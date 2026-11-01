@@ -1,0 +1,27 @@
+# Signing key — never commit
+*.jks
+*.keystore
+.store_password.txt
+.key_password.txt
+.key_alias.txt
+keystore.properties
+
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rust build artifacts
+target/
+horizon/target/

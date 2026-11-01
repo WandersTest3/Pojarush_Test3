@@ -1,0 +1,373 @@
+package com.wanderstest3.pojarush.horizon
+
+import android.content.Context
+import android.content.Intent
+import android.system.Os
+import android.util.Log
+import com.wanderstest3.pojarush.BuildConfig
+import com.wanderstest3.pojarush.Http
+import com.wanderstest3.pojarush.JavaRuntime
+import com.wanderstest3.pojarush.Paths
+import com.wanderstest3.pojarush.Profile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import okhttp3.Request
+import org.json.JSONObject
+import java.io.File
+import java.io.IOException
+import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicLong
+
+object HorizonManager {
+    private const val TAG = "Horizon"
+    const val VERSION = "26.3"
+    private const val BUNDLE = "horizon"
+    private const val LOG_LINES = 300
+
+    sealed interface State {
+        data object Idle : State
+        data class Running(val step: String, val progress: Float? = null) : State
+        data class Failed(val message: String) : State
+        data object Done : State
+    }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var job: Job? = null
+    @Volatile private var process: Process? = null
+    private val http get() = Http.client
+
+    private val _state = MutableStateFlow<State>(State.Idle)
+    val state = _state.asStateFlow()
+    private val _log = MutableStateFlow<List<String>>(emptyList())
+    val log = _log.asStateFlow()
+
+    val privateRoot: File get() = File(Paths.privateRoot, "horizon")
+    val prepareRoot: File get() = File(privateRoot, "prepare")
+    val staging: File get() = File(privateRoot, "minecraft")
+    private val javaShim: File get() = File(privateRoot, "java")
+    val publicRoot: File get() = File(Paths.publicRoot, "horizon")
+    val gameDir: File get() = File(publicRoot, "game")
+    val homeDir: File get() = File(publicRoot, "home")
+    val resources: File get() = File(prepareRoot, ".local/horizon-client/$VERSION")
+    val prepareLog: File get() = File(homeDir, "logs/prepare.log")
+    val gameLog: File get() = File(homeDir, "logs/latest.log")
+    val stdioLog: File get() = File(homeDir, "logs/stdio.log")
+    private val soundsMarker: File get() = File(privateRoot, "sounds.ok")
+
+    private val nativeDir: File get() = Paths.nativeDir
+    private val gameLibrary: File get() = File(nativeDir, "libhorizon_android.so")
+    private val prepareBinary: File get() = File(nativeDir, "libhorizon_prepare.so")
+    private val javaLauncher: File get() = File(nativeDir, "libpojajava.so")
+
+    fun isSupported(): Boolean =
+        gameLibrary.isFile && prepareBinary.isFile && javaLauncher.isFile
+
+    fun isPrepared(): Boolean = File(resources, "horizon-resources.json").isFile
+
+    fun hasSounds(): Boolean = soundsMarker.isFile && isPrepared()
+
+    fun isBusy(): Boolean = _state.value is State.Running
+
+    private fun appendLog(line: String) {
+        _log.update { (it + line).takeLast(LOG_LINES) }
+        runCatching {
+            prepareLog.parentFile?.mkdirs()
+            prepareLog.appendText(line + "\n")
+        }
+    }
+
+    private fun step(text: String, progress: Float? = null) {
+        _state.value = State.Running(text, progress)
+    }
+
+    @Volatile private var javaHeapMb = 0
+
+    fun prepare(context: Context, withSounds: Boolean) {
+        if (isBusy()) return
+        javaHeapMb = com.wanderstest3.pojarush.controls.ControlSettings(context).javaHeapMb
+        _log.value = emptyList()
+        runCatching { prepareLog.delete() }
+        job = scope.launch {
+            runCatching {
+                if (!isSupported()) throw IOException("This device cannot run Pojarush_Test3's Horizon libraries (arm64-v8a only).")
+                installBundle(context)
+                val javaHome = findJava(context)
+                downloadGame(withSounds)
+                runPrepare(javaHome, listOf("--prepare", "--root", prepareRoot.absolutePath, "--minecraft-dir", staging.absolutePath, "--server-jar", serverJar.absolutePath))
+                if (withSounds) {
+                    step("Importing sounds")
+                    runPrepare(javaHome, listOf("sounds", "--minecraft-dir", staging.absolutePath, "--root", prepareRoot.absolutePath))
+                    soundsMarker.writeText(VERSION)
+                }
+                if (!isPrepared()) throw IOException("horizon-prepare finished without horizon-resources.json")
+            }.onSuccess {
+                appendLog("Ready: ${resources.absolutePath}")
+                _state.value = State.Done
+            }.onFailure { e ->
+                Log.e(TAG, "Preparation failed", e)
+                appendLog("Error: ${e.message}")
+                _state.value = State.Failed(e.message ?: e.javaClass.simpleName)
+            }
+        }
+    }
+
+    fun freeSpace() {
+        if (isBusy()) return
+        staging.deleteRecursively()
+        File(prepareRoot, ".local").listFiles()?.forEach { if (it.name != "horizon-client") it.deleteRecursively() }
+        File(Paths.cache, "horizon-tmp").deleteRecursively()
+    }
+
+    fun shareLogs(context: android.content.Context) {
+        val dir = File(context.cacheDir, "shared").apply { mkdirs() }
+        val zip = File(dir, "pojarush-logs.zip")
+        java.util.zip.ZipOutputStream(zip.outputStream().buffered()).use { out ->
+            fun add(name: String, bytes: ByteArray) {
+                out.putNextEntry(java.util.zip.ZipEntry(name))
+                out.write(bytes)
+                out.closeEntry()
+            }
+            for (file in listOf(prepareLog, gameLog, stdioLog, File(homeDir, "exit-code"))) {
+                if (file.isFile) add(file.name, file.readBytes())
+            }
+            runCatching {
+                val process = ProcessBuilder("logcat", "-d", "-t", "4000").redirectErrorStream(true).start()
+                add("logcat.txt", process.inputStream.readBytes())
+            }
+        }
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", zip)
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(send, null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    fun lastExitCode(): String? = File(homeDir, "exit-code").takeIf { it.isFile }?.readText()?.trim()
+
+    fun readTail(file: File, lines: Int = 400): String =
+        runCatching { file.readLines().takeLast(lines).joinToString("\n") }.getOrDefault("")
+
+    fun cancel() {
+        process?.destroy()
+        job?.cancel()
+        _state.value = State.Idle
+    }
+
+    private fun installBundle(context: Context) {
+        step("Installing Horizon's preparation files")
+        val marker = File(prepareRoot, ".bundle-version")
+        val version = "${BuildConfig.VERSION_CODE}-${BuildConfig.VERSION_NAME}"
+        if (marker.isFile && marker.readText() == version) return
+        listOf("exporters", "mods", "crates").forEach { File(prepareRoot, it).deleteRecursively() }
+        fun copy(path: String) {
+            val children = context.assets.list(path).orEmpty()
+            if (children.isEmpty()) {
+                val target = File(prepareRoot, path.removePrefix("$BUNDLE/"))
+                target.parentFile?.mkdirs()
+                context.assets.open(path).use { input -> target.outputStream().use { input.copyTo(it) } }
+            } else {
+                children.forEach { copy("$path/$it") }
+            }
+        }
+        copy(BUNDLE)
+        marker.writeText(version)
+    }
+
+    private fun findJava(context: Context): File {
+        step("Looking for Java ${JavaRuntime.MAJOR}")
+        val home = JavaRuntime.ensure(context) { step(it) }
+        val bin = File(javaShim, "bin")
+        bin.mkdirs()
+        val link = File(bin, "java")
+        if (link.exists() || runCatching { Os.lstat(link.absolutePath) }.isSuccess) link.delete()
+        Os.symlink(javaLauncher.absolutePath, link.absolutePath)
+        appendLog("Java: ${home.absolutePath}")
+        return home
+    }
+
+    private fun lock(): JSONObject = JSONObject(File(prepareRoot, "research-lock.json").readText()).getJSONObject("minecraft")
+
+    private val serverJar: File get() = File(staging, "server-$VERSION.jar")
+
+    private suspend fun downloadGame(withSounds: Boolean) {
+        step("Downloading Minecraft $VERSION's version file")
+        val lock = lock()
+        val versionDir = File(staging, "versions/$VERSION")
+        val manifestFile = File(versionDir, "$VERSION.json")
+        val accepted = buildList {
+            add(lock.getString("manifest_sha1"))
+            lock.optJSONArray("accepted_manifest_sha1")?.let { a -> for (i in 0 until a.length()) add(a.getString(i)) }
+        }
+        if (!(manifestFile.isFile && sha1(manifestFile) in accepted)) {
+            var fetched = false
+            for (sha in accepted) {
+                if (runCatching { download("https://piston-meta.mojang.com/v1/packages/$sha/$VERSION.json", manifestFile, sha) }.isSuccess) {
+                    fetched = true
+                    break
+                }
+            }
+            if (!fetched) throw IOException("Mojang's $VERSION version file could not be downloaded")
+        }
+        val manifest = JSONObject(manifestFile.readText())
+        val downloads = manifest.getJSONObject("downloads")
+        val jobs = mutableListOf<Fetch>()
+        downloads.getJSONObject("client").let { jobs += Fetch(it.getString("url"), File(versionDir, "$VERSION.jar"), it.getString("sha1"), it.getLong("size")) }
+        downloads.getJSONObject("server").let { jobs += Fetch(it.getString("url"), serverJar, it.getString("sha1"), it.getLong("size")) }
+        val libraries = manifest.getJSONArray("libraries")
+        for (i in 0 until libraries.length()) {
+            val artifact = libraries.getJSONObject(i).optJSONObject("downloads")?.optJSONObject("artifact") ?: continue
+            val path = artifact.getString("path")
+            jobs += Fetch(artifact.getString("url"), File(staging, "libraries/$path"), artifact.getString("sha1"), artifact.getLong("size"))
+        }
+        val assetIndex = manifest.getJSONObject("assetIndex")
+        val indexFile = File(staging, "assets/indexes/${assetIndex.getString("id")}.json")
+        fetchAll(listOf(Fetch(assetIndex.getString("url"), indexFile, assetIndex.getString("sha1"), assetIndex.getLong("size"))), "the asset index")
+        val objects = JSONObject(indexFile.readText()).getJSONObject("objects")
+        for (key in objects.keys()) {
+            if (!withSounds && key.startsWith("minecraft/sounds/")) continue
+            val obj = objects.getJSONObject(key)
+            val hash = obj.getString("hash")
+            val relative = "assets/objects/${hash.take(2)}/$hash"
+            jobs += Fetch("https://resources.download.minecraft.net/${hash.take(2)}/$hash", File(staging, relative), hash, obj.getLong("size"))
+        }
+        fetchAll(jobs, "Minecraft $VERSION")
+    }
+
+    private data class Fetch(val url: String, val file: File, val sha1: String, val size: Long)
+
+    private suspend fun fetchAll(jobs: List<Fetch>, what: String) = coroutineScope {
+        val total = jobs.sumOf { it.size }.coerceAtLeast(1)
+        val done = AtomicLong()
+        val gate = Semaphore(8)
+        step("Downloading $what", 0f)
+        jobs.map { fetch ->
+            async {
+                gate.withPermit {
+                    ensureActive()
+                    if (!(fetch.file.isFile && fetch.file.length() == fetch.size && sha1(fetch.file) == fetch.sha1)) {
+                        download(fetch.url, fetch.file, fetch.sha1)
+                    }
+                    val now = done.addAndGet(fetch.size)
+                    step("Downloading $what (${now / 1_048_576} / ${total / 1_048_576} MB)", now.toFloat() / total)
+                }
+            }
+        }.awaitAll()
+        appendLog("Downloaded $what: ${jobs.size} files")
+    }
+
+    private fun download(url: String, target: File, sha1: String) {
+        target.parentFile?.mkdirs()
+        val temp = File(target.parentFile, target.name + ".part")
+        var last: Exception? = null
+        repeat(3) {
+            try {
+                http.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("HTTP ${response.code} for $url")
+                    response.body.byteStream().use { input -> temp.outputStream().use { input.copyTo(it) } }
+                }
+                val got = sha1(temp)
+                if (got != sha1) throw IOException("Checksum mismatch for $url ($got)")
+                if (!temp.renameTo(target)) {
+                    temp.copyTo(target, overwrite = true)
+                    temp.delete()
+                }
+                return
+            } catch (e: Exception) {
+                last = e
+                temp.delete()
+            }
+        }
+        throw last ?: IOException("Download failed: $url")
+    }
+
+    private fun sha1(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-1")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(1 shl 16)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun runPrepare(javaHome: File, args: List<String>) {
+        step(if (args.first() == "sounds") "Importing sounds" else "Preparing Horizon's resources (Java exporters, a few minutes)")
+        appendLog("$ horizon-prepare ${args.joinToString(" ")}")
+        val tmp = File(Paths.cache, "horizon-tmp").apply { mkdirs() }
+        val process = ProcessBuilder(listOf(prepareBinary.absolutePath) + args)
+            .directory(prepareRoot)
+            .redirectErrorStream(true)
+            .apply {
+                environment().apply {
+                    put("JAVA_HOME", javaShim.absolutePath)
+                    put("POJARUSH_JAVA_HOME", javaHome.absolutePath)
+                    put("PATH", "${javaShim.absolutePath}/bin:" + (get("PATH") ?: "/system/bin"))
+                    put("HOME", privateRoot.absolutePath)
+                    put("TMPDIR", tmp.absolutePath)
+                    val heap = javaHeapMb.takeIf { it > 0 }
+                    put("_JAVA_OPTIONS", "-Djava.io.tmpdir=${tmp.absolutePath} -Djava.awt.headless=true" + (heap?.let { " -Xmx${it}M" } ?: ""))
+                    heap?.let { put("HORIZON_PREPARE_HEAP", "${it}M") }
+                    remove("LD_LIBRARY_PATH")
+                }
+            }
+            .start()
+        this.process = process
+        process.inputStream.bufferedReader().useLines { lines ->
+            lines.forEach { line ->
+                appendLog(line)
+                if (line.startsWith("Exporting ") || line.startsWith("Running ") || line.startsWith("Copying ") || line.startsWith("Writing ") || line.startsWith("Compiling ") || line.startsWith("Importing ")) {
+                    step(line)
+                }
+            }
+        }
+        val code = process.waitFor()
+        this.process = null
+        if (code != 0) throw IOException("horizon-prepare stopped with exit code $code; see ${prepareLog.absolutePath}")
+    }
+
+    fun launchIntent(context: Context, profile: Profile?): Intent {
+        gameDir.mkdirs()
+        privateRoot.mkdirs()
+        File(homeDir, "logs").mkdirs()
+        val args = arrayListOf(
+            "--resources", resources.absolutePath,
+            "--game-dir", gameDir.absolutePath,
+            "--home", homeDir.absolutePath,
+        )
+        profile?.name?.takeIf { it.isNotBlank() }?.let { args += listOf("--name", it) }
+        val session = File(privateRoot, "session.json")
+        session.delete()
+        if (profile != null && profile.microsoft && profile.accessToken.isNotBlank()) {
+            val json = JSONObject()
+                .put("name", profile.name)
+                .put("uuid", profile.uuid.replace("-", ""))
+                .put("access_token", profile.accessToken)
+                .put("user_type", "msa")
+            if (profile.xuid.isNotBlank()) json.put("xuid", profile.xuid)
+            session.writeText(json.toString())
+            runCatching { Os.chmod(session.absolutePath, "600".toInt(8)) }
+            args += listOf("--session-file", session.absolutePath)
+        }
+        return Intent(context, HorizonActivity::class.java)
+            .putStringArrayListExtra(HorizonActivity.EXTRA_ARGS, args)
+            .putExtra(HorizonActivity.EXTRA_GAME_DIR, gameDir.absolutePath)
+            .putExtra(HorizonActivity.EXTRA_HOME, homeDir.absolutePath)
+    }
+}

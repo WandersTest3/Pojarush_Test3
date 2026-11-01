@@ -1,0 +1,7 @@
+-keep class com.wanderstest3.pojarush.horizon.HorizonBridge { *; }
+-keep class com.wanderstest3.pojarush.horizon.HorizonActivity { *; }
+-keep class com.google.androidgamesdk.** { *; }
+-dontwarn org.brotli.dec.**
+-dontwarn com.github.luben.zstd.**
+-dontwarn org.objectweb.asm.**
+-dontwarn org.tukaani.xz.**
