@@ -82,8 +82,6 @@ class ControlSettings(context: Context) {
 
     companion object {
         private const val PREFS = "pojarush_controls"
-        const val ZALITH = "asset:zalith-default.json"
-        const val FCL = "asset:fcl-default.json"
     }
 }
 
@@ -95,8 +93,6 @@ object ControlLayouts {
     fun list(context: Context, defaultName: String): List<Entry> {
         val builtIn = listOf(
             Entry(DefaultLayout.ID, defaultName, false),
-            Entry(ControlSettings.ZALITH, "Zalith Launcher 2", false),
-            Entry(ControlSettings.FCL, "Fold Craft Launcher", false),
         )
         val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".json", true) }.orEmpty()
             .sortedBy { it.name.lowercase() }

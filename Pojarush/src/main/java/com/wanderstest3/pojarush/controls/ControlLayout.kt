@@ -100,7 +100,7 @@ data class ControlLayout(
                 json.has("pojarush") -> PojarushFormat.parse(json, fallbackName)
                 json.has("editorVersion") -> Zalith.parse(json, fallbackName)
                 json.has("viewGroups") -> FoldCraft.parse(json, fallbackName)
-                else -> throw IllegalArgumentException("Not a Zalith Launcher 2 or Fold Craft Launcher layout")
+                else -> throw IllegalArgumentException("Unknown control layout format")
             }
         }
 

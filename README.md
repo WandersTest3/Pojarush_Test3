@@ -1,12 +1,9 @@
 # Pojarush_Test3
 
 Android launcher with a single game: **Horizon**, Minecraft: Java Edition 26.3 rewritten in Rust, running
-natively on the phone (no JVM while playing). Started from Zalith Launcher 2 (GPL-3.0); everything Horizon
-does not use was removed (other Minecraft versions, Java game launching, mod loaders, renderers, downloads
-of mods/modpacks, control editor, multiplayer VPN, LWJGL...).
+natively on the phone (no JVM while playing).
 
 - Horizon: https://github.com/horizon-rust/horizon (MIT), source in `horizon/`
-- Zalith Launcher 2: https://github.com/ZalithLauncher/ZalithLauncher2 (GPL-3.0)
 
 ## Layout
 
@@ -14,8 +11,8 @@ of mods/modpacks, control editor, multiplayer VPN, LWJGL...).
 |---|---|
 | `Pojarush/` | The Android app (Kotlin, Compose) |
 | `Pojarush/src/main/java/com/wanderstest3/pojarush/MainActivity.kt` | The single screen: player, Horizon 26.3, logs |
-| `.../Accounts.kt`, `MicrosoftAuth.kt` | Offline player name; Microsoft sign-in (device code) when the build has an OAuth client ID |
-| `.../JavaRuntime.kt` | Unpacks the bundled Java 25 (from Zalith's runtime) used only to prepare the game files |
+| `.../Accounts.kt`, `MicrosoftAuth.kt` | Offline player name; Microsoft sign-in when the build has an OAuth client ID |
+| `.../JavaRuntime.kt` | Unpacks the bundled Java 25 used only to prepare the game files |
 | `.../horizon/HorizonManager.kt` | Downloads 26.3 from Mojang (SHA-1 checked), runs `horizon-prepare` |
 | `.../horizon/HorizonActivity.kt`, `HorizonOverlay.kt`, `HorizonBridge.kt` | The game (`GameActivity`, process `:horizon`) and its touch controls |
 | `Pojarush/src/main/jniLibs/arm64-v8a/` | `libhorizon_android.so` (the game), `libhorizon_prepare.so`, `libpojajava.so` (Java launcher for the exporters), `libc++_shared.so` (needed by Java 25) |
@@ -42,15 +39,12 @@ Minecraft API access in `.oauth_client_id.txt` or `OAUTH_CLIENT_ID`; without it 
 3. Prepare game files: about 330 MB download (+380 MB with sounds), then several minutes of Java exporters.
 4. Play (the button at the bottom right).
 
-Controls: the built-in layout, Zalith Launcher 2's and Fold Craft Launcher's default layouts, and any Zalith
-Launcher 2 (`editorVersion`) or Fold Craft Launcher (`viewGroups`) layout imported from a `.json` file or put in
-`Pojarush_Test3/controls/`. In game: drag to look, tap to use, hold to break, tap the hotbar to select. In menus:
-direct touch, or a virtual mouse with an optional custom image or animated GIF (Mouse page). The ☰ handle
-(drag it to move it) opens the quick menu: virtual mouse, keyboard, settings (controls, mouse, resolution) and the
-control editor, also reachable from the launcher. Edited layouts are saved as Pojarush `.json` files in
+Controls: the built-in Pojarush layout and any Pojarush (`pojarush`), Zalith (`editorVersion`) or
+Fold Craft Launcher (`viewGroups`) layout imported from a `.json` file or put in `Pojarush_Test3/controls/`.
+In game: drag to look, tap to use, hold to break, tap the hotbar to select. In menus: direct touch, or a
+virtual mouse with an optional custom image or animated GIF (Mouse page). The ☰ handle (drag it to move it)
+opens the quick menu: virtual mouse, keyboard, settings (controls, mouse, resolution) and the control editor,
+also reachable from the launcher. Edited layouts are saved as Pojarush `.json` files in
 `Pojarush_Test3/controls/`. Back is Escape.
-
-Bundled layouts: `assets/controls/zalith-default.json` from Zalith Launcher 2 and `assets/controls/fcl-default.json`
-from Fold Craft Launcher, both GPL-3.0.
 
 Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
