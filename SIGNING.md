@@ -28,13 +28,27 @@ printf '%s' 'pojarush' > .key_alias.txt
 
 Alternatively, provide `STORE_PASSWORD`, `KEY_PASSWORD`, and `KEY_ALIAS` as environment variables.
 
-## Verify and record the public certificate fingerprint
+## Current release certificate
+
+The following public certificate identifies the current Pojarush release signing key. Do not publish the keystore or its passwords.
+
+| Field | Value |
+|---|---|
+| Alias | `pojarush` |
+| Owner / Issuer | `CN=Wanders_Test3, O=Pojarush_Test3` |
+| Serial number | `ff532dd05ace2577` |
+| Created | 2026-11-03 |
+| Valid until | 2126-10-10 |
+| Public key | RSA 2048-bit |
+| Signature algorithm | SHA384withRSA |
+| SHA-1 | `65:CF:0D:3D:9B:00:63:7F:6B:15:BC:A6:4E:78:8D:32:AA:EF:37:52` |
+| SHA-256 | `82:82:16:21:04:CA:BC:F0:E7:2E:B6:AC:A9:31:33:AD:23:AF:DC:20:BC:FF:41:8E:52:46:D0:DE:CB:E4:33:A4` |
+
+Verify the certificate locally with:
 
 ```sh
 keytool -list -v -keystore pojarush.jks -alias pojarush
 ```
-
-Record the SHA-256 certificate fingerprint in a separate secure project record. The fingerprint is public identification data; the keystore and passwords are private signing credentials.
 
 ## Build a signed release
 
