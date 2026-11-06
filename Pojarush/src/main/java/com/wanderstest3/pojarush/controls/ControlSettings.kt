@@ -19,8 +19,8 @@ class ControlSettings(context: Context) {
         get() = prefs.getFloat("button_scale", 1.00f)
         set(v) = prefs.edit().putFloat("button_scale", v).apply()
     var lookSensitivity: Float
-        get() = prefs.getFloat("look_sensitivity", 1.00f)
-        set(v) = prefs.edit().putFloat("look_sensitivity", v).apply()
+        get() = prefs.getFloat("look_sensitivity", 1.00f).coerceIn(0.10f, 2.00f)
+        set(v) = prefs.edit().putFloat("look_sensitivity", v.coerceIn(0.10f, 2.00f)).apply()
     var longPressMs: Int
         get() = prefs.getInt("long_press_ms", 350)
         set(v) = prefs.edit().putInt("long_press_ms", v).apply()
@@ -37,10 +37,10 @@ class ControlSettings(context: Context) {
         get() = prefs.getBoolean("virtual_mouse", false)
         set(v) = prefs.edit().putBoolean("virtual_mouse", v).apply()
     var mouseSpeed: Float
-        get() = prefs.getFloat("mouse_speed", 1.00f)
+        get() = prefs.getFloat("mouse_speed", 1.75f)
         set(v) = prefs.edit().putFloat("mouse_speed", v).apply()
     var cursorSize: Float
-        get() = prefs.getFloat("cursor_size", 1.00f)
+        get() = prefs.getFloat("cursor_size", 0.75f)
         set(v) = prefs.edit().putFloat("cursor_size", v).apply()
     var tapToClick: Boolean
         get() = prefs.getBoolean("tap_to_click", true)
@@ -69,6 +69,9 @@ class ControlSettings(context: Context) {
     var javaHeapMb: Int
         get() = prefs.getInt("java_heap_mb", 0)
         set(v) = prefs.edit().putInt("java_heap_mb", v).apply()
+    var graphicsApi: String
+        get() = prefs.getString("graphics_api", "auto")?.takeIf { it in GRAPHICS_APIS } ?: "auto"
+        set(v) = prefs.edit().putString("graphics_api", v).apply()
     var cursorCenter: Boolean
         get() = prefs.getBoolean("cursor_center", false)
         set(v) = prefs.edit().putBoolean("cursor_center", v).apply()
@@ -82,6 +85,7 @@ class ControlSettings(context: Context) {
 
     companion object {
         private const val PREFS = "pojarush_controls"
+        val GRAPHICS_APIS = listOf("auto", "vulkan", "opengl")
     }
 }
 
@@ -130,7 +134,7 @@ object ControlLayouts {
     fun save(layout: ControlLayout, currentId: String, suffix: String): String {
         dir.mkdirs()
         val existing = currentId.takeIf { it.startsWith("file:") }?.let { File(dir, it.removePrefix("file:")) }
-        val target = if (existing != null && existing.isFile && runCatching { org.json.JSONObject(existing.readText()).has("pojarush") }.getOrDefault(false)) {
+        val target = if (existing != null && existing.isFile) {
             existing
         } else {
             val base = "${layout.name} $suffix".replace(Regex("[^A-Za-z0-9._ ()-]"), "_").trim().take(48)

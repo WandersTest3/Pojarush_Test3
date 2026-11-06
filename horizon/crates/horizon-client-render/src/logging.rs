@@ -198,7 +198,10 @@ pub fn open_latest(dir: &Path) -> io::Result<Option<Latest>> {
     match lock.try_lock() {
         Ok(()) => {}
         Err(fs::TryLockError::WouldBlock) => return Ok(None),
-        Err(fs::TryLockError::Error(e)) => return Err(e),
+        // Shared storage on Android has no file locks: log without one.
+        Err(fs::TryLockError::Error(e)) => {
+            eprintln!("Horizon: file locks unsupported in {} ({e}); logging unlocked", dir.display());
+        }
     }
     let mut file = OpenOptions::new()
         .read(true)

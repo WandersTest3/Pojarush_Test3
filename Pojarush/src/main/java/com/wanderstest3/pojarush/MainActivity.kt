@@ -77,6 +77,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wanderstest3.pojarush.controls.ControlSettings
 import com.wanderstest3.pojarush.horizon.HorizonManager
+import com.wanderstest3.pojarush.ui.AccountsCard
+import com.wanderstest3.pojarush.ui.GraphicsApiSettings
+import com.wanderstest3.pojarush.ui.ModsPage
 import com.wanderstest3.pojarush.ui.CardTitle
 import com.wanderstest3.pojarush.ui.ControlsSettings
 import com.wanderstest3.pojarush.ui.Hint
@@ -94,7 +97,9 @@ import java.util.Locale
 
 private enum class Section(val label: Int, val glyph: String) {
     Home(R.string.nav_home, "▶"),
+    Accounts(R.string.nav_accounts, "⚉"),
     Controls(R.string.nav_controls, "✥"),
+    Mods(R.string.nav_mods, "✚"),
     Mouse(R.string.nav_mouse, "➚"),
     Graphics(R.string.nav_graphics, "▣"),
     Logs(R.string.nav_logs, "☰"),
@@ -123,9 +128,11 @@ class MainActivity : ComponentActivity() {
 private fun PojarushScreen() {
     var section by rememberSaveable { mutableStateOf(Section.Home) }
     var storageVersion by remember { mutableIntStateOf(0) }
+    var resumes by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (Paths.refresh(context)) storageVersion++
+        resumes++
     }
     Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -147,18 +154,24 @@ private fun PojarushScreen() {
                             Section.Home -> {
                                 val access = remember(storageVersion) { Paths.hasStorageAccess(context) }
                                 if (!access) StorageCard()
-                                AccountCard()
                                 GameCard(storageVersion)
+                            }
+                            Section.Accounts -> {
+                                AccountsCard()
                             }
                             Section.Controls -> {
                                 val settings = remember { ControlSettings(context) }
-                                LayoutSettings(settings, onEdit = { context.startActivity(Intent(context, ControlEditorActivity::class.java)) }) {}
+                                androidx.compose.runtime.key(resumes) {
+                                    LayoutSettings(settings, onEdit = { context.startActivity(Intent(context, ControlEditorActivity::class.java)) }) {}
+                                }
                                 ControlsSettings(settings) {}
                             }
+                            Section.Mods -> ModsPage()
                             Section.Mouse -> MouseSettings(remember { ControlSettings(context) }) {}
                             Section.Graphics -> {
                                 val settings = remember { ControlSettings(context) }
                                 ResolutionSettings(settings) {}
+                                GraphicsApiSettings(settings)
                                 MemorySettings(settings)
                             }
                             Section.Logs -> {}
@@ -174,8 +187,8 @@ private fun PojarushScreen() {
 @Composable
 private fun Header() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple)) {
-            Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize())
+        Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))) {
+            Image(painterResource(R.drawable.ic_launcher_art), contentDescription = null, modifier = Modifier.fillMaxSize())
         }
         Spacer(Modifier.width(10.dp))
         Text(
@@ -228,6 +241,7 @@ private fun PlayButton(modifier: Modifier) {
                         .onFailure { e -> Toast.makeText(context, e.message, Toast.LENGTH_LONG).show() }
                         .getOrDefault(p)
                 }
+                withContext(Dispatchers.IO) { HorizonManager.stopRunningGame(context) }
                 context.startActivity(HorizonManager.launchIntent(context, current))
             }
         }
@@ -253,73 +267,6 @@ private fun StorageCard() {
                 permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
         }) { Text(stringResource(R.string.storage_grant)) }
-    }
-}
-
-@Composable
-private fun AccountCard() {
-    val scope = rememberCoroutineScope()
-    val profile by Accounts.profile.collectAsStateWithLifecycle()
-    var name by rememberSaveable { mutableStateOf(profile?.takeIf { !it.microsoft }?.name.orEmpty()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var signing by remember { mutableStateOf(false) }
-    val login = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val code = result.data?.getStringExtra(MicrosoftLoginActivity.EXTRA_CODE)
-        if (result.resultCode != Activity.RESULT_OK || code == null) {
-            error = result.data?.getStringExtra(MicrosoftLoginActivity.EXTRA_ERROR)
-            return@rememberLauncherForActivityResult
-        }
-        signing = true
-        scope.launch {
-            runCatching { withContext(Dispatchers.IO) { MicrosoftAuth.loginWithCode(code) } }
-                .onSuccess { Accounts.save(it) }
-                .onFailure { e -> error = e.message }
-            signing = false
-        }
-    }
-    val context = LocalContext.current
-
-    PojarushCard {
-        CardTitle(stringResource(R.string.account_title))
-        Text(
-            text = when {
-                profile == null -> stringResource(R.string.account_none)
-                profile!!.microsoft -> stringResource(R.string.account_signed_in, profile!!.name)
-                else -> stringResource(R.string.account_offline, profile!!.name)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-        if (profile?.microsoft != true) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.take(16) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.account_name_hint)) },
-                    isError = name.isNotEmpty() && !Accounts.isValidOfflineName(name),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-                )
-                Button(enabled = Accounts.isValidOfflineName(name), onClick = { Accounts.setOfflineName(name) }) {
-                    Text(stringResource(R.string.account_save))
-                }
-            }
-            if (name.isNotEmpty() && !Accounts.isValidOfflineName(name)) {
-                Text(stringResource(R.string.account_name_invalid), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (profile?.microsoft == true) {
-                OutlinedButton(onClick = { Accounts.signOut(); name = "" }) { Text(stringResource(R.string.account_sign_out)) }
-            } else {
-                OutlinedButton(enabled = !signing, onClick = {
-                    error = null
-                    login.launch(Intent(context, MicrosoftLoginActivity::class.java))
-                }) { Text(stringResource(if (signing) R.string.account_signing_in else R.string.account_microsoft)) }
-            }
-        }
-        error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
     }
 }
 

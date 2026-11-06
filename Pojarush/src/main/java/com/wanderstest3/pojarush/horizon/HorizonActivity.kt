@@ -22,6 +22,7 @@ class HorizonActivity : GameActivity() {
         const val EXTRA_ARGS = "horizon_args"
         const val EXTRA_GAME_DIR = "horizon_game_dir"
         const val EXTRA_HOME = "horizon_home"
+        const val EXTRA_CACHE = "horizon_cache"
     }
 
     private var stdio: ParcelFileDescriptor? = null
@@ -35,6 +36,11 @@ class HorizonActivity : GameActivity() {
         Os.setenv("POJARUSH_GAME_DIR", gameDir, true)
         Os.setenv("POJARUSH_EXIT_FILE", File(home, "exit-code").absolutePath, true)
         Os.setenv("HORIZON_HOME", home, true)
+        intent.getStringExtra(EXTRA_CACHE)?.takeIf { it.isNotEmpty() }?.let {
+            File(it).mkdirs()
+            Os.setenv("HORIZON_CACHE_DIR", it, true)
+        }
+        ControlSettings(this).graphicsApi.takeIf { it != "auto" }?.let { Os.setenv("HORIZON_GRAPHICS_API", it, true) }
         Os.setenv("HOME", home, true)
         Os.setenv("TMPDIR", cacheDir.absolutePath, true)
         File(home, "exit-code").delete()

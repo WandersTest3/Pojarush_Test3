@@ -54,6 +54,7 @@ import com.wanderstest3.pojarush.controls.ControlSettings
 import com.wanderstest3.pojarush.ui.Change
 import com.wanderstest3.pojarush.ui.ControlEditor
 import com.wanderstest3.pojarush.ui.ControlsSettings
+import com.wanderstest3.pojarush.ui.GraphicsApiSettings
 import com.wanderstest3.pojarush.ui.LayoutSettings
 import com.wanderstest3.pojarush.ui.MouseSettings
 import com.wanderstest3.pojarush.ui.PojarushTheme
@@ -83,6 +84,8 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     private val poll = object : Runnable {
         override fun run() {
             if (panel != Panel.EDITOR) controls.setCaptured(HorizonBridge.isCaptured())
+            controls.menuHold = panel != Panel.NONE
+            controls.resumeIfPossible()
             uiHandler.postDelayed(this, 100)
         }
     }
@@ -120,7 +123,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
 
     override fun toggleMenu() {
         if (panel == Panel.EDITOR) return
-        controls.releaseAll()
+        controls.pause()
         mouseOn = controls.virtualMouse
         panel = if (panel == Panel.NONE) Panel.MENU else Panel.NONE
     }
@@ -224,7 +227,10 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                             ControlsSettings(settings, ::apply)
                         }
                         1 -> MouseSettings(settings, ::apply)
-                        else -> ResolutionSettings(settings, ::apply)
+                        else -> {
+                            ResolutionSettings(settings, ::apply)
+                            GraphicsApiSettings(settings)
+                        }
                     }
                 }
             }
@@ -242,6 +248,12 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         }
     }
 
+    private fun hideKeyboard() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(textInput.windowToken, 0)
+        textInput.clearFocus()
+    }
+
     override fun sendText(text: String) {
         activity.tapKey(KeyEvent.KEYCODE_T)
         uiHandler.postDelayed({ HorizonBridge.command("type $text") }, 200)
@@ -251,11 +263,13 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     private fun setupTextInput() {
         textInput.setOnEditorActionListener { _, _, _ ->
             activity.tapKey(KeyEvent.KEYCODE_ENTER)
+            hideKeyboard()
             true
         }
         textInput.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_ENTER) {
                 activity.sendKey(keyCode, event.action == KeyEvent.ACTION_DOWN)
+                if (keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_UP) hideKeyboard()
                 true
             } else false
         }

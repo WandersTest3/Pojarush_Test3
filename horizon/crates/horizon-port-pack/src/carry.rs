@@ -548,7 +548,10 @@ fn extra_namespaces(
         let Ok(mut entry) = zip.by_index(i) else {
             continue;
         };
-        let Some((root, ns, rest)) = split(entry.name()) else {
+        let Ok(entry_name) = entry.name() else {
+            continue;
+        };
+        let Some((root, ns, rest)) = split(&entry_name) else {
             continue;
         };
         let ns = match () {
@@ -557,7 +560,7 @@ fn extra_namespaces(
             _ => continue,
         };
         let mut bytes = Vec::new();
-        if entry.name().ends_with(".json") && entry.read_to_end(&mut bytes).is_ok() {
+        if entry_name.ends_with(".json") && entry.read_to_end(&mut bytes).is_ok() {
             texts.push((ns, bytes));
         }
     }
@@ -731,7 +734,9 @@ pub fn carry(
         .collect();
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
-        let name = entry.name().to_owned();
+        let Ok(name) = entry.name().map(|n| n.into_owned()) else {
+            continue;
+        };
         let Some(keep) = place(&name, &owned) else {
             continue;
         };

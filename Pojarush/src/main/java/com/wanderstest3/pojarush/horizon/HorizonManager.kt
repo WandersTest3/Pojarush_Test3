@@ -35,6 +35,7 @@ object HorizonManager {
     const val VERSION = "26.3"
     private const val BUNDLE = "horizon"
     private const val LOG_LINES = 300
+    private const val PREPARE_STALL_MS = 20 * 60_000L
 
     sealed interface State {
         data object Idle : State
@@ -47,6 +48,13 @@ object HorizonManager {
     private var job: Job? = null
     @Volatile private var process: Process? = null
     private val http get() = Http.client
+    private val downloadClient: okhttp3.OkHttpClient by lazy {
+        Http.client.newBuilder()
+            .callTimeout(10, java.util.concurrent.TimeUnit.MINUTES)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
+    }
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state = _state.asStateFlow()
@@ -59,7 +67,18 @@ object HorizonManager {
     private val javaShim: File get() = File(privateRoot, "java")
     val publicRoot: File get() = File(Paths.publicRoot, "horizon")
     val gameDir: File get() = File(publicRoot, "game")
-    val homeDir: File get() = File(publicRoot, "home")
+    val homeDir: File get() = File(privateRoot, "home")
+    val cacheRoot: File get() = File(privateRoot, "cache")
+    val modsDir: File get() = File(gameDir, "horizon-mods")
+    val nativeModsDir: File get() = File(gameDir, "horizon-native-mods")
+    val resourcePacksDir: File get() = File(gameDir, "resourcepacks")
+    val shaderPacksDir: File get() = File(gameDir, "shaderpacks")
+    val modsFile: File get() = File(gameDir, "horizon-mods.txt")
+
+    fun ensureFolders() {
+        listOf(gameDir, modsDir, nativeModsDir, resourcePacksDir, shaderPacksDir, File(gameDir, "saves"), File(gameDir, "screenshots"), File(homeDir, "logs"))
+            .forEach { runCatching { it.mkdirs() } }
+    }
     val resources: File get() = File(prepareRoot, ".local/horizon-client/$VERSION")
     val prepareLog: File get() = File(homeDir, "logs/prepare.log")
     val gameLog: File get() = File(homeDir, "logs/latest.log")
@@ -113,6 +132,7 @@ object HorizonManager {
                 }
                 if (!isPrepared()) throw IOException("horizon-prepare finished without horizon-resources.json")
             }.onSuccess {
+                ensureFolders()
                 appendLog("Ready: ${resources.absolutePath}")
                 _state.value = State.Done
             }.onFailure { e ->
@@ -142,6 +162,12 @@ object HorizonManager {
             for (file in listOf(prepareLog, gameLog, stdioLog, File(homeDir, "exit-code"))) {
                 if (file.isFile) add(file.name, file.readBytes())
             }
+            File(homeDir, "logs").listFiles { f -> f.isFile && f.name != "latest.log" && f.name != "stdio.log" && f.name != "prepare.log" }
+                .orEmpty().sortedByDescending { it.lastModified() }.take(3)
+                .forEach { add("logs/${it.name}", it.readBytes()) }
+            File(homeDir, "crash-reports").listFiles { f -> f.isFile }
+                .orEmpty().sortedByDescending { it.lastModified() }.take(3)
+                .forEach { add("crash-reports/${it.name}", it.readBytes()) }
             runCatching {
                 val process = ProcessBuilder("logcat", "-d", "-t", "4000").redirectErrorStream(true).start()
                 add("logcat.txt", process.inputStream.readBytes())
@@ -275,7 +301,7 @@ object HorizonManager {
         var last: Exception? = null
         repeat(3) {
             try {
-                http.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                downloadClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code} for $url")
                     response.body.byteStream().use { input -> temp.outputStream().use { input.copyTo(it) } }
                 }
@@ -329,8 +355,23 @@ object HorizonManager {
             }
             .start()
         this.process = process
+        val lastOutput = java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
+        val stalled = java.util.concurrent.atomic.AtomicBoolean(false)
+        val watchdog = scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(15_000)
+                val idle = System.currentTimeMillis() - lastOutput.get()
+                if (idle > PREPARE_STALL_MS) {
+                    stalled.set(true)
+                    appendLog("No output from horizon-prepare for ${idle / 60_000} minutes; stopping it.")
+                    process.destroyForcibly()
+                    break
+                }
+            }
+        }
         process.inputStream.bufferedReader().useLines { lines ->
             lines.forEach { line ->
+                lastOutput.set(System.currentTimeMillis())
                 appendLog(line)
                 if (line.startsWith("Exporting ") || line.startsWith("Running ") || line.startsWith("Copying ") || line.startsWith("Writing ") || line.startsWith("Compiling ") || line.startsWith("Importing ")) {
                     step(line)
@@ -338,14 +379,28 @@ object HorizonManager {
             }
         }
         val code = process.waitFor()
+        watchdog.cancel()
         this.process = null
+        if (stalled.get()) throw IOException("horizon-prepare stopped answering (low memory?). Lower the Java memory limit in Graphics or free RAM, then Prepare again; see ${prepareLog.absolutePath}")
         if (code != 0) throw IOException("horizon-prepare stopped with exit code $code; see ${prepareLog.absolutePath}")
     }
 
+    fun stopRunningGame(context: Context) {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val name = context.packageName + ":horizon"
+        val pids = am.runningAppProcesses.orEmpty().filter { it.processName == name }.map { it.pid }
+        if (pids.isEmpty()) return
+        pids.forEach { android.os.Process.killProcess(it) }
+        val deadline = android.os.SystemClock.uptimeMillis() + 3000
+        while (android.os.SystemClock.uptimeMillis() < deadline &&
+            am.runningAppProcesses.orEmpty().any { it.processName == name }) {
+            Thread.sleep(100)
+        }
+    }
+
     fun launchIntent(context: Context, profile: Profile?): Intent {
-        gameDir.mkdirs()
+        ensureFolders()
         privateRoot.mkdirs()
-        File(homeDir, "logs").mkdirs()
         val args = arrayListOf(
             "--resources", resources.absolutePath,
             "--game-dir", gameDir.absolutePath,
@@ -369,5 +424,6 @@ object HorizonManager {
             .putStringArrayListExtra(HorizonActivity.EXTRA_ARGS, args)
             .putExtra(HorizonActivity.EXTRA_GAME_DIR, gameDir.absolutePath)
             .putExtra(HorizonActivity.EXTRA_HOME, homeDir.absolutePath)
+            .putExtra(HorizonActivity.EXTRA_CACHE, cacheRoot.apply { mkdirs() }.absolutePath)
     }
 }

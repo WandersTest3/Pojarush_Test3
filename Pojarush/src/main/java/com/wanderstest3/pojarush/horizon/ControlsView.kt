@@ -145,6 +145,9 @@ class ControlsView(
     }
 
     private val roles = HashMap<Int, Role>()
+    private var savedToggles: BooleanArray? = null
+    private var savedLocks: BooleanArray? = null
+    var menuHold = false
 
     init {
         setLayout(initial)
@@ -153,6 +156,8 @@ class ControlsView(
 
     fun setLayout(next: ControlLayout) {
         releaseAll()
+        savedToggles = null
+        savedLocks = null
         layout = next
         layerVisible = next.layers.associate { it.id to it.visible }.toMutableMap()
         layerVisibility = next.layers.associate { it.id to it.visibility }
@@ -207,11 +212,48 @@ class ControlsView(
 
     fun setCaptured(on: Boolean) {
         if (on == captured) return
-        releaseAll()
+        if (on) releaseAll() else pause()
         captured = on
-        if (!on && virtualMouse) {
-            centerCursorIfUnset()
-            HorizonBridge.cursor(cursorX, cursorY)
+        if (on) resumeIfPossible()
+        if (!on) {
+            if (width > 0) {
+                cursorX = width / 2f
+                cursorY = height / 2f
+            }
+            if (virtualMouse) HorizonBridge.cursor(cursorX, cursorY)
+        }
+        invalidate()
+    }
+
+    fun pause() {
+        if (savedToggles == null && !editMode) {
+            savedToggles = toggled.copyOf()
+            savedLocks = stickLocked.copyOf()
+        }
+        releaseAll()
+    }
+
+    fun resumeIfPossible() {
+        val toggles = savedToggles ?: return
+        if (menuHold || !captured || editMode) return
+        val locks = savedLocks
+        savedToggles = null
+        savedLocks = null
+        toggles.forEachIndexed { i, on ->
+            if (on && i < toggled.size && i < layout.buttons.size) {
+                toggled[i] = true
+                layout.buttons[i].toggle.forEach(::down)
+            }
+        }
+        locks?.forEachIndexed { i, on ->
+            if (on && i < stickLocked.size && i < layout.sticks.size) {
+                val s = layout.sticks[i]
+                stickLocked[i] = true
+                setStickActions(i, s.directions[ControlLayout.NORTH].orEmpty())
+                s.lock.forEach(::down)
+                stickKnob[i][0] = 0f
+                stickKnob[i][1] = -stickCenters[i][2]
+            }
         }
         invalidate()
     }
@@ -334,8 +376,8 @@ class ControlsView(
             stickCenters[i][1] = (h - size) * s.y + size / 2f
             stickCenters[i][2] = size / 2f
         }
-        val mw = 52f * density
-        val mh = 22f * density
+        val mw = 34f * density
+        val mh = 34f * density
         val left = (w - mw) * settings.menuX.coerceIn(0f, 1f)
         val top = (h - mh) * settings.menuY.coerceIn(0f, 1f)
         menuRect.set(left, top, left + mw, top + mh)
@@ -873,7 +915,7 @@ class ControlsView(
         }
         if (showHandle) {
             fill.color = alpha(Color.argb(170, 0x57, 0x19, 0x7F), opacity.coerceAtLeast(0.50f))
-            canvas.drawRoundRect(menuRect, 8f * density, 8f * density, fill)
+            canvas.drawRect(menuRect, fill)
             text.color = Color.WHITE
             text.textSize = 13f * scaledDensity
             canvas.drawText("☰", menuRect.centerX(), menuRect.centerY() - (text.descent() + text.ascent()) / 2f, text)

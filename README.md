@@ -48,3 +48,10 @@ also reachable from the launcher. Edited layouts are saved as Pojarush `.json` f
 `Pojarush_Test3/controls/`. Back is Escape.
 
 Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
+
+## Changes in this build (not compiled or tested in game)
+
+- Several accounts (offline, Microsoft, Ely.by) with a switcher; skin viewer with cape.
+- Mods page: import and list `.hmod` mods, resource packs and shader packs into the game folder; `horizon-mods`, `resourcepacks`, `shaderpacks` are created automatically.
+- Graphics API (Auto / Vulkan / OpenGL) through `HORIZON_GRAPHICS_API`; resolution recommendations.
+- Logs now go to the app's private storage (shared storage has no file locking). `logging.rs` also tolerates missing locks; it needs `build-android.sh` to take effect.

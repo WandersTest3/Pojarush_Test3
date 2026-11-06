@@ -538,7 +538,9 @@ pub fn piece_counts<R: Read + std::io::Seek>(
         let Ok(mut entry) = zip.by_index(i) else {
             continue;
         };
-        let name = entry.name().to_owned();
+        let Ok(name) = entry.name().map(|n| n.into_owned()) else {
+            continue;
+        };
         let Some((ns, rest)) = name
             .strip_prefix("data/")
             .and_then(|r| r.strip_suffix(".json"))
@@ -703,8 +705,10 @@ pub fn structure_set_tags<R: Read + std::io::Seek>(
         let Ok(mut entry) = zip.by_index(i) else {
             continue;
         };
-        let Some(id) = entry
-            .name()
+        let Ok(entry_name) = entry.name().map(|n| n.into_owned()) else {
+            continue;
+        };
+        let Some(id) = entry_name
             .strip_prefix("data/")
             .and_then(|r| r.split_once("/tags/worldgen/structure_set/"))
             .and_then(|(ns, path)| Some(format!("{ns}:{}", path.strip_suffix(".json")?)))
@@ -776,8 +780,10 @@ pub fn loader_biome_tags(work: &Path) -> BTreeMap<String, Value> {
             let Ok(mut entry) = zip.by_index(i) else {
                 continue;
             };
-            let Some(path) = entry
-                .name()
+            let Ok(entry_name) = entry.name().map(|n| n.into_owned()) else {
+                continue;
+            };
+            let Some(path) = entry_name
                 .strip_prefix("data/c/tags/worldgen/biome/")
                 .and_then(|p| p.strip_suffix(".json"))
                 .map(str::to_owned)

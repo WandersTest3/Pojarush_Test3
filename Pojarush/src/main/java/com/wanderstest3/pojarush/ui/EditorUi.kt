@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -70,6 +71,7 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
     var version by remember { mutableIntStateOf(0) }
     var dirty by remember { mutableStateOf(false) }
     var onLeft by remember { mutableStateOf(false) }
+    var confirmExit by remember { mutableStateOf(false) }
     val savedText = stringResource(R.string.editor_saved, "%s")
     val suffix = stringResource(R.string.editor_suffix)
     val defaultName = stringResource(R.string.controls_default_name)
@@ -159,8 +161,36 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                 )
                 controls.editLayout(l.copy(sticks = l.sticks + s), Selection.Stick(l.sticks.size))
             }) { Text(stringResource(R.string.editor_add_stick)) }
-            TextButton(onClick = { save() }) { Text(stringResource(R.string.editor_save), fontWeight = FontWeight.Bold) }
-            TextButton(onClick = onExit) { Text(stringResource(if (dirty) R.string.editor_discard else R.string.editor_exit)) }
+            if (dirty) {
+                Text(stringResource(R.string.editor_modified), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            }
+            TextButton(onClick = { save() }) {
+                Text(stringResource(R.string.editor_save), fontWeight = FontWeight.Bold, color = if (dirty) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary)
+            }
+            TextButton(onClick = { if (dirty) confirmExit = true else onExit() }) { Text(stringResource(R.string.editor_exit)) }
+        }
+        if (confirmExit) {
+            AlertDialog(
+                onDismissRequest = { confirmExit = false },
+                title = { Text(stringResource(R.string.editor_unsaved_title)) },
+                text = { Text(stringResource(R.string.editor_unsaved_text)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmExit = false
+                        save()
+                        onExit()
+                    }) { Text(stringResource(R.string.editor_save_exit)) }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = { confirmExit = false }) { Text(stringResource(R.string.cancel)) }
+                        TextButton(onClick = {
+                            confirmExit = false
+                            onExit()
+                        }) { Text(stringResource(R.string.editor_discard), color = MaterialTheme.colorScheme.error) }
+                    }
+                }
+            )
         }
         val current = selection
         if (current != null) {
@@ -252,7 +282,7 @@ private fun ButtonEditor(
     SettingSlider(stringResource(R.string.editor_height), dpOf(b.height), 20f..240f, 2f, { "${it.toInt()} dp" }) { v -> onChange { it.copy(height = Size(v)) } }
     Text(stringResource(R.string.editor_mode), style = MaterialTheme.typography.bodyMedium)
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(Mode.HOLD to R.string.editor_mode_hold, Mode.TAP to R.string.editor_mode_tap, Mode.TOGGLE to R.string.editor_mode_toggle).forEach { (m, label) ->
+        listOf(Mode.HOLD to R.string.editor_mode_hold, Mode.TOGGLE to R.string.editor_mode_toggle).forEach { (m, label) ->
             FilterChip(selected = mode == m, onClick = { onChange(withActions(all, m)) }, label = { Text(stringResource(label)) })
         }
     }

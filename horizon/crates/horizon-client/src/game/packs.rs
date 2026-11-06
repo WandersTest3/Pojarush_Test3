@@ -19,11 +19,18 @@ use std::{
     sync::Arc,
 };
 
-/// Where overlay roots are built (beside options.txt).
+/// The `.horizon-cache` folder: beside options.txt, or `HORIZON_CACHE_DIR`
+/// when the game folder's filesystem cannot hold the overlays' symlinks
+/// (Android's shared storage).
+pub fn cache_root() -> PathBuf {
+    std::env::var_os("HORIZON_CACHE_DIR")
+        .filter(|d| !d.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default().join(".horizon-cache"))
+}
+/// Where overlay roots are built.
 pub fn cache_dir() -> PathBuf {
-    std::env::current_dir()
-        .unwrap_or_default()
-        .join(".horizon-cache/resourcepacks")
+    cache_root().join("resourcepacks")
 }
 pub fn packs_dir() -> PathBuf {
     std::env::current_dir()

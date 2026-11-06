@@ -99,7 +99,7 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         CardTitle(stringResource(R.string.nav_controls))
         SettingSlider(stringResource(R.string.controls_opacity), settings.opacity, 0.10f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.opacity = it; onChange(Change.CONTROLS) }
         SettingSlider(stringResource(R.string.controls_size), settings.buttonScale, 0.50f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.buttonScale = it; onChange(Change.CONTROLS) }
-        SettingSlider(stringResource(R.string.controls_sensitivity), settings.lookSensitivity, 0.10f..3.00f, 0.05f, { "${fmt(it)}x" }) { settings.lookSensitivity = it; onChange(Change.CONTROLS) }
+        SettingSlider(stringResource(R.string.controls_sensitivity), settings.lookSensitivity, 0.10f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.lookSensitivity = it; onChange(Change.CONTROLS) }
         SettingSlider(stringResource(R.string.controls_long_press), settings.longPressMs.toFloat(), 150f..800f, 50f, { "${it.toInt()} ms" }) { settings.longPressMs = it.toInt(); onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_tap_use), settings.tapToUse) { settings.tapToUse = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_hotbar), settings.hotbarTouch) { settings.hotbarTouch = it; onChange(Change.CONTROLS) }
@@ -158,8 +158,14 @@ fun MemorySettings(settings: ControlSettings) {
         (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(info)
         (info.totalMem / (1024L * 1024L)).toInt()
     }
-    val maxMb = ((totalMb - 1024) / 256 * 256).coerceAtLeast(1024)
+    val maxMb = (totalMb - 1024).coerceAtLeast(1024)
     var auto by remember { mutableStateOf(settings.javaHeapMb <= 0) }
+    var heapText by remember { mutableStateOf(settings.javaHeapMb.coerceIn(512, maxMb).toString()) }
+    fun applyHeap(mb: Int) {
+        val v = mb.coerceIn(512, maxMb)
+        settings.javaHeapMb = v
+        heapText = v.toString()
+    }
     PojarushCard {
         CardTitle(stringResource(R.string.memory_title))
         Hint(stringResource(R.string.memory_desc))
@@ -167,6 +173,7 @@ fun MemorySettings(settings: ControlSettings) {
         SettingSwitch(stringResource(R.string.memory_auto), auto, stringResource(R.string.memory_auto_desc)) {
             auto = it
             settings.javaHeapMb = if (it) 0 else 2048.coerceAtMost(maxMb)
+            heapText = settings.javaHeapMb.coerceIn(512, maxMb).toString()
         }
         if (!auto) {
             SettingSlider(
@@ -175,7 +182,21 @@ fun MemorySettings(settings: ControlSettings) {
                 512f..maxMb.toFloat(),
                 256f,
                 { context.getString(R.string.memory_value, it.toInt()) }
-            ) { settings.javaHeapMb = (Math.round(it / 256f) * 256).coerceIn(512, maxMb) }
+            ) { applyHeap(Math.round(it)) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = heapText,
+                    onValueChange = { heapText = it.filter(Char::isDigit).take(5) },
+                    modifier = Modifier.width(150.dp),
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.memory_exact)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { heapText.toIntOrNull()?.let(::applyHeap) })
+                )
+                Text("MB")
+                Button(onClick = { heapText.toIntOrNull()?.let(::applyHeap) }) { Text(stringResource(R.string.graphics_apply)) }
+            }
+            Hint(stringResource(R.string.memory_range, 512, maxMb))
         }
     }
 }
@@ -263,8 +284,58 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             }
             Hint(stringResource(R.string.graphics_stretch))
         }
+        Hint(stringResource(R.string.graphics_recommended))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(67, 45).forEach { p ->
+                FilterChip(
+                    selected = !fixed && percent == p,
+                    onClick = {
+                        fixed = false
+                        settings.fixedResolution = false
+                        applyPercent(p)
+                    },
+                    label = { Text(stringResource(R.string.graphics_rec_fps, p)) }
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(1100 to 720, 1600 to 1080).forEach { (w, h) ->
+                FilterChip(
+                    selected = fixed && settings.fixedWidth == w && settings.fixedHeight == h,
+                    onClick = {
+                        fixed = true
+                        settings.fixedResolution = true
+                        widthText = w.toString()
+                        heightText = h.toString()
+                        applyFixed()
+                    },
+                    label = { Text(stringResource(R.string.graphics_rec_stretch, w, h)) }
+                )
+            }
+        }
         val (rw, rh) = remember(version) { settings.renderSize(screenW, screenH) }
         Text(stringResource(R.string.graphics_render, rw, rh), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
         Hint(stringResource(R.string.graphics_more))
+    }
+}
+
+@Composable
+fun GraphicsApiSettings(settings: ControlSettings) {
+    var api by remember { mutableStateOf(settings.graphicsApi) }
+    PojarushCard {
+        CardTitle(stringResource(R.string.graphics_api_title))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(
+                "auto" to R.string.graphics_api_auto,
+                "vulkan" to R.string.graphics_api_vulkan,
+                "opengl" to R.string.graphics_api_opengl,
+            ).forEach { (id, label) ->
+                FilterChip(selected = api == id, onClick = {
+                    api = id
+                    settings.graphicsApi = id
+                }, label = { Text(stringResource(label)) })
+            }
+        }
+        Hint(stringResource(R.string.graphics_api_desc))
     }
 }
