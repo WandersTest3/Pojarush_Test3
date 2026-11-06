@@ -51,9 +51,7 @@ impl ProcessorData {
             let Ok(mut entry) = zip.by_index(i) else {
                 continue;
             };
-            let Ok(name) = entry.name().map(|n| n.into_owned()) else {
-                continue;
-            };
+            let name = entry.name().to_owned();
             let Some((ns, rest)) = name
                 .strip_prefix("data/")
                 .and_then(|r| r.strip_suffix(".json"))

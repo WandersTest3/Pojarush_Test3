@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::Pack;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Lang(HashMap<String, String>);
 
 impl Lang {
@@ -24,13 +24,6 @@ impl Lang {
                 lang.read(&text);
             }
         }
-        lang
-    }
-
-    /// The names one `.lang` file's text gives.
-    pub fn parse(text: &str) -> Self {
-        let mut lang = Self::default();
-        lang.read(text);
         lang
     }
 

@@ -1,6 +1,5 @@
-//! The arithmetic of `#if` and `#elif` (spec 1.5, GLSL 4.60 §3.3): `defined`, integer
-//! literals, macros expanded to their values, and the C operators with C precedence. Float
-//! literals count as numbers too, as GL drivers take them (a pack's `#define AMOUNT 0.`).
+//! The integer arithmetic of `#if` and `#elif` (spec 1.5, GLSL 4.60 §3.3): `defined`, integer
+//! literals, macros expanded to their values, and the C operators with C precedence.
 //! An identifier that is not a macro counts as 0, as in C: GLSL would reject the line, and a
 //! pack would then lose a whole section of its settings over one unknown name.
 
@@ -10,20 +9,13 @@ use crate::macros::{is_ident, is_ident_start};
 /// The value of a condition; `Err` says what is wrong with it.
 pub fn eval_condition(expr: &str, macros: &Macros) -> Result<i64, String> {
     let tokens = tokens(&resolve_defined(expr, macros)?, macros)?;
-    let real = tokens
-        .iter()
-        .any(|t| matches!(t, Token::Num(n) if n.fract() != 0.0))
-        || expr.contains('.');
     let mut parser = Parser {
         tokens: &tokens,
         at: 0,
-        real,
     };
     let value = parser.binary(0)?;
     match parser.tokens.get(parser.at) {
-        // A fraction is true, as any value but zero.
-        None if value != 0.0 && value.abs() < 1.0 => Ok(value.signum() as i64),
-        None => Ok(value as i64),
+        None => Ok(value),
         Some(t) => Err(format!("unexpected `{}`", t.text())),
     }
 }
@@ -179,7 +171,7 @@ fn find_word(text: &str, word: &str) -> Option<usize> {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Token {
-    Num(f64),
+    Num(i64),
     Op(&'static str),
 }
 
@@ -202,29 +194,19 @@ fn tokens(expr: &str, macros: &Macros) -> Result<Vec<Token>, String> {
     let mut out = Vec::new();
     let mut rest = expanded.trim_start();
     while let Some(c) = rest.chars().next() {
-        let fraction = c == '.' && rest[1..].starts_with(|c: char| c.is_ascii_digit());
-        if c.is_ascii_digit() || fraction {
+        if c.is_ascii_digit() {
             let len = rest
                 .find(|c: char| !c.is_ascii_alphanumeric())
                 .unwrap_or(rest.len());
-            if fraction || rest[len..].starts_with('.') {
-                let len = rest
-                    .find(|c: char| !(c.is_ascii_alphanumeric() || c == '.'))
-                    .unwrap_or(rest.len());
-                let text = rest[..len].trim_end_matches(['f', 'F']);
-                let n = text
-                    .parse::<f64>()
-                    .map_err(|_| format!("`{text}` is not a number"))?;
-                out.push(Token::Num(n));
-                rest = &rest[len..];
-            } else {
-                out.push(Token::Num(int_literal(&rest[..len])? as f64));
-                rest = &rest[len..];
+            if rest[len..].starts_with('.') {
+                return Err(format!("`{}`: `#if` takes integers only", &rest[..len + 1]));
             }
+            out.push(Token::Num(int_literal(&rest[..len])?));
+            rest = &rest[len..];
         } else if is_ident_start(c) {
             // Not a macro: 0, as the C preprocessor counts it.
             let len = rest.find(|c: char| !is_ident(c)).unwrap_or(rest.len());
-            out.push(Token::Num(0.0));
+            out.push(Token::Num(0));
             rest = &rest[len..];
         } else {
             let op = OPS
@@ -255,8 +237,6 @@ fn int_literal(text: &str) -> Result<i64, String> {
 struct Parser<'a> {
     tokens: &'a [Token],
     at: usize,
-    /// A float literal appears: `/` and `%` divide as floats.
-    real: bool,
 }
 
 /// Binary operators from the loosest to the tightest (GLSL §5.1 / §3.3).
@@ -280,7 +260,7 @@ impl Parser<'_> {
         t
     }
 
-    fn binary(&mut self, level: usize) -> Result<f64, String> {
+    fn binary(&mut self, level: usize) -> Result<i64, String> {
         if level == LEVELS.len() {
             return self.unary();
         }
@@ -291,12 +271,12 @@ impl Parser<'_> {
             }
             self.at += 1;
             let right = self.binary(level + 1)?;
-            left = apply(op, left, right, self.real)?;
+            left = apply(op, left, right)?;
         }
         Ok(left)
     }
 
-    fn unary(&mut self) -> Result<f64, String> {
+    fn unary(&mut self) -> Result<i64, String> {
         match self.next() {
             Some(Token::Num(n)) => Ok(n),
             Some(Token::Op("(")) => {
@@ -306,41 +286,37 @@ impl Parser<'_> {
                     _ => Err("missing `)`".into()),
                 }
             }
-            Some(Token::Op("-")) => Ok(-self.unary()?),
+            Some(Token::Op("-")) => Ok(self.unary()?.wrapping_neg()),
             Some(Token::Op("+")) => self.unary(),
-            Some(Token::Op("!")) => Ok(f64::from(u8::from(self.unary()? == 0.0))),
-            Some(Token::Op("~")) => Ok(!(self.unary()? as i64) as f64),
+            Some(Token::Op("!")) => Ok((self.unary()? == 0) as i64),
+            Some(Token::Op("~")) => Ok(!self.unary()?),
             Some(t) => Err(format!("unexpected `{}`", t.text())),
             None => Err("the condition ends too early".into()),
         }
     }
 }
 
-fn apply(op: &str, a: f64, b: f64, real: bool) -> Result<f64, String> {
-    let truth = |v: bool| f64::from(u8::from(v));
-    let (i, j) = (a as i64, b as i64);
+fn apply(op: &str, a: i64, b: i64) -> Result<i64, String> {
     Ok(match op {
-        "||" => truth(a != 0.0 || b != 0.0),
-        "&&" => truth(a != 0.0 && b != 0.0),
-        "|" => (i | j) as f64,
-        "^" => (i ^ j) as f64,
-        "&" => (i & j) as f64,
-        "==" => truth(a == b),
-        "!=" => truth(a != b),
-        "<" => truth(a < b),
-        ">" => truth(a > b),
-        "<=" => truth(a <= b),
-        ">=" => truth(a >= b),
-        "<<" => i.wrapping_shl(j as u32) as f64,
-        ">>" => i.wrapping_shr(j as u32) as f64,
-        "+" => a + b,
-        "-" => a - b,
-        "*" => a * b,
-        "/" | "%" if b == 0.0 => return Err("division by zero".into()),
-        "/" if real => a / b,
-        "%" if real => a % b,
-        "/" => i.wrapping_div(j) as f64,
-        _ => i.wrapping_rem(j) as f64,
+        "||" => (a != 0 || b != 0) as i64,
+        "&&" => (a != 0 && b != 0) as i64,
+        "|" => a | b,
+        "^" => a ^ b,
+        "&" => a & b,
+        "==" => (a == b) as i64,
+        "!=" => (a != b) as i64,
+        "<" => (a < b) as i64,
+        ">" => (a > b) as i64,
+        "<=" => (a <= b) as i64,
+        ">=" => (a >= b) as i64,
+        "<<" => a.wrapping_shl(b as u32),
+        ">>" => a.wrapping_shr(b as u32),
+        "+" => a.wrapping_add(b),
+        "-" => a.wrapping_sub(b),
+        "*" => a.wrapping_mul(b),
+        "/" | "%" if b == 0 => return Err("division by zero".into()),
+        "/" => a.wrapping_div(b),
+        _ => a.wrapping_rem(b),
     })
 }
 
@@ -380,23 +356,10 @@ mod tests {
         assert_eq!(eval("undefinedFeature"), Ok(0));
     }
 
-    /// Float values, as GL drivers read them (I Like Vanilla's `#if AMBIENT_CEL_AMOUNT != 0` with
-    /// `#define AMBIENT_CEL_AMOUNT 0.0`).
-    #[test]
-    fn float_values_count() {
-        assert_eq!(eval("0. != 0"), Ok(0));
-        assert_eq!(eval("4. != 0"), Ok(1));
-        assert_eq!(eval("0.7 > 0.5"), Ok(1));
-        assert_eq!(eval(".25 * 4.0 == 1"), Ok(1));
-        assert_eq!(eval("1.5f"), Ok(1));
-        assert_eq!(eval("7 / 2"), Ok(3));
-        assert_eq!(eval("SHADOW_RES == 2048.0"), Ok(1));
-    }
-
     #[test]
     fn bad_conditions_say_why() {
         assert!(eval("1 / 0").is_err());
-        assert!(eval("SHADOW_RES == 0.5 0").is_err());
+        assert!(eval("SHADOW_RES == 0.5").is_err());
         assert!(eval("(1 + 2").is_err());
         assert!(eval("1 2").is_err());
         assert!(eval("").is_err());

@@ -59,10 +59,9 @@ android-activity = { version = "0.6.1", features = ["game-activity"] }
 jni = "0.21"
 
 [features]
-default = ["mods", "audio"]
+default = ["audio"]
 audio = ["horizon-client/audio"]
 controllers = []
-mods = ["horizon-client/mods", "horizon-mods/runtime"]
 rng-trace = ["horizon-core/rng-trace"]
 
 [lints]
