@@ -47,7 +47,7 @@ winit = "0.30.13"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [target.'cfg(unix)'.dependencies]
-rustix = { version = "1", default-features = false, features = ["std", "time"] }
+rustix = { version = "1", default-features = false, features = ["std", "time", "fs"] }
 
 [target.'cfg(windows)'.dependencies]
 wgpu = { version = "30.0.1", default-features = false, features = ["dx12"] }

@@ -405,17 +405,34 @@ fn link(target: &Path, at: &Path) -> io::Result<()> {
         Ok(())
     } else {
         let _ = std::fs::remove_file(at);
-        std::fs::copy(&target, at).map(|_| ())
+        copy_any(&target, at)
     }
 }
 /// Whether `path` (a freshly created symlink) can actually be opened and read from, not
-/// just whether creating the link itself succeeded.
+/// just whether creating the link itself succeeded. A directory is readable when it lists.
 #[cfg(unix)]
 fn readable(path: &Path) -> bool {
     use std::io::Read;
-    std::fs::File::open(path)
-        .and_then(|mut f| f.read(&mut [0u8; 1]))
-        .is_ok()
+    match std::fs::metadata(path) {
+        Ok(meta) if meta.is_dir() => std::fs::read_dir(path).is_ok(),
+        Ok(_) => std::fs::File::open(path)
+            .and_then(|mut f| f.read(&mut [0u8; 1]))
+            .is_ok(),
+        Err(_) => false,
+    }
+}
+#[cfg(unix)]
+fn copy_any(from: &Path, to: &Path) -> io::Result<()> {
+    if std::fs::metadata(from)?.is_dir() {
+        std::fs::create_dir_all(to)?;
+        for entry in std::fs::read_dir(from)? {
+            let entry = entry?;
+            copy_any(&entry.path(), &to.join(entry.file_name()))?;
+        }
+        Ok(())
+    } else {
+        std::fs::copy(from, to).map(|_| ())
+    }
 }
 #[cfg(not(unix))]
 fn link(target: &Path, at: &Path) -> io::Result<()> {

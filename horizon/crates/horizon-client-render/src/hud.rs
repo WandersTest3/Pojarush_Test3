@@ -85,6 +85,32 @@ pub const GLYPH_ROWS: u32 = 512;
 /// The largest atlas side: the 2D texture limit of the GPUs Horizon runs on
 /// (Apple silicon, RADV and Intel allow 16384; NVIDIA 32768).
 pub const MAX_ATLAS_SIZE: u32 = 16384;
+
+static ATLAS_LIMIT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+pub fn set_atlas_limit(limit: u32) {
+    if limit > 0 {
+        ATLAS_LIMIT.store(limit.min(MAX_ATLAS_SIZE), std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+fn atlas_limit_after_device() -> u32 {
+    if cfg!(target_os = "android") {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(4);
+        while ATLAS_LIMIT.load(std::sync::atomic::Ordering::Relaxed) == 0 && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
+    atlas_limit()
+}
+
+pub fn atlas_limit() -> u32 {
+    match ATLAS_LIMIT.load(std::sync::atomic::Ordering::Relaxed) {
+        0 if cfg!(target_os = "android") => 4096,
+        0 => MAX_ATLAS_SIZE,
+        limit => limit,
+    }
+}
 /// 128x128 atlas slots for map textures. A lobby paints its signs as walls of
 /// framed maps, so the pool holds a wall; too few slots re-upload every map
 /// every frame. 26.3's `MapTextureManager` keeps a texture per map instead.
@@ -445,6 +471,126 @@ impl HudAtlas {
             width = (width * 2).min(max);
         }
     }
+    fn skyline(images: &[PackedImage], max: u32) -> Result<(u32, Vec<(u32, u32)>, u32)> {
+        let width = max;
+        let mut line: Vec<(u32, u32, u32)> = vec![(0, 0, width)];
+        let mut placements = Vec::with_capacity(images.len());
+        let mut top = 0u32;
+        for (_, w, h, _) in images {
+            let (pw, ph) = (w + 1, h + 1);
+            if pw > width {
+                return Err(format!("a {w}x{h} texture is wider than a {max} atlas").into());
+            }
+            let mut best: Option<(u32, u32, usize)> = None;
+            for i in 0..line.len() {
+                let x = line[i].0;
+                if x + pw > width {
+                    break;
+                }
+                let mut y = 0;
+                let mut covered = 0;
+                let mut j = i;
+                while covered < pw && j < line.len() {
+                    y = y.max(line[j].1);
+                    covered += line[j].2;
+                    j += 1;
+                }
+                if covered < pw {
+                    continue;
+                }
+                if best.is_none_or(|(by, bx, _)| y < by || (y == by && x < bx)) {
+                    best = Some((y, x, i));
+                }
+            }
+            let Some((y, x, i)) = best else {
+                return Err("no room left in the atlas".into());
+            };
+            if y + ph + GLYPH_ROWS > max {
+                let texels: u64 = images.iter().map(|i| u64::from(i.1) * u64::from(i.2)).sum();
+                return Err(format!(
+                    "the textures ({} images, {texels} texels) do not fit a {max}x{max} atlas",
+                    images.len()
+                )
+                .into());
+            }
+            placements.push((x, y));
+            top = top.max(y + ph);
+            let end = (x + pw).min(width);
+            let mut next = Vec::with_capacity(line.len() + 2);
+            next.extend_from_slice(&line[..i]);
+            next.push((x, y + ph, end - x));
+            for &(sx, sy, sw) in &line[i..] {
+                let s_end = sx + sw;
+                if s_end <= end {
+                    continue;
+                }
+                let start = sx.max(end);
+                next.push((start, sy, s_end - start));
+            }
+            let mut merged: Vec<(u32, u32, u32)> = Vec::with_capacity(next.len());
+            for seg in next {
+                match merged.last_mut() {
+                    Some(last) if last.1 == seg.1 => last.2 += seg.2,
+                    _ => merged.push(seg),
+                }
+            }
+            line = merged;
+        }
+        Ok((width, placements, top))
+    }
+
+    fn fit(images: &[PackedImage], max: u32) -> Result<(u32, Vec<(u32, u32)>, u32)> {
+        match Self::layout(images, max) {
+            Ok(done) => Ok(done),
+            Err(shelf) => Self::skyline(images, max).map_err(|_| shelf),
+        }
+    }
+
+    fn shrink_gui(
+        images: &mut [PackedImage],
+        side: u32,
+        keep: &HashSet<String>,
+        sizes: &mut HashMap<String, (u32, u32)>,
+    ) -> usize {
+        let mut changed = 0;
+        for (name, w, h, data) in images.iter_mut() {
+            let gui = name.starts_with("gui/") || name.contains(":gui/");
+            if !gui || keep.contains(name.as_str()) || *w < side || *h < side || *w < 2 || *h < 2 {
+                continue;
+            }
+            let (nw, nh) = (*w / 2, *h / 2);
+            let mut out = vec![0u8; (nw * nh * 4) as usize];
+            for y in 0..nh {
+                for x in 0..nw {
+                    let mut acc = [0u32; 4];
+                    let mut weight = 0u32;
+                    for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                        let i = (((y * 2 + dy) * *w + x * 2 + dx) * 4) as usize;
+                        let a = u32::from(data[i + 3]);
+                        for c in 0..3 {
+                            acc[c] += u32::from(data[i + c]) * a;
+                        }
+                        acc[3] += a;
+                        weight += a;
+                    }
+                    let o = ((y * nw + x) * 4) as usize;
+                    if weight > 0 {
+                        for c in 0..3 {
+                            out[o + c] = (acc[c] / weight) as u8;
+                        }
+                    }
+                    out[o + 3] = (acc[3] / 4) as u8;
+                }
+            }
+            sizes.entry(name.clone()).or_insert((*w, *h));
+            *w = nw;
+            *h = nh;
+            *data = out;
+            changed += 1;
+        }
+        changed
+    }
+
     /// Pack the textures under these folders of `textures/`, and for the
     /// `full` atlas the generated sprites and the run-time slots too.
     fn pack(root: &Path, defaults: &Path, folders: &[&str], full: bool) -> Result<Self> {
@@ -576,10 +722,29 @@ impl HudAtlas {
             }
         }
         images.sort_by(|a, b| b.2.cmp(&a.2).then(b.1.cmp(&a.1)));
-        let (width, placements, glyph_region) = Self::layout(&images, MAX_ATLAS_SIZE)?;
+        let limit = if full { atlas_limit_after_device() } else { atlas_limit() };
+        let (width, placements, glyph_region) = match Self::fit(&images, limit) {
+            Ok(done) => done,
+            Err(first) => {
+                let keep: HashSet<String> = animated.iter().cloned().chain(bordered.iter().cloned()).collect();
+                let mut result = Err(first);
+                for side in [512, 256, 128, 64] {
+                    if Self::shrink_gui(&mut images, side, &keep, &mut gui_sizes) == 0 {
+                        continue;
+                    }
+                    images.sort_by(|a, b| b.2.cmp(&a.2).then(b.1.cmp(&a.1)));
+                    result = Self::fit(&images, limit);
+                    if result.is_ok() {
+                        log::warn!("Horizon: GUI textures halved to fit this GPU's {limit}x{limit} atlas");
+                        break;
+                    }
+                }
+                result?
+            }
+        };
         // A multiple of 1024 rather than a power of two: the default resources
         // need 4096x5120 (8192 rows before), Faithful 32x 4096x12288 (16384).
-        let height = (glyph_region + GLYPH_ROWS).next_multiple_of(1024);
+        let height = (glyph_region + GLYPH_ROWS).next_multiple_of(1024).min(limit);
         let mut pixels = vec![0u8; (width * height * 4) as usize];
         let mut sprites = HashMap::new();
         let mut translucent = HashSet::new();
@@ -2202,6 +2367,34 @@ mod tests {
         assert_eq!(atlas.sprites["mymod:gui/container/machine"].w, 176);
         assert!(atlas.sprites.contains_key("gui/container/furnace"));
         assert!(!atlas.sprites.contains_key("mymod:block/machine"));
+    }
+    #[test]
+    fn a_4096_gpu_gets_the_tighter_skyline_packing() {
+        let mut images = sized(1, 64, 3000);
+        images.extend(sized(3000, 64, 64));
+        assert!(HudAtlas::layout(&images, 4096).is_err());
+        let (width, placements, free) = HudAtlas::fit(&images, 4096).unwrap();
+        assert_eq!(width, 4096);
+        assert!(free + GLYPH_ROWS <= 4096);
+        assert_inside(&images, width, &placements, free);
+        for (i, a) in placements.iter().enumerate() {
+            for (j, b) in placements.iter().enumerate().skip(i + 1) {
+                let (aw, ah) = (images[i].1, images[i].2);
+                let (bw, bh) = (images[j].1, images[j].2);
+                let apart = a.0 + aw <= b.0 || b.0 + bw <= a.0 || a.1 + ah <= b.1 || b.1 + bh <= a.1;
+                assert!(apart, "{i} and {j} overlap");
+            }
+        }
+    }
+    #[test]
+    fn halving_a_gui_texture_keeps_its_gui_size() {
+        let mut images: Vec<PackedImage> = vec![("gui/big".into(), 4, 4, vec![200; 64]), ("block/stone".into(), 4, 4, vec![200; 64])];
+        let mut sizes = HashMap::new();
+        let changed = HudAtlas::shrink_gui(&mut images, 4, &HashSet::new(), &mut sizes);
+        assert_eq!(changed, 1);
+        assert_eq!((images[0].1, images[0].2, images[0].3.len()), (2, 2, 16));
+        assert_eq!(sizes["gui/big"], (4, 4));
+        assert_eq!(images[1].1, 4);
     }
     #[test]
     fn the_default_textures_keep_a_4096_wide_atlas() {

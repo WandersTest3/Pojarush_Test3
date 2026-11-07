@@ -104,15 +104,17 @@ impl Pack {
             let size = bytes.len() as u64;
             total += size;
             let max = if name.ends_with(".wgsl") {
-                if !used.contains(&name.as_str()) {
+                if !used.contains(&name.as_str()) && manifest.unsupported.is_empty() {
                     return Err(format!("{name} is not used by any stage or in shared"));
                 }
-                if std::str::from_utf8(bytes).is_err() {
+                if used.contains(&name.as_str()) && std::str::from_utf8(bytes).is_err() {
                     return Err(format!("{name}: not UTF-8"));
                 }
                 MAX_WGSL
             } else if name == MANIFEST || EXTRAS.contains(&name.as_str()) {
                 MAX_OTHER
+            } else if !manifest.unsupported.is_empty() {
+                continue;
             } else {
                 return Err(format!(
                     "{name}: a pack holds only {MANIFEST}, .wgsl files and {}",

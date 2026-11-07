@@ -97,14 +97,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+private const val TEXT_STYLE = "\uFE0E"
+
 private enum class Section(val label: Int, val glyph: String) {
-    Home(R.string.nav_home, "▶"),
-    Accounts(R.string.nav_accounts, "⚉"),
-    Controls(R.string.nav_controls, "✥"),
-    Mods(R.string.nav_mods, "✚"),
-    Mouse(R.string.nav_mouse, "➚"),
-    Graphics(R.string.nav_graphics, "▣"),
-    Logs(R.string.nav_logs, "☰"),
+    Home(R.string.nav_home, ""),
+    Accounts(R.string.nav_accounts, "⚉$TEXT_STYLE"),
+    Controls(R.string.nav_controls, "✥$TEXT_STYLE"),
+    Mouse(R.string.nav_mouse, "➚$TEXT_STYLE"),
+    Mods(R.string.nav_mods, "✚$TEXT_STYLE"),
+    Graphics(R.string.nav_graphics, "▣$TEXT_STYLE"),
+    Logs(R.string.nav_logs, "☰$TEXT_STYLE"),
 }
 
 class MainActivity : ComponentActivity() {
@@ -119,10 +121,26 @@ class MainActivity : ComponentActivity() {
         setContent {
             PojarushTheme {
                 Box(modifier = Modifier.fillMaxSize().background(com.wanderstest3.pojarush.ui.pojarushBackgroundBrush())) {
+                    com.wanderstest3.pojarush.ui.WallpaperBackground()
                     PojarushScreen()
                 }
             }
         }
+        askNotifications()
+    }
+
+    private fun askNotifications() {
+        if (Build.VERSION.SDK_INT < 33) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) return
+        val prefs = getSharedPreferences("pojarush_launcher", MODE_PRIVATE)
+        if (prefs.getBoolean("asked_notifications", false)) return
+        prefs.edit().putBoolean("asked_notifications", true).apply()
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Thread { HorizonManager.syncLogs() }.start()
     }
 }
 
@@ -156,7 +174,7 @@ private fun PojarushScreen() {
 
     Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(modifier = Modifier.width(176.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(modifier = Modifier.width(176.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Header()
                 Spacer(Modifier.height(6.dp))
                 Section.entries.forEach { s ->
@@ -193,6 +211,7 @@ private fun PojarushScreen() {
                                 ResolutionSettings(settings) {}
                                 GraphicsApiSettings(settings)
                                 MemorySettings(settings)
+                                com.wanderstest3.pojarush.ui.AppearanceSettings(settings)
                             }
                             Section.Logs -> {}
                         }
@@ -234,7 +253,14 @@ private fun NavItem(section: Section, selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(section.glyph, modifier = Modifier.width(26.dp), color = if (selected) Color.White else MaterialTheme.colorScheme.primary)
+        val tint = if (selected) Color.White else MaterialTheme.colorScheme.primary
+        if (section == Section.Home) {
+            Box(modifier = Modifier.width(26.dp)) {
+                androidx.compose.material3.Icon(painterResource(R.drawable.ic_play), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            }
+        } else {
+            Text(section.glyph, modifier = Modifier.width(26.dp), color = tint)
+        }
         Text(
             stringResource(section.label),
             style = MaterialTheme.typography.bodyLarge,
@@ -391,7 +417,9 @@ private fun PlayButton(modifier: Modifier) {
             }
         }
     ) {
-        Text("▶  " + stringResource(R.string.play), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.Icon(painterResource(R.drawable.ic_play), contentDescription = null, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(stringResource(R.string.play), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -431,7 +459,7 @@ private fun GameCard(storageVersion: Int) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             val ready = supported && prepared
             Text(
-                text = if (ready) "✔ " + stringResource(R.string.ready_to_play) else stringResource(R.string.game_title),
+                text = if (ready) "✔$TEXT_STYLE " + stringResource(R.string.ready_to_play) else stringResource(R.string.game_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (ready) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
@@ -476,6 +504,11 @@ private fun GameCard(storageVersion: Int) {
         }
         HorizonManager.lastExitCode()?.takeIf { it != "0" }?.let {
             Text(stringResource(R.string.last_exit, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            val reason = remember(state, refresh) { HorizonManager.lastCrashReason() }
+            if (reason != null) Text(stringResource(R.string.last_exit_reason, reason), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { scope.launch(Dispatchers.IO) { runCatching { HorizonManager.shareLogs(context) } } }) {
+                Text(stringResource(R.string.share_logs))
+            }
         }
         val folder = remember(storageVersion) { HorizonManager.gameDir.absolutePath }
         Hint(stringResource(R.string.folder_info, folder))
@@ -487,7 +520,7 @@ private fun GameCard(storageVersion: Int) {
 private fun StatusLine(label: String, ok: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = if (ok) "✔" else "✖",
+            text = if (ok) "✔$TEXT_STYLE" else "✖$TEXT_STYLE",
             color = if (ok) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(end = 8.dp)
         )

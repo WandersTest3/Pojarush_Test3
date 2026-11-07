@@ -80,7 +80,43 @@ object Keycodes {
         rows.forEach { (code, name) -> named[name]?.let { put(code, it) } }
     }
 
+    private val glfw: Map<Int, String> = buildMap {
+        for (c in 'A'..'Z') put(c.code, c.toString())
+        for (d in 0..9) put(48 + d, d.toString())
+        for (f in 1..12) put(289 + f, "F$f")
+        for (d in 0..9) put(320 + d, "KP_$d")
+        putAll(
+            mapOf(
+                32 to "SPACE", 39 to "APOSTROPHE", 44 to "COMMA", 45 to "MINUS", 46 to "PERIOD", 47 to "SLASH",
+                59 to "SEMICOLON", 61 to "EQUAL", 91 to "LEFT_BRACKET", 92 to "BACKSLASH", 93 to "RIGHT_BRACKET",
+                96 to "GRAVE_ACCENT", 256 to "ESCAPE", 257 to "ENTER", 258 to "TAB", 259 to "BACKSPACE",
+                260 to "INSERT", 261 to "DELETE", 262 to "RIGHT", 263 to "LEFT", 264 to "DOWN", 265 to "UP",
+                266 to "PAGE_UP", 267 to "PAGE_DOWN", 268 to "HOME", 269 to "END", 280 to "CAPS_LOCK",
+                281 to "SCROLL_LOCK", 282 to "NUM_LOCK", 283 to "PRINT_SCREEN", 284 to "PAUSE",
+                330 to "KP_DECIMAL", 331 to "KP_DIVIDE", 332 to "KP_MULTIPLY", 333 to "KP_SUBTRACT", 334 to "KP_ADD",
+                335 to "KP_ENTER", 336 to "KP_EQUAL", 340 to "LEFT_SHIFT", 341 to "LEFT_CONTROL", 342 to "LEFT_ALT",
+                343 to "LEFT_SUPER", 344 to "RIGHT_SHIFT", 345 to "RIGHT_CONTROL", 346 to "RIGHT_ALT",
+                347 to "RIGHT_SUPER", 348 to "MENU",
+            )
+        )
+    }
+
+    private val labels: Map<Int, String> = mapOf(
+        KeyEvent.KEYCODE_SPACE to "Space", KeyEvent.KEYCODE_SHIFT_LEFT to "Shift", KeyEvent.KEYCODE_SHIFT_RIGHT to "Shift",
+        KeyEvent.KEYCODE_CTRL_LEFT to "Ctrl", KeyEvent.KEYCODE_CTRL_RIGHT to "Ctrl", KeyEvent.KEYCODE_ALT_LEFT to "Alt",
+        KeyEvent.KEYCODE_ALT_RIGHT to "Alt", KeyEvent.KEYCODE_ESCAPE to "Esc", KeyEvent.KEYCODE_ENTER to "Enter",
+        KeyEvent.KEYCODE_TAB to "Tab", KeyEvent.KEYCODE_DEL to "⌫", KeyEvent.KEYCODE_DPAD_UP to "↑",
+        KeyEvent.KEYCODE_DPAD_DOWN to "↓", KeyEvent.KEYCODE_DPAD_LEFT to "←", KeyEvent.KEYCODE_DPAD_RIGHT to "→",
+    )
+
     fun fromGlfwName(name: String): Int? = named[name.removePrefix("GLFW_KEY_")]
+
+    fun fromGlfwCode(code: Int): Int? = glfw[code]?.let { named[it] }
+
+    fun label(code: Int): String = labels[code]
+        ?: (KeyEvent.keyCodeToString(code) ?: code.toString()).removePrefix("KEYCODE_").replace("NUMPAD_", "Num ").let {
+            if (it.length == 1) it else it.lowercase().replaceFirstChar { c -> c.uppercase() }
+        }
 
     fun fromEvdev(code: Int): Int? = evdev[code]
 }

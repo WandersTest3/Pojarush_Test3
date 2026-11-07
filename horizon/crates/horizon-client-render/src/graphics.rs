@@ -208,6 +208,8 @@ pub enum Pacing {
 pub enum Overlay {
     #[default]
     Off,
+    /// Vanilla-style: only the frame rate, in the game's font on a dark box.
+    Counter,
     /// Frames per second and frame time.
     Fps,
     /// The numbers and a graph of recent frame times.
@@ -512,6 +514,7 @@ impl Graphics {
                 "pickedShaderPack" => g.shader_pack = value.to_owned(),
                 "overlay" => {
                     g.overlay = match value {
+                        "counter" => Overlay::Counter,
                         "fps" => Overlay::Fps,
                         "graph" => Overlay::Graph,
                         _ => Overlay::Off,
@@ -544,6 +547,7 @@ impl Graphics {
             self.workers,
             match self.overlay {
                 Overlay::Off => "off",
+                Overlay::Counter => "counter",
                 Overlay::Fps => "fps",
                 Overlay::Graph => "graph",
             },

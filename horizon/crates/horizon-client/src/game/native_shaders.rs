@@ -81,6 +81,14 @@ impl Game<'_> {
                 if reload {
                     self.system_message(Text::literal(format!("Shader pack {} reloaded", m.name)));
                 }
+                if !m.unsupported.is_empty() {
+                    log::warn!("shader pack {}: not drawn by this Horizon: {}", m.id, m.unsupported.join(", "));
+                    self.system_message(Text::literal(format!(
+                        "Shader pack {}: {} not supported yet, the rest is on",
+                        m.name,
+                        m.unsupported.join(", ")
+                    )));
+                }
             }
             Err(problems) => {
                 log::warn!("shader pack {name} refused: {}", problems.join("; "));

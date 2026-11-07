@@ -74,6 +74,7 @@ data class ControlStick(
     val deadZone: Float,
     val doubleTap: List<Action> = emptyList(),
     val style: Style? = null,
+    val autoRun: Boolean = false,
 )
 
 data class ControlLayer(val id: String, val visible: Boolean, val visibility: Visibility)
@@ -100,6 +101,7 @@ data class ControlLayout(
                 json.has("pojarush") -> PojarushFormat.parse(json, fallbackName)
                 json.has("editorVersion") -> Zalith.parse(json, fallbackName)
                 json.has("viewGroups") -> FoldCraft.parse(json, fallbackName)
+                json.has("mControlDataList") -> Pojav.parse(json, fallbackName)
                 else -> throw IllegalArgumentException("Unknown control layout format")
             }
         }
@@ -395,6 +397,284 @@ private object FoldCraft {
     }
 }
 
+internal fun parsePojav(text: String, fallbackName: String, width: Float, height: Float, density: Float): ControlLayout =
+    Pojav.parse(JSONObject(text), fallbackName, Pojav.Screen(width, height, density))
+
+private object Pojav {
+    private const val KEYBOARD = -1
+    private const val TOGGLE_CTRL = -2
+    private const val MOUSE_PRIMARY = -3
+    private const val MOUSE_SECONDARY = -4
+    private const val VIRTUAL_MOUSE = -5
+    private const val MOUSE_MIDDLE = -6
+    private const val SCROLL_UP = -7
+    private const val SCROLL_DOWN = -8
+    private const val MENU = -9
+
+    class Screen(val width: Float, val height: Float, val density: Float)
+
+    private fun screen(): Screen {
+        val m = android.content.res.Resources.getSystem().displayMetrics
+        return Screen(maxOf(m.widthPixels, m.heightPixels).toFloat(), minOf(m.widthPixels, m.heightPixels).toFloat(), m.density)
+    }
+
+    fun parse(json: JSONObject, fallbackName: String, screen: Screen = screen()): ControlLayout {
+        val main = "pojav"
+        val layers = mutableListOf(ControlLayer(main, true, Visibility.ALWAYS))
+        val buttons = mutableListOf<ControlButton>()
+        val sticks = mutableListOf<ControlStick>()
+        json.list("mControlDataList").forEachIndexed { i, b -> buttons += button(b, "b$i", main, screen) }
+        json.list("mDrawerDataList").forEachIndexed { i, d ->
+            val props = d.optJSONObject("properties") ?: return@forEachIndexed
+            val layer = "drawer$i"
+            layers += ControlLayer(layer, false, Visibility.ALWAYS)
+            val head = button(props, "d$i", main, screen)
+            buttons += head.copy(press = emptyList(), toggle = emptyList(), tap = listOf(Action.Layer(listOf(layer), Action.LAYER_TOGGLE)))
+            val orientation = d.optString("orientation", "DOWN")
+            val (hx, hy) = position(props, screen)
+            val (hw, hh) = size(props, screen)
+            var cx = hx
+            var cy = hy
+            var prevW = hw * screen.density
+            var prevH = hh * screen.density
+            d.list("buttonProperties").forEach { sub ->
+                val (sw, sh) = size(sub, screen)
+                val (pw, ph) = sw * screen.density to sh * screen.density
+                when (orientation) {
+                    "RIGHT" -> cx += prevW
+                    "LEFT" -> cx -= pw
+                    "UP" -> cy -= ph
+                    "FREE" -> {}
+                    else -> cy += prevH
+                }
+                prevW = pw
+                prevH = ph
+                val sid = "d$i.${buttons.size}"
+                buttons += if (orientation == "FREE") button(sub, sid, layer, screen) else button(sub, sid, layer, screen, cx to cy)
+            }
+        }
+        json.list("mJoystickDataList").forEachIndexed { i, j ->
+            val (w, _) = size(j, screen)
+            val (left, top) = position(j, screen)
+            val span = w * screen.density
+            sticks += ControlStick(
+                id = "j$i",
+                layer = main,
+                x = fraction(left, screen.width - span),
+                y = fraction(top, screen.height - span),
+                size = Size(w),
+                visibility = visibility(j),
+                directions = ControlLayout.wasd(KeyEvent.KEYCODE_W, KeyEvent.KEYCODE_S, KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_D),
+                lock = listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)),
+                canLock = j.optBoolean("forwardLock", false),
+                lockThreshold = 0.25f,
+                deadZone = 0.15f,
+                style = style(j, w, w),
+            )
+        }
+        val info = json.optJSONObject("mControlInfoDataList")
+        val name = info?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: fallbackName
+        return ControlLayout(name, layers, buttons, sticks)
+    }
+
+    private fun fraction(pos: Float, room: Float) = if (room > 0f) (pos / room).coerceIn(0f, 1f) else 0f
+
+    private fun size(b: JSONObject, screen: Screen): Pair<Float, Float> =
+        b.optDouble("width", 50.0).toFloat() to b.optDouble("height", 50.0).toFloat()
+
+    private fun position(b: JSONObject, screen: Screen): Pair<Float, Float> {
+        val (w, h) = size(b, screen)
+        val vars = mapOf(
+            "screen_width" to screen.width,
+            "screen_height" to screen.height,
+            "width" to w * screen.density,
+            "height" to h * screen.density,
+            "margin" to (2f * screen.density).toInt().toFloat(),
+            "preferred_scale" to 100f,
+            "top" to 0f,
+            "left" to 0f,
+            "right" to screen.width - w * screen.density,
+            "bottom" to screen.height - h * screen.density,
+        )
+        fun eval(key: String, legacy: String): Float {
+            val text = b.optString(key).takeIf { it.isNotBlank() && it != "null" }
+            if (text != null) runCatching { return Expression(text, vars, screen.density).value() }
+            return b.optDouble(legacy, 0.0).toFloat()
+        }
+        return eval("dynamicX", "x") to eval("dynamicY", "y")
+    }
+
+    private fun visibility(b: JSONObject): Visibility {
+        val game = b.optBoolean("displayInGame", true)
+        val menu = b.optBoolean("displayInMenu", true)
+        return when {
+            game && !menu -> Visibility.IN_GAME
+            menu && !game -> Visibility.IN_MENU
+            else -> Visibility.ALWAYS
+        }
+    }
+
+    private fun style(b: JSONObject, w: Float, h: Float): Style {
+        val opacity = b.optDouble("opacity", 1.0).toFloat().coerceIn(0f, 1f)
+        fun alpha(c: Int, extra: Float) = Color.argb((Color.alpha(c) * extra).toInt().coerceIn(0, 255), Color.red(c), Color.green(c), Color.blue(c))
+        val bg = b.optLong("bgColor", 0x4D000000).toInt()
+        val stroke = b.optLong("strokeColor", 0xFFFFFFFF).toInt()
+        val pressed = Color.argb(
+            (Color.alpha(bg) + 90).coerceAtMost(255),
+            (Color.red(bg) + 60).coerceAtMost(255),
+            (Color.green(bg) + 60).coerceAtMost(255),
+            (Color.blue(bg) + 60).coerceAtMost(255),
+        )
+        val radius = b.optDouble("cornerRadius", 0.0).toFloat().coerceIn(0f, 100f) / 100f * minOf(w, h) / 2f
+        return Style(
+            fill = alpha(bg, opacity),
+            fillPressed = alpha(pressed, opacity),
+            text = alpha(Color.WHITE, opacity),
+            textPressed = alpha(Color.WHITE, opacity),
+            stroke = alpha(stroke, opacity),
+            strokeDp = b.optDouble("strokeWidth", 0.0).toFloat(),
+            radiusDp = radius,
+            textSp = 13f,
+        )
+    }
+
+    private fun actions(codes: List<Int>): List<Action> = codes.filter { it != 0 }.mapNotNull { code ->
+        when (code) {
+            KEYBOARD -> Action.Keyboard
+            TOGGLE_CTRL -> Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)
+            MOUSE_PRIMARY -> Action.Mouse(0)
+            MOUSE_SECONDARY -> Action.Mouse(1)
+            VIRTUAL_MOUSE -> Action.ToggleMouse
+            MOUSE_MIDDLE -> Action.Mouse(2)
+            SCROLL_UP -> Action.Scroll(1f, false)
+            SCROLL_DOWN -> Action.Scroll(-1f, false)
+            MENU -> Action.Menu
+            else -> Keycodes.fromGlfwCode(code)?.let { Action.Key(it) }
+        }
+    }
+
+    private fun label(codes: List<Int>): String = codes.filter { it != 0 }.mapNotNull { code ->
+        when (code) {
+            KEYBOARD -> "⌨"
+            TOGGLE_CTRL -> "Ctrl"
+            MOUSE_PRIMARY -> "LMB"
+            MOUSE_SECONDARY -> "RMB"
+            VIRTUAL_MOUSE -> "Mouse"
+            MOUSE_MIDDLE -> "MMB"
+            SCROLL_UP -> "▲"
+            SCROLL_DOWN -> "▼"
+            MENU -> "☰"
+            else -> Keycodes.fromGlfwCode(code)?.let(Keycodes::label)
+        }
+    }.joinToString("+")
+
+    private fun button(b: JSONObject, id: String, layer: String, screen: Screen, at: Pair<Float, Float>? = null): ControlButton {
+        val (w, h) = size(b, screen)
+        val (left, top) = at ?: position(b, screen)
+        val codes = b.optJSONArray("keycodes").ints()
+        val all = actions(codes)
+        val holdable = all.filter { it is Action.Key || it is Action.Mouse }
+        val instant = all - holdable.toSet()
+        val toggle = b.optBoolean("isToggle", false) || codes.contains(TOGGLE_CTRL)
+        val name = b.optString("name").trim().takeIf { it.isNotEmpty() && it != "null" }
+        return ControlButton(
+            id = id,
+            text = name ?: label(codes),
+            layer = layer,
+            x = fraction(left, screen.width - w * screen.density),
+            y = fraction(top, screen.height - h * screen.density),
+            width = Size(w),
+            height = Size(h),
+            visibility = visibility(b),
+            press = if (toggle) emptyList() else holdable,
+            tap = instant,
+            toggle = if (toggle) holdable else emptyList(),
+            swipe = b.optBoolean("isSwipeable", false),
+            penetrable = b.optBoolean("passThruEnabled", false),
+            style = style(b, w, h),
+        )
+    }
+}
+
+internal class Expression(text: String, vars: Map<String, Float>, private val density: Float) {
+    private val src = Regex("\\$\\{([a-z_]+)\\}").replace(text) { m ->
+        (vars[m.groupValues[1]] ?: throw IllegalArgumentException(m.value)).toString()
+    }
+    private var i = 0
+
+    fun value(): Float {
+        val v = sum()
+        skip()
+        if (i != src.length) throw IllegalArgumentException("Unexpected '${src[i]}'")
+        return v
+    }
+
+    private fun skip() {
+        while (i < src.length && src[i].isWhitespace()) i++
+    }
+
+    private fun sum(): Float {
+        var v = product()
+        while (true) {
+            skip()
+            when (src.getOrNull(i)) {
+                '+' -> { i++; v += product() }
+                '-' -> { i++; v -= product() }
+                else -> return v
+            }
+        }
+    }
+
+    private fun product(): Float {
+        var v = unary()
+        while (true) {
+            skip()
+            when (src.getOrNull(i)) {
+                '*' -> { i++; v *= unary() }
+                '/' -> { i++; v /= unary() }
+                else -> return v
+            }
+        }
+    }
+
+    private fun unary(): Float {
+        skip()
+        return when (src.getOrNull(i)) {
+            '-' -> { i++; -unary() }
+            '+' -> { i++; unary() }
+            else -> atom()
+        }
+    }
+
+    private fun atom(): Float {
+        skip()
+        if (src.startsWith("px(", i) || src.startsWith("dp(", i)) {
+            val dp = src[i] == 'd'
+            i += 3
+            val v = sum()
+            expect(')')
+            return if (dp) v / density else v * density
+        }
+        if (src.getOrNull(i) == '(') {
+            i++
+            val v = sum()
+            expect(')')
+            return v
+        }
+        val start = i
+        while (i < src.length && (src[i].isDigit() || src[i] == '.' || src[i] == 'E' || src[i] == 'e' ||
+                ((src[i] == '-' || src[i] == '+') && i > start && (src[i - 1] == 'E' || src[i - 1] == 'e')))) i++
+        if (start == i) throw IllegalArgumentException("Number expected at $start")
+        return src.substring(start, i).toFloat()
+    }
+
+    private fun expect(c: Char) {
+        skip()
+        if (src.getOrNull(i) != c) throw IllegalArgumentException("'$c' expected")
+        i++
+    }
+}
+
 object DefaultLayout {
     const val ID = "builtin:pojarush"
 
@@ -513,6 +793,7 @@ private object PojarushFormat {
         .put("directions", JSONObject().apply { s.directions.forEach { (k, v) -> put(k.toString(), actions(v)) } })
         .put("lock", actions(s.lock)).put("canLock", s.canLock).put("lockThreshold", s.lockThreshold.toDouble())
         .put("deadZone", s.deadZone.toDouble()).put("doubleTap", actions(s.doubleTap))
+        .put("autoRun", s.autoRun)
         .apply { style(s.style)?.let { put("style", it) } }
 
     private fun visibility(v: String) = runCatching { Visibility.valueOf(v) }.getOrDefault(Visibility.ALWAYS)
@@ -541,6 +822,7 @@ private object PojarushFormat {
                 lock = actions(s.optJSONArray("lock")), canLock = s.optBoolean("canLock"),
                 lockThreshold = s.optDouble("lockThreshold", 0.25).toFloat(), deadZone = s.optDouble("deadZone", 0.15).toFloat(),
                 doubleTap = actions(s.optJSONArray("doubleTap")), style = style(s.optJSONObject("style")),
+                autoRun = s.optBoolean("autoRun", false),
             )
         },
     )

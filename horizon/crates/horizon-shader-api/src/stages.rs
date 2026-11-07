@@ -259,6 +259,18 @@ pub fn compose(pack: &Pack, kind: StageKind, file: &str) -> Composed {
     for shared in pack.manifest.shared.iter().filter(|s| *s != file) {
         push(shared, pack.source(shared).unwrap_or_default());
     }
+    let manifest = &pack.manifest;
+    let stage = manifest
+        .sky
+        .iter()
+        .chain(&manifest.material)
+        .chain(&manifest.post)
+        .find(|s| s.file == file);
+    for extra in stage.map(|s| s.files.as_slice()).unwrap_or_default() {
+        if extra != file && !manifest.shared.contains(extra) {
+            push(extra, pack.source(extra).unwrap_or_default());
+        }
+    }
     push(file, pack.source(file).unwrap_or_default());
     push("<entries>", kind.entries());
     composed

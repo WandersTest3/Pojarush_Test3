@@ -148,17 +148,17 @@ impl SessionLock {
             .create(true)
             .truncate(false)
             .open(world.join("session.lock"))?;
-        match file.try_lock() {
-            Err(fs::TryLockError::WouldBlock) if cfg!(target_os = "android") => {
+        match horizon_client_render::file_lock::try_exclusive(&file) {
+            Ok(false) if cfg!(target_os = "android") => {
                 log::warn!("{}: session.lock is held; Android runs one game process, opening anyway", world.display());
             }
-            Err(fs::TryLockError::WouldBlock) => {
+            Ok(false) => {
                 return Err(format!("{} is already open in another instance", world.display()).into());
             }
-            Err(fs::TryLockError::Error(e)) => {
+            Err(e) => {
                 log::warn!("{}: file locks unsupported here ({e}); opening unlocked", world.display());
             }
-            Ok(()) => {}
+            Ok(true) => {}
         }
         file.set_len(0)?;
         file.write_all(&[0x26, 0x03])?;

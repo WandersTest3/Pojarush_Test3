@@ -29,6 +29,13 @@ impl FrameGraph {
         let n = self.frames.len() as f32;
         let avg = |f: fn(&(f32, f32, f32)) -> f32| self.frames.iter().map(f).sum::<f32>() / n;
         let (frame, cpu, gpu) = (avg(|f| f.0), avg(|f| f.1), avg(|f| f.2));
+        if mode == Overlay::Counter {
+            let line = format!("{:.0} FPS", 1000.0 / frame.max(0.001));
+            let width = atlas.font.width(&line) + 4.0;
+            batch.fill(atlas, 2.0, 2.0, width, 12.0, rgba(0, 0, 0, 144));
+            batch.text_styled(atlas, &Text::literal(line), 4.0, 4.0, rgba(255, 255, 255, 255), true);
+            return;
+        }
         let worst = self.frames.iter().map(|f| f.0).fold(0.0f32, f32::max);
         let lines = [
             format!("{:.0} fps", 1000.0 / frame.max(0.001)),

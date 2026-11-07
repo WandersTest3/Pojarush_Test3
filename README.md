@@ -39,15 +39,49 @@ Minecraft API access in `.oauth_client_id.txt` or `OAUTH_CLIENT_ID`; without it 
 3. Prepare game files: about 330 MB download (+380 MB with sounds), then several minutes of Java exporters.
 4. Play (the button at the bottom right).
 
-Controls: the built-in Pojarush layout and any Pojarush (`pojarush`), Zalith (`editorVersion`) or
-Fold Craft Launcher (`viewGroups`) layout imported from a `.json` file or put in `Pojarush_Test3/controls/`.
+Controls: the built-in Pojarush layout and any Pojarush (`pojarush`), Zalith (`editorVersion`),
+Fold Craft Launcher (`viewGroups`) or PojavLauncher (`mControlDataList`) layout imported from a `.json` file or
+put in `Pojarush_Test3/controls/`.
 In game: drag to look, tap to use, hold to break, tap the hotbar to select. In menus: direct touch, or a
-virtual mouse with an optional custom image or animated GIF (Mouse page). The ☰ handle (drag it to move it)
-opens the quick menu: virtual mouse, keyboard, settings (controls, mouse, resolution) and the control editor,
-also reachable from the launcher. Edited layouts are saved as Pojarush `.json` files in
+virtual mouse with an optional custom image or animated GIF (Mouse page). The floating button (drag it to move
+it; size, opacity, roundness, color and image in Controls) opens the controls, mouse and resolution settings
+directly, with quick actions for the virtual mouse, keyboard, hiding the controls and the control editor. Edited layouts are saved as Pojarush `.json` files in
 `Pojarush_Test3/controls/`. Back is Escape.
 
 Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
+
+## 1.6.0
+
+- Resource packs load again: Rust's file locks are not implemented on Android, so the pack cache's
+  lock always failed with "Resource reload failed: lock() not supported". Locks now use the kernel's
+  `flock` and carry on unlocked on filesystems without them. The game log (`latest.log`, archived as
+  `YYYY-MM-DD-N.log.gz` like vanilla) and world session locks use the same path; logs and crash
+  reports are also copied to `Pojarush_Test3/logs` and `Pojarush_Test3/crash-reports`.
+- Fixed a 1.5.1 regression that broke every resource pack (including the offline skin pack): the
+  check that a linked file reads back always failed on folders, and the copy fallback then refused
+  to copy a folder, so the whole overlay failed.
+- Fixed the crash on GPUs limited to 4096×4096 textures (PowerVR GE8300 and others: "the shared
+  atlas is 4096x5120"): the GUI atlas is now packed for the GPU's real limit with a tighter skyline
+  packer, and only if it still does not fit are the large GUI textures halved.
+- `.hshader` packs written for newer Horizon builds (`[[lights]]`, `[shadow]`, per-stage `files`...)
+  are no longer refused: what this Horizon draws (sky, material, post) runs and the chat says which
+  sections are not supported yet. WebAssembly code mods (e.g. Compass Enhanced) still do not run in
+  this Horizon version; content `.hmod` mods do.
+- PojavLauncher control layouts (`mControlDataList`, dynamic positions, drawers, special buttons)
+  can be imported.
+- Controls: hide them while keeping them usable, 80% default opacity, double-tap a hotbar slot to swap
+  hands (F), Bedrock-style drop (hold a hotbar slot to keep pressing Q, interval adjustable), auto
+  sprint per joystick, and an option to stop taps outside the buttons from clicking.
+- The floating button is customizable and opens the settings directly.
+- Launcher: wallpaper (image or muted looping video), Minecraft-style FPS counter, Mouse before Mods in
+  the menu, a drawn Play icon (some devices showed an emoji), crash reason and log sharing next to
+  "The last game ended with code N".
+- The game and the Minecraft download keep running in the background through a foreground service
+  (with a notification), so switching apps no longer closes the game or freezes the preparation;
+  a stuck preparation is now stopped together with its Java process instead of hanging forever.
+- Faster input right after the title screen appears: the background world loader runs at a lower
+  priority on Android.
+- The skin preview's cape is drawn with depth and no longer cut by the arms or body.
 
 ## 1.5.1
 

@@ -257,7 +257,7 @@ fun SkinViewer(data: SkinData, modifier: Modifier = Modifier) {
     }
 }
 
-private class Face(val depth: Float, val src: Rect, val dst: RectF, val bitmap: Bitmap, val layer: Float = 0f)
+private class Face(val group: Float, val depth: Float, val src: Rect, val dst: RectF, val bitmap: Bitmap, val layer: Float = 0f)
 
 private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data: SkinData, angle: Float, paint: Paint) {
     val skin = data.skin ?: return
@@ -273,25 +273,27 @@ private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data:
     val faces = ArrayList<Face>()
 
     fun sx(x: Float, z: Float) = cx + (x * cs + z * sn) * scale
+    fun depthOf(x: Float, z: Float) = -x * sn + z * cs
     fun src(l: Float, t: Float, r: Float, b: Float) = Rect((l * k).toInt(), (t * k).toInt(), (r * k).toInt(), (b * k).toInt())
 
-    fun add(bitmap: Bitmap, s: Rect, ax: Float, az: Float, bx: Float, bz: Float, top: Float, bottom: Float, layer: Float = 0f) {
+    fun add(group: Float, bitmap: Bitmap, s: Rect, ax: Float, az: Float, bx: Float, bz: Float, top: Float, bottom: Float, layer: Float = 0f) {
         val xa = sx(ax, az)
         val xb = sx(bx, bz)
         if (abs(xb - xa) < 0.5f) return
-        val depth = -((ax + bx) / 2f) * sn + ((az + bz) / 2f) * cs
-        faces += Face(depth, s, RectF(minOf(xa, xb), top0 + top * scale, maxOf(xa, xb), top0 + bottom * scale), bitmap, layer)
+        val depth = depthOf((ax + bx) / 2f, (az + bz) / 2f)
+        faces += Face(group, depth, s, RectF(minOf(xa, xb), top0 + top * scale, maxOf(xa, xb), top0 + bottom * scale), bitmap, layer)
     }
 
     fun box(bitmap: Bitmap, px: Float, pz: Float, top: Float, bw: Float, bh: Float, bd: Float, u: Float, v: Float, inf: Float, layer: Float = 0f) {
+        val group = depthOf(px, pz)
         val gw = bw / 2f + inf
         val gd = bd / 2f + inf
         val t = top - inf
         val b = top + bh + inf
-        if (cs > 0f) add(bitmap, src(u + bd, v + bd, u + bd + bw, v + bd + bh), px - gw, pz + gd, px + gw, pz + gd, t, b, layer)
-        if (cs < 0f) add(bitmap, src(u + 2 * bd + bw, v + bd, u + 2 * bd + 2 * bw, v + bd + bh), px + gw, pz - gd, px - gw, pz - gd, t, b, layer)
-        if (sn > 0f) add(bitmap, src(u, v + bd, u + bd, v + bd + bh), px - gw, pz - gd, px - gw, pz + gd, t, b, layer)
-        if (sn < 0f) add(bitmap, src(u + bd + bw, v + bd, u + 2 * bd + bw, v + bd + bh), px + gw, pz + gd, px + gw, pz - gd, t, b, layer)
+        if (cs > 0f) add(group, bitmap, src(u + bd, v + bd, u + bd + bw, v + bd + bh), px - gw, pz + gd, px + gw, pz + gd, t, b, layer)
+        if (cs < 0f) add(group, bitmap, src(u + 2 * bd + bw, v + bd, u + 2 * bd + 2 * bw, v + bd + bh), px + gw, pz - gd, px - gw, pz - gd, t, b, layer)
+        if (sn > 0f) add(group, bitmap, src(u, v + bd, u + bd, v + bd + bh), px - gw, pz - gd, px - gw, pz + gd, t, b, layer)
+        if (sn < 0f) add(group, bitmap, src(u + bd + bw, v + bd, u + 2 * bd + bw, v + bd + bh), px + gw, pz + gd, px + gw, pz - gd, t, b, layer)
     }
 
     val rightArmX = -(4f + armW / 2f)
@@ -314,15 +316,17 @@ private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data:
     if (cape != null) {
         val ck = cape.width / 64f
         fun csrc(l: Float, t: Float, r: Float, b: Float) = Rect((l * ck).toInt(), (t * ck).toInt(), (r * ck).toInt(), (b * ck).toInt())
-        val cz = -3.2f
+        val back = -3.3f
+        val front = back + 1f
         val half = 5f
         val top = 8f
         val bottom = 24f
-        if (cs < 0f) add(cape, csrc(1f, 1f, 11f, 17f), -half, cz, half, cz, top, bottom, layer = -0.02f)
-        if (cs > 0f) add(cape, csrc(12f, 1f, 22f, 17f), half, cz, -half, cz, top, bottom, layer = -0.02f)
-        if (sn > 0f) add(cape, csrc(11f, 1f, 12f, 17f), half, cz, half, cz + 1f, top, bottom, layer = -0.02f)
-        if (sn < 0f) add(cape, csrc(0f, 1f, 1f, 17f), -half, cz, -half, cz + 1f, top, bottom, layer = -0.02f)
+        val group = depthOf(0f, (back + front) / 2f)
+        if (cs < 0f) add(group, cape, csrc(1f, 1f, 11f, 17f), half, back, -half, back, top, bottom)
+        if (cs > 0f) add(group, cape, csrc(12f, 1f, 22f, 17f), -half, front, half, front, top, bottom)
+        if (sn > 0f) add(group, cape, csrc(11f, 1f, 12f, 17f), -half, back, -half, front, top, bottom)
+        if (sn < 0f) add(group, cape, csrc(0f, 1f, 1f, 17f), half, front, half, back, top, bottom)
     }
-    faces.sortWith(compareBy({ it.depth }, { it.layer }))
+    faces.sortWith(compareBy({ it.group }, { it.layer }, { it.depth }))
     faces.forEach { canvas.drawBitmap(it.bitmap, it.src, it.dst, paint) }
 }

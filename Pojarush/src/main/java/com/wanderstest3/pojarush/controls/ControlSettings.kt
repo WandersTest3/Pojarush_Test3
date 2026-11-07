@@ -13,7 +13,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getString("layout", DefaultLayout.ID) ?: DefaultLayout.ID
         set(v) = prefs.edit().putString("layout", v).apply()
     var opacity: Float
-        get() = prefs.getFloat("opacity", 0.70f)
+        get() = prefs.getFloat("opacity", 0.80f)
         set(v) = prefs.edit().putFloat("opacity", v).apply()
     var buttonScale: Float
         get() = prefs.getFloat("button_scale", 1.00f)
@@ -75,6 +75,48 @@ class ControlSettings(context: Context) {
     var cursorCenter: Boolean
         get() = prefs.getBoolean("cursor_center", false)
         set(v) = prefs.edit().putBoolean("cursor_center", v).apply()
+    var controlsHidden: Boolean
+        get() = prefs.getBoolean("controls_hidden", false)
+        set(v) = prefs.edit().putBoolean("controls_hidden", v).apply()
+    var screenTouch: Boolean
+        get() = prefs.getBoolean("screen_touch", true)
+        set(v) = prefs.edit().putBoolean("screen_touch", v).apply()
+    var bedrockDrop: Boolean
+        get() = prefs.getBoolean("bedrock_drop", false)
+        set(v) = prefs.edit().putBoolean("bedrock_drop", v).apply()
+    var bedrockDropMs: Int
+        get() = prefs.getInt("bedrock_drop_ms", 250).coerceIn(50, 1000)
+        set(v) = prefs.edit().putInt("bedrock_drop_ms", v.coerceIn(50, 1000)).apply()
+    var hotbarSwap: Boolean
+        get() = prefs.getBoolean("hotbar_swap", true)
+        set(v) = prefs.edit().putBoolean("hotbar_swap", v).apply()
+    var menuSize: Float
+        get() = prefs.getFloat("menu_size", 34f).coerceIn(20f, 80f)
+        set(v) = prefs.edit().putFloat("menu_size", v.coerceIn(20f, 80f)).apply()
+    var menuOpacity: Float
+        get() = prefs.getFloat("menu_opacity", 0.80f).coerceIn(0.05f, 1.00f)
+        set(v) = prefs.edit().putFloat("menu_opacity", v.coerceIn(0.05f, 1.00f)).apply()
+    var menuRadius: Float
+        get() = prefs.getFloat("menu_radius", 0.20f).coerceIn(0f, 0.50f)
+        set(v) = prefs.edit().putFloat("menu_radius", v.coerceIn(0f, 0.50f)).apply()
+    var menuColor: Int
+        get() = prefs.getInt("menu_color", 0xFF57197F.toInt())
+        set(v) = prefs.edit().putInt("menu_color", v).apply()
+    var menuIcon: String
+        get() = prefs.getString("menu_icon", "").orEmpty()
+        set(v) = prefs.edit().putString("menu_icon", v).apply()
+    var fpsCounter: Boolean
+        get() = prefs.getBoolean("fps_counter", true)
+        set(v) = prefs.edit().putBoolean("fps_counter", v).apply()
+    var wallpaper: String
+        get() = prefs.getString("wallpaper", "").orEmpty()
+        set(v) = prefs.edit().putString("wallpaper", v).apply()
+    var wallpaperDim: Float
+        get() = prefs.getFloat("wallpaper_dim", 0.45f).coerceIn(0f, 0.90f)
+        set(v) = prefs.edit().putFloat("wallpaper_dim", v.coerceIn(0f, 0.90f)).apply()
+    var keepAlive: Boolean
+        get() = prefs.getBoolean("keep_alive", true)
+        set(v) = prefs.edit().putBoolean("keep_alive", v).apply()
 
     fun renderSize(viewWidth: Int, viewHeight: Int): Pair<Int, Int> =
         if (fixedResolution) fixedWidth.coerceIn(64, 7680) to fixedHeight.coerceIn(64, 4320)
@@ -150,20 +192,41 @@ object ControlLayouts {
 
     fun cursorDir(): File = File(Paths.publicRoot, "cursor")
 
-    fun importCursor(context: Context, uri: Uri): File {
+    fun importCursor(context: Context, uri: Uri): File = importMedia(context, uri, cursorDir(), "cursor")
+
+    fun importMenuIcon(context: Context, uri: Uri): File = importMedia(context, uri, File(Paths.publicRoot, "menu-button"), "icon")
+
+    fun importWallpaper(context: Context, uri: Uri): File = importMedia(context, uri, File(Paths.publicRoot, "wallpaper"), "wallpaper")
+
+    fun isVideo(path: String): Boolean = path.substringAfterLast('.', "").lowercase() in VIDEO
+
+    private val VIDEO = setOf("mp4", "webm", "mkv", "3gp", "mov", "m4v")
+
+    private fun importMedia(context: Context, uri: Uri, dir: File, base: String): File {
         val type = context.contentResolver.getType(uri).orEmpty()
         val ext = when {
             type.contains("gif") -> "gif"
             type.contains("png") -> "png"
             type.contains("webp") -> "webp"
             type.contains("jpeg") || type.contains("jpg") -> "jpg"
+            type.contains("mp4") -> "mp4"
+            type.contains("webm") -> "webm"
+            type.contains("matroska") -> "mkv"
+            type.contains("3gpp") -> "3gp"
+            type.contains("quicktime") -> "mov"
+            type.startsWith("video/") -> "mp4"
             else -> uri.lastPathSegment?.substringAfterLast('.', "png")?.lowercase()?.take(4) ?: "png"
         }
-        val dir = cursorDir().apply { mkdirs() }
-        dir.listFiles()?.forEach { it.delete() }
-        val file = File(dir, "cursor.$ext")
-        context.contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { input.copyTo(it) } }
+        dir.mkdirs()
+        val temp = File(dir, ".$base.part")
+        context.contentResolver.openInputStream(uri)?.use { input -> temp.outputStream().use { input.copyTo(it) } }
             ?: throw IllegalArgumentException("Empty file")
+        dir.listFiles()?.forEach { if (it != temp) it.delete() }
+        val file = File(dir, "$base.$ext")
+        if (!temp.renameTo(file)) {
+            temp.copyTo(file, overwrite = true)
+            temp.delete()
+        }
         return file
     }
 

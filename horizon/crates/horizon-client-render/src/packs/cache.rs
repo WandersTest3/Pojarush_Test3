@@ -277,7 +277,7 @@ pub(super) fn build(vanilla: &Path, packs: &[Pack], out: &Path) -> io::Result<()
         .create(true)
         .truncate(false)
         .open(lock_path(out))?;
-    lock.lock()?;
+    crate::file_lock::exclusive(&lock)?;
     let vanilla_key = absolute(vanilla)?;
     let marker_path = marker_path(out);
     let signature = pack_signature(packs);

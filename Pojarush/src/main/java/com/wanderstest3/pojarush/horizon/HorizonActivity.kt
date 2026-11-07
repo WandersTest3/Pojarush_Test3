@@ -14,6 +14,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.google.androidgamesdk.GameActivity
+import com.wanderstest3.pojarush.GameKeepAliveService
+import com.wanderstest3.pojarush.KeepAliveService
 import com.wanderstest3.pojarush.controls.ControlSettings
 import java.io.File
 
@@ -54,6 +56,7 @@ class HorizonActivity : GameActivity() {
             }
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (ControlSettings(this).keepAlive) KeepAliveService.start(this, GameKeepAliveService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes = window.attributes.apply {
                 layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -144,6 +147,7 @@ class HorizonActivity : GameActivity() {
     }
 
     override fun onDestroy() {
+        KeepAliveService.stop(this, GameKeepAliveService::class.java)
         super.onDestroy()
         runCatching { stdio?.close() }
         Process.killProcess(Process.myPid())

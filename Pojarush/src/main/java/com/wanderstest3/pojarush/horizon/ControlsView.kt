@@ -96,6 +96,9 @@ class ControlsView(
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
     private val cursorPath = Path()
     private var cursorDrawable: Drawable? = null
+    private var menuDrawable: Drawable? = null
+    private var lastHotbarSlot = -1
+    private var lastHotbarTime = 0L
     private var cursorMovie: Movie? = null
     private var movieStart = 0L
 
@@ -141,6 +144,9 @@ class ControlsView(
             var moved = false
         }
         class Drag(val target: Selection, val offX: Float, val offY: Float) : Role()
+        class Hotbar(val slot: Int) : Role() {
+            var repeat: Runnable? = null
+        }
         data object Ignore : Role()
     }
 
@@ -152,6 +158,28 @@ class ControlsView(
     init {
         setLayout(initial)
         loadCursor()
+        loadMenuIcon()
+    }
+
+    private fun loadMenuIcon() {
+        (menuDrawable as? AnimatedImageDrawable)?.stop()
+        menuDrawable?.callback = null
+        menuDrawable = null
+        val file = File(settings.menuIcon)
+        if (settings.menuIcon.isEmpty() || !file.isFile) return
+        menuDrawable = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ImageDecoder.decodeDrawable(ImageDecoder.createSource(file)).also { d ->
+                    d.callback = this
+                    if (d is AnimatedImageDrawable) {
+                        d.repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
+                        d.start()
+                    }
+                }
+            } else {
+                BitmapFactory.decodeFile(file.absolutePath)?.let { BitmapDrawable(resources, it) }
+            }
+        }.getOrNull()
     }
 
     fun setLayout(next: ControlLayout) {
@@ -207,6 +235,7 @@ class ControlsView(
         virtualMouse = settings.virtualMouse
         relayout()
         loadCursor()
+        loadMenuIcon()
         invalidate()
     }
 
@@ -280,6 +309,7 @@ class ControlsView(
             when (role) {
                 is Role.Look -> role.longPress?.let(uiHandler::removeCallbacks)
                 is Role.Mouse -> role.longPress?.let(uiHandler::removeCallbacks)
+                is Role.Hotbar -> role.repeat?.let(uiHandler::removeCallbacks)
                 else -> {}
             }
         }
@@ -333,7 +363,7 @@ class ControlsView(
         }
     }
 
-    override fun verifyDrawable(who: Drawable): Boolean = who === cursorDrawable || super.verifyDrawable(who)
+    override fun verifyDrawable(who: Drawable): Boolean = who === cursorDrawable || who === menuDrawable || super.verifyDrawable(who)
 
     private fun matches(v: Visibility) = editMode || when (v) {
         Visibility.ALWAYS -> true
@@ -376,8 +406,8 @@ class ControlsView(
             stickCenters[i][1] = (h - size) * s.y + size / 2f
             stickCenters[i][2] = size / 2f
         }
-        val mw = 34f * density
-        val mh = 34f * density
+        val mw = settings.menuSize * density
+        val mh = settings.menuSize * density
         val left = (w - mw) * settings.menuX.coerceIn(0f, 1f)
         val top = (h - mh) * settings.menuY.coerceIn(0f, 1f)
         menuRect.set(left, top, left + mw, top + mh)
@@ -648,17 +678,37 @@ class ControlsView(
                 if (slot >= 0) {
                     HorizonBridge.command("select ${slot + 1}")
                     vibrate()
-                    roles[id] = Role.Ignore
+                    if (settings.hotbarSwap && slot == lastHotbarSlot && time - lastHotbarTime < 300) {
+                        tap(Action.Key(android.view.KeyEvent.KEYCODE_F))
+                        lastHotbarSlot = -1
+                    } else {
+                        lastHotbarSlot = slot
+                        lastHotbarTime = time
+                    }
+                    val role = Role.Hotbar(slot)
+                    if (settings.bedrockDrop) {
+                        val every = settings.bedrockDropMs.toLong()
+                        role.repeat = object : Runnable {
+                            override fun run() {
+                                if (roles[id] !== role) return
+                                tap(Action.Key(android.view.KeyEvent.KEYCODE_Q))
+                                uiHandler.postDelayed(this, every)
+                            }
+                        }.also { uiHandler.postDelayed(it, settings.longPressMs.toLong().coerceAtLeast(every)) }
+                    }
+                    roles[id] = role
                     return true
                 }
             }
             val look = Role.Look(x, y, x, y, time)
-            look.longPress = Runnable {
-                if (!look.moved && roles[id] === look) {
-                    look.mining = true
-                    holdMouse(0, true)
-                }
-            }.also { uiHandler.postDelayed(it, settings.longPressMs.toLong()) }
+            if (settings.screenTouch) {
+                look.longPress = Runnable {
+                    if (!look.moved && roles[id] === look) {
+                        look.mining = true
+                        holdMouse(0, true)
+                    }
+                }.also { uiHandler.postDelayed(it, settings.longPressMs.toLong()) }
+            }
             roles[id] = look
             return true
         }
@@ -848,10 +898,11 @@ class ControlsView(
             }
             is Role.Btn -> releaseButton(role.index, !cancel)
             is Role.Stick -> stickUp(role.index)
+            is Role.Hotbar -> role.repeat?.let(uiHandler::removeCallbacks)
             is Role.Look -> {
                 role.longPress?.let(uiHandler::removeCallbacks)
                 if (role.mining) holdMouse(0, false)
-                else if (!cancel && settings.tapToUse && !role.moved && time - role.downTime < 300) tap(Action.Mouse(1))
+                else if (!cancel && settings.screenTouch && settings.tapToUse && !role.moved && time - role.downTime < 300) tap(Action.Mouse(1))
             }
             is Role.Mouse -> {
                 role.longPress?.let(uiHandler::removeCallbacks)
@@ -908,7 +959,9 @@ class ControlsView(
             val deg = (Math.toDegrees(atan2(-dy, dx).toDouble()) + 360.0) % 360.0
             (((deg + 22.5) / 45.0).toInt()) % 8
         }
-        setStickActions(i, if (dir < 0) emptyList() else s.directions[dir].orEmpty())
+        val forward = dir == ControlLayout.NORTH || dir == ControlLayout.NORTH_EAST || dir == ControlLayout.NORTH_WEST
+        val run = if (s.autoRun && forward && !stickLocked[i]) s.lock.ifEmpty { listOf(Action.Key(android.view.KeyEvent.KEYCODE_CTRL_LEFT)) } else emptyList()
+        setStickActions(i, if (dir < 0) emptyList() else s.directions[dir].orEmpty() + run)
         val armed = s.canLock && dir == ControlLayout.NORTH && dist >= radius * (1f + s.lockThreshold)
         if (armed != stickArmed[i]) {
             stickArmed[i] = armed
@@ -939,6 +992,11 @@ class ControlsView(
 
     override fun onDraw(canvas: Canvas) {
         val opacity = if (editMode) settings.opacity.coerceAtLeast(0.60f) else settings.opacity
+        if (settings.controlsHidden && !editMode) {
+            drawMenuHandle(canvas)
+            if (!captured && virtualMouse) drawCursor(canvas)
+            return
+        }
         layout.sticks.forEachIndexed { i, s ->
             if (!shown(s.layer, s.visibility)) return@forEachIndexed
             val st = s.style ?: defaultStyle
@@ -977,15 +1035,40 @@ class ControlsView(
             guideX?.let { canvas.drawLine(it, 0f, it, height.toFloat(), stroke) }
             guideY?.let { canvas.drawLine(0f, it, width.toFloat(), it, stroke) }
         }
-        if (showHandle) {
-            fill.color = alpha(Color.argb(170, 0x57, 0x19, 0x7F), opacity.coerceAtLeast(0.50f))
-            canvas.drawRect(menuRect, fill)
-            text.color = Color.WHITE
-            text.textSize = 13f * scaledDensity
-            canvas.drawText("☰", menuRect.centerX(), menuRect.centerY() - (text.descent() + text.ascent()) / 2f, text)
-        }
+        drawMenuHandle(canvas)
         if (!editMode && !captured && virtualMouse) drawCursor(canvas)
     }
+
+    private fun drawMenuHandle(canvas: Canvas) {
+        if (!showHandle) return
+        val a = settings.menuOpacity
+        val r = menuRect.width().coerceAtMost(menuRect.height()) * settings.menuRadius
+        val icon = menuDrawable
+        if (icon != null) {
+            icon.alpha = (a * 255).toInt().coerceIn(0, 255)
+            icon.setBounds(menuRect.left.toInt(), menuRect.top.toInt(), menuRect.right.toInt(), menuRect.bottom.toInt())
+            canvas.save()
+            menuPath.reset()
+            menuPath.addRoundRect(menuRect, r, r, Path.Direction.CW)
+            canvas.clipPath(menuPath)
+            icon.draw(canvas)
+            canvas.restore()
+            return
+        }
+        fill.color = alpha(settings.menuColor, a)
+        canvas.drawRoundRect(menuRect, r, r, fill)
+        val bar = menuRect.width() * 0.46f
+        val thick = (menuRect.height() * 0.07f).coerceAtLeast(1.5f * density)
+        val cx = menuRect.centerX()
+        val cy = menuRect.centerY()
+        fill.color = alpha(Color.WHITE, a.coerceAtLeast(0.35f))
+        for (k in -1..1) {
+            val y = cy + k * thick * 2.6f
+            canvas.drawRoundRect(cx - bar / 2f, y - thick / 2f, cx + bar / 2f, y + thick / 2f, thick / 2f, thick / 2f, fill)
+        }
+    }
+
+    private val menuPath = Path()
 
     private fun drawButton(canvas: Canvas, b: ControlButton, r: RectF, active: Boolean, opacity: Float) {
         val st = b.style ?: defaultStyle

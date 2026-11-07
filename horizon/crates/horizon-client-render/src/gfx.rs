@@ -1095,13 +1095,16 @@ async fn open_backend(
         None => adapter.request_device(&desc).await,
     };
     match opened {
-        Ok((device, queue)) => Ok(Opened {
-            instance,
-            surface,
-            adapter,
-            device,
-            queue,
-        }),
+        Ok((device, queue)) => {
+            crate::hud::set_atlas_limit(device.limits().max_texture_dimension_2d);
+            Ok(Opened {
+                instance,
+                surface,
+                adapter,
+                device,
+                queue,
+            })
+        }
         Err(e) => Err(NoDevice::Failed(format!("{name} device: {e}"))),
     }
 }

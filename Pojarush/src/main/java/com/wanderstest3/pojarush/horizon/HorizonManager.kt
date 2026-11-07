@@ -35,7 +35,7 @@ object HorizonManager {
     const val VERSION = "26.3"
     private const val BUNDLE = "horizon"
     private const val LOG_LINES = 300
-    private const val PREPARE_STALL_MS = 20 * 60_000L
+    private const val PREPARE_STALL_MS = 12 * 60_000L
 
     sealed interface State {
         data object Idle : State
@@ -118,6 +118,9 @@ object HorizonManager {
         javaHeapMb = com.wanderstest3.pojarush.controls.ControlSettings(context).javaHeapMb
         _log.value = emptyList()
         runCatching { prepareLog.delete() }
+        runCatching { File(homeDir, "exit-code").delete() }
+        val app = context.applicationContext
+        com.wanderstest3.pojarush.KeepAliveService.start(app, com.wanderstest3.pojarush.PrepareKeepAliveService::class.java)
         job = scope.launch {
             runCatching {
                 if (!isSupported()) throw IOException("This device cannot run Pojarush_Test3's Horizon libraries (arm64-v8a only).")
@@ -138,8 +141,9 @@ object HorizonManager {
             }.onFailure { e ->
                 Log.e(TAG, "Preparation failed", e)
                 appendLog("Error: ${e.message}")
-                _state.value = State.Failed(e.message ?: e.javaClass.simpleName)
+                if (e !is kotlinx.coroutines.CancellationException) _state.value = State.Failed(e.message ?: e.javaClass.simpleName)
             }
+            com.wanderstest3.pojarush.KeepAliveService.stop(app, com.wanderstest3.pojarush.PrepareKeepAliveService::class.java)
         }
     }
 
@@ -188,9 +192,89 @@ object HorizonManager {
         runCatching { file.readLines().takeLast(lines).joinToString("\n") }.getOrDefault("")
 
     fun cancel() {
-        process?.destroy()
+        process?.let(::killTree)
         job?.cancel()
         _state.value = State.Idle
+    }
+
+    private fun pidOf(process: Process): Int? = runCatching {
+        if (android.os.Build.VERSION.SDK_INT >= 33) process.pid().toInt()
+        else process.javaClass.getDeclaredField("pid").apply { isAccessible = true }.getInt(process)
+    }.getOrNull()
+
+    private fun descendants(root: Int): List<Int> {
+        val children = HashMap<Int, MutableList<Int>>()
+        File("/proc").listFiles()?.forEach { dir ->
+            val pid = dir.name.toIntOrNull() ?: return@forEach
+            val stat = runCatching { File(dir, "stat").readText() }.getOrNull() ?: return@forEach
+            val ppid = stat.substringAfterLast(')').trim().split(' ').getOrNull(1)?.toIntOrNull() ?: return@forEach
+            children.getOrPut(ppid) { mutableListOf() }.add(pid)
+        }
+        val out = mutableListOf<Int>()
+        val queue = ArrayDeque(listOf(root))
+        while (queue.isNotEmpty()) {
+            val next = queue.removeFirst()
+            children[next]?.forEach {
+                out += it
+                queue += it
+            }
+        }
+        return out
+    }
+
+    private fun killTree(process: Process) {
+        val pid = pidOf(process)
+        val tree = pid?.let(::descendants).orEmpty()
+        runCatching { process.destroyForcibly() }
+        tree.forEach { child -> runCatching { android.system.Os.kill(child, android.system.OsConstants.SIGKILL) } }
+    }
+
+    fun syncLogs() {
+        runCatching {
+            val out = File(publicRoot.parentFile, "logs").apply { mkdirs() }
+            File(homeDir, "logs").listFiles()?.forEach { f ->
+                val target = File(out, f.name)
+                if (f.isFile && (!target.isFile || target.lastModified() < f.lastModified() || target.length() != f.length())) {
+                    f.copyTo(target, overwrite = true)
+                    target.setLastModified(f.lastModified())
+                }
+            }
+            val crashes = File(homeDir, "crash-reports")
+            if (crashes.isDirectory) {
+                val dst = File(publicRoot.parentFile, "crash-reports").apply { mkdirs() }
+                crashes.listFiles()?.forEach { f ->
+                    val target = File(dst, f.name)
+                    if (f.isFile && !target.isFile) f.copyTo(target)
+                }
+            }
+        }
+    }
+
+    fun lastCrashReason(): String? = runCatching {
+        val report = File(homeDir, "crash-reports").listFiles { f -> f.isFile }?.maxByOrNull { it.lastModified() }
+        val exit = File(homeDir, "exit-code")
+        if (report == null || !exit.isFile || report.lastModified() + 60_000 < exit.lastModified()) return@runCatching null
+        val lines = report.readLines()
+        val start = lines.indexOfFirst { it.startsWith("Description:") }
+        lines.drop(start + 1).firstOrNull { it.isNotBlank() }?.trim()
+    }.getOrNull()
+
+    fun applyFpsCounter(enabled: Boolean) {
+        runCatching {
+            val file = File(gameDir, "horizon-graphics.txt")
+            val lines = if (file.isFile) file.readLines().toMutableList() else mutableListOf()
+            val index = lines.indexOfFirst { it.startsWith("overlay:") }
+            val current = lines.getOrNull(index)?.substringAfter(':')
+            val next = when {
+                enabled -> "counter"
+                current == "counter" -> "off"
+                else -> return
+            }
+            if (current == next) return
+            if (index >= 0) lines[index] = "overlay:$next" else lines += "overlay:$next"
+            gameDir.mkdirs()
+            file.writeText(lines.joinToString("\n", postfix = "\n"))
+        }
     }
 
     private fun installBundle(context: Context) {
@@ -364,7 +448,7 @@ object HorizonManager {
                 if (idle > PREPARE_STALL_MS) {
                     stalled.set(true)
                     appendLog("No output from horizon-prepare for ${idle / 60_000} minutes; stopping it.")
-                    process.destroyForcibly()
+                    killTree(process)
                     break
                 }
             }
@@ -400,6 +484,7 @@ object HorizonManager {
 
     fun launchIntent(context: Context, profile: Profile?): Intent {
         ensureFolders()
+        applyFpsCounter(com.wanderstest3.pojarush.controls.ControlSettings(context).fpsCounter)
         privateRoot.mkdirs()
         val args = arrayListOf(
             "--resources", resources.absolutePath,

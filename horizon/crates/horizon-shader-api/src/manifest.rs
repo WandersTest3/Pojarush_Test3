@@ -35,6 +35,8 @@ pub struct Manifest {
     pub post: Vec<Stage>,
     pub options: Vec<PackOption>,
     pub budget: Budget,
+    /// Sections written for a newer Horizon that this one reads but does not draw.
+    pub unsupported: Vec<String>,
 }
 
 /// One stage: the WGSL file that defines its function.
@@ -42,9 +44,23 @@ pub struct Manifest {
 #[serde(deny_unknown_fields)]
 pub struct Stage {
     pub file: String,
+    #[serde(default)]
+    pub files: Vec<String>,
     /// Shown in the GPU time overlay; the file name when absent.
     #[serde(default)]
     pub name: Option<String>,
+    #[serde(default)]
+    pub fog: Option<bool>,
+    #[serde(default)]
+    pub clouds: Option<bool>,
+    #[serde(default)]
+    pub sun: Option<bool>,
+    #[serde(default)]
+    pub stars: Option<bool>,
+    #[serde(default)]
+    pub scale: Option<f32>,
+    #[serde(default)]
+    pub output: Option<String>,
 }
 
 /// An option the player can change: a WGSL `override` constant of the
@@ -105,6 +121,23 @@ struct Raw {
     options: Vec<RawOption>,
     #[serde(default)]
     budget: RawBudget,
+    vertex: Option<toml::Value>,
+    weather: Option<toml::Value>,
+    #[serde(default)]
+    pages: Vec<toml::Value>,
+    #[serde(default)]
+    tags: Vec<toml::Value>,
+    #[serde(default)]
+    materials: Vec<toml::Value>,
+    #[serde(default)]
+    textures: Vec<toml::Value>,
+    #[serde(default)]
+    lights: Vec<toml::Value>,
+    #[serde(default)]
+    particle_lights: Vec<toml::Value>,
+    reflection: Option<toml::Value>,
+    shadow: Option<toml::Value>,
+    displacement: Option<toml::Value>,
 }
 
 #[derive(Deserialize)]
@@ -168,7 +201,8 @@ impl Manifest {
             )));
         }
         let stages = raw.sky.iter().chain(&raw.material).chain(&raw.post);
-        for file in raw.shared.iter().chain(stages.map(|s| &s.file)) {
+        let own = stages.flat_map(|s| s.files.iter().chain(std::iter::once(&s.file)));
+        for file in raw.shared.iter().chain(own) {
             if !crate::package::plain_path(file) || !file.ends_with(".wgsl") {
                 return Err(err(format!("{file:?} is not a plain path to a .wgsl file")));
             }
@@ -196,6 +230,24 @@ impl Manifest {
             }
             ms => ms.map(|ms| ms as f32),
         };
+        let mut unsupported = Vec::new();
+        for (name, present) in [
+            ("vertex", raw.vertex.is_some()),
+            ("weather", raw.weather.is_some()),
+            ("pages", !raw.pages.is_empty()),
+            ("tags", !raw.tags.is_empty()),
+            ("materials", !raw.materials.is_empty()),
+            ("textures", !raw.textures.is_empty()),
+            ("lights", !raw.lights.is_empty()),
+            ("particle_lights", !raw.particle_lights.is_empty()),
+            ("reflection", raw.reflection.is_some()),
+            ("shadow", raw.shadow.is_some()),
+            ("displacement", raw.displacement.is_some()),
+        ] {
+            if present {
+                unsupported.push(name.to_owned());
+            }
+        }
         Ok(Manifest {
             id: raw.id,
             name: raw.name,
@@ -210,6 +262,7 @@ impl Manifest {
             post: raw.post,
             options,
             budget: Budget { gpu_ms },
+            unsupported,
         })
     }
 
@@ -217,7 +270,8 @@ impl Manifest {
     pub fn files(&self) -> Vec<&str> {
         let mut files: Vec<&str> = Vec::new();
         let stages = self.sky.iter().chain(&self.material).chain(&self.post);
-        for file in self.shared.iter().chain(stages.map(|s| &s.file)) {
+        let own = stages.flat_map(|s| s.files.iter().chain(std::iter::once(&s.file)));
+        for file in self.shared.iter().chain(own) {
             if !files.contains(&file.as_str()) {
                 files.push(file);
             }

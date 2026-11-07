@@ -323,5 +323,6 @@ private fun StickEditor(
     SettingSlider(stringResource(R.string.editor_size), dpOf(s.size), 60f..360f, 4f, { "${it.toInt()} dp" }) { v -> onChange { it.copy(size = Size(v)) } }
     VisibilityChips(s.visibility) { v -> onChange { it.copy(visibility = v) } }
     SettingSwitch(stringResource(R.string.editor_sprint_lock), s.canLock) { v -> onChange { it.copy(canLock = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
+    SettingSwitch(stringResource(R.string.editor_auto_run), s.autoRun, stringResource(R.string.editor_auto_run_desc)) { v -> onChange { it.copy(autoRun = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     OutlinedButton(onClick = onDelete) { Text(stringResource(R.string.editor_delete), color = MaterialTheme.colorScheme.error) }
 }

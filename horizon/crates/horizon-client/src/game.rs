@@ -16041,6 +16041,8 @@ fn load_resources(
         let handle = std::thread::Builder::new()
             .name("world-rest-loader".into())
             .spawn(move || {
+                #[cfg(target_os = "android")]
+                let _ = rustix::process::setpriority_process(None, 10);
                 let rest = load_world_rest(
                     &root,
                     &resources,

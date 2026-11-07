@@ -460,6 +460,7 @@ impl H {
                 "Performance Overlay",
                 match g.overlay {
                     Overlay::Off => "Off",
+                    Overlay::Counter => "FPS Counter",
                     Overlay::Fps => "FPS",
                     Overlay::Graph => "FPS and Graph",
                 },
@@ -547,7 +548,7 @@ impl H {
             }
             H::Overlay => {
                 g.overlay = step(
-                    &[Overlay::Off, Overlay::Fps, Overlay::Graph],
+                    &[Overlay::Off, Overlay::Counter, Overlay::Fps, Overlay::Graph],
                     g.overlay,
                     back,
                 )

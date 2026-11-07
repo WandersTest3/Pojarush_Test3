@@ -3,7 +3,10 @@ package com.wanderstest3.pojarush.ui
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,7 +42,7 @@ import com.wanderstest3.pojarush.controls.ControlLayouts
 import com.wanderstest3.pojarush.controls.ControlSettings
 import java.io.File
 
-enum class Change { LAYOUT, CONTROLS, MOUSE, RESOLUTION }
+enum class Change { LAYOUT, CONTROLS, MOUSE, RESOLUTION, MENU_BUTTON }
 
 @Composable
 fun LayoutSettings(settings: ControlSettings, onEdit: (() -> Unit)?, onChange: (Change) -> Unit) {
@@ -104,7 +107,75 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         SettingSwitch(stringResource(R.string.controls_tap_use), settings.tapToUse) { settings.tapToUse = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_hotbar), settings.hotbarTouch) { settings.hotbarTouch = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_vibrate), settings.vibrate) { settings.vibrate = it; onChange(Change.CONTROLS) }
+        SettingSwitch(stringResource(R.string.controls_hidden), settings.controlsHidden, stringResource(R.string.controls_hidden_desc)) { settings.controlsHidden = it; onChange(Change.CONTROLS) }
+        SettingSwitch(stringResource(R.string.controls_hotbar_swap), settings.hotbarSwap, stringResource(R.string.controls_hotbar_swap_desc)) { settings.hotbarSwap = it; onChange(Change.CONTROLS) }
+        var drop by remember { mutableStateOf(settings.bedrockDrop) }
+        SettingSwitch(stringResource(R.string.controls_bedrock_drop), drop, stringResource(R.string.controls_bedrock_drop_desc)) {
+            settings.bedrockDrop = it
+            drop = it
+            onChange(Change.CONTROLS)
+        }
+        if (drop) {
+            SettingSlider(stringResource(R.string.controls_bedrock_drop_interval), settings.bedrockDropMs.toFloat(), 50f..1000f, 50f, { "${it.toInt()} ms" }) {
+                settings.bedrockDropMs = it.toInt()
+                onChange(Change.CONTROLS)
+            }
+        }
         Hint(stringResource(R.string.controls_help))
+    }
+    MenuButtonSettings(settings, onChange)
+}
+
+private val MENU_COLORS = listOf(0xFF57197F, 0xFF1E1E1E, 0xFF0D47A1, 0xFF1B5E20, 0xFFB71C1C, 0xFFE65100, 0xFFFFFFFF).map { it.toInt() }
+
+@Composable
+fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
+    val context = LocalContext.current
+    var icon by remember { mutableStateOf(settings.menuIcon) }
+    var color by remember { mutableIntStateOf(settings.menuColor) }
+    val failed = stringResource(R.string.controls_import_failed, "%s")
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        runCatching { ControlLayouts.importMenuIcon(context, uri) }
+            .onSuccess {
+                settings.menuIcon = it.absolutePath
+                icon = it.absolutePath
+                onChange(Change.MENU_BUTTON)
+            }
+            .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+    }
+    PojarushCard {
+        CardTitle(stringResource(R.string.menu_button_title))
+        SettingSlider(stringResource(R.string.menu_button_size), settings.menuSize, 20f..80f, 2f, { "${it.toInt()} dp" }) { settings.menuSize = it; onChange(Change.MENU_BUTTON) }
+        SettingSlider(stringResource(R.string.menu_button_opacity), settings.menuOpacity, 0.05f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.menuOpacity = it; onChange(Change.MENU_BUTTON) }
+        SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
+        Text(stringResource(R.string.menu_button_color), style = MaterialTheme.typography.bodyMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MENU_COLORS.forEach { c ->
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.size(32.dp).clip(RoundedCornerShape(50))
+                        .background(androidx.compose.ui.graphics.Color(c))
+                        .border(if (color == c) 3.dp else 1.dp, if (color == c) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Gray, RoundedCornerShape(50))
+                        .clickable {
+                            color = c
+                            settings.menuColor = c
+                            onChange(Change.MENU_BUTTON)
+                        }
+                )
+            }
+        }
+        Hint(if (icon.isEmpty()) stringResource(R.string.menu_button_icon_none) else stringResource(R.string.mouse_cursor_current, File(icon).name))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { picker.launch(arrayOf("image/*")) }) { Text(stringResource(R.string.menu_button_icon_choose)) }
+            if (icon.isNotEmpty()) {
+                OutlinedButton(onClick = {
+                    settings.menuIcon = ""
+                    icon = ""
+                    onChange(Change.MENU_BUTTON)
+                }) { Text(stringResource(R.string.mouse_cursor_default)) }
+            }
+        }
+        Hint(stringResource(R.string.menu_button_hint))
     }
 }
 
@@ -129,6 +200,7 @@ fun MouseSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         SettingSlider(stringResource(R.string.mouse_speed), settings.mouseSpeed, 0.25f..3.00f, 0.05f, { "${fmt(it)}x" }) { settings.mouseSpeed = it; onChange(Change.MOUSE) }
         SettingSlider(stringResource(R.string.mouse_size), settings.cursorSize, 0.25f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.cursorSize = it; onChange(Change.MOUSE) }
         SettingSwitch(stringResource(R.string.mouse_tap_click), settings.tapToClick) { settings.tapToClick = it; onChange(Change.MOUSE) }
+        SettingSwitch(stringResource(R.string.mouse_screen_touch), settings.screenTouch, stringResource(R.string.mouse_screen_touch_desc)) { settings.screenTouch = it; onChange(Change.MOUSE) }
     }
     PojarushCard {
         CardTitle(stringResource(R.string.mouse_cursor_image))

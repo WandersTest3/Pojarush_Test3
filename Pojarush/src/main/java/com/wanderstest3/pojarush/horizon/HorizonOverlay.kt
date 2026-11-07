@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,7 +63,7 @@ import com.wanderstest3.pojarush.ui.ResolutionSettings
 
 @SuppressLint("ViewConstructor")
 class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activity), ControlsHost {
-    private enum class Panel { NONE, MENU, SETTINGS, EDITOR }
+    private enum class Panel { NONE, SETTINGS, EDITOR }
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private val settings = ControlSettings(activity)
@@ -72,6 +73,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     private val sentinel = " "
     private var panel by mutableStateOf(Panel.NONE)
     private var mouseOn by mutableStateOf(controls.virtualMouse)
+    private var hiddenOn by mutableStateOf(settings.controlsHidden)
 
     private val textInput = EditText(context).apply {
         alpha = 0f
@@ -125,16 +127,22 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         if (panel == Panel.EDITOR) return
         controls.pause()
         mouseOn = controls.virtualMouse
-        panel = if (panel == Panel.NONE) Panel.MENU else Panel.NONE
+        hiddenOn = settings.controlsHidden
+        panel = if (panel == Panel.NONE) Panel.SETTINGS else Panel.NONE
     }
 
     private fun apply(change: Change) {
         when (change) {
             Change.LAYOUT -> controls.setLayout(ControlLayouts.load(activity, settings.layout, defaultName))
             Change.CONTROLS, Change.MOUSE -> controls.reloadSettings()
+            Change.MENU_BUTTON -> {
+                controls.reloadSettings()
+                controls.relayout()
+            }
             Change.RESOLUTION -> activity.applyResolution()
         }
         mouseOn = controls.virtualMouse
+        hiddenOn = settings.controlsHidden
     }
 
     private fun openEditor() {
@@ -149,50 +157,17 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     }
 
     @Composable
-    private fun MenuButton(label: String, onClick: () -> Unit) {
-        Button(
-            onClick = onClick,
-            modifier = Modifier.width(260.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = Color.White)
-        ) { Text(label) }
-    }
-
-    @Composable
     private fun OverlayUi() {
         when (panel) {
             Panel.NONE -> {}
-            Panel.MENU -> Box(
-                modifier = Modifier.fillMaxSize().background(Color(0x66000000)).clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { panel = Panel.NONE },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xF01E1129)).clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {}.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                    MenuButton(stringResource(if (mouseOn) R.string.overlay_mouse_on else R.string.overlay_mouse_off)) {
-                        controls.setVirtualMouse(!controls.virtualMouse)
-                        mouseOn = controls.virtualMouse
-                    }
-                    MenuButton(stringResource(R.string.overlay_keyboard)) {
-                        panel = Panel.NONE
-                        toggleKeyboard()
-                    }
-                    MenuButton(stringResource(R.string.menu_settings)) { panel = Panel.SETTINGS }
-                    MenuButton(stringResource(R.string.menu_edit)) { openEditor() }
-                    TextButton(onClick = { panel = Panel.NONE }) { Text(stringResource(R.string.overlay_close)) }
-                }
-            }
             Panel.SETTINGS -> SettingsPanel()
             Panel.EDITOR -> ControlEditor(controls, settings) { closeEditor() }
         }
+    }
+
+    @Composable
+    private fun QuickChip(label: String, selected: Boolean = false, onClick: () -> Unit) {
+        FilterChip(selected = selected, onClick = onClick, label = { Text(label, maxLines = 1) })
     }
 
     @Composable
@@ -216,6 +191,26 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                     }
                     Box(modifier = Modifier.weight(1f))
                     TextButton(onClick = { panel = Panel.NONE }) { Text(stringResource(R.string.overlay_close)) }
+                }
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    QuickChip(stringResource(if (mouseOn) R.string.overlay_mouse_on else R.string.overlay_mouse_off), mouseOn) {
+                        controls.setVirtualMouse(!controls.virtualMouse)
+                        mouseOn = controls.virtualMouse
+                    }
+                    QuickChip(stringResource(R.string.overlay_keyboard)) {
+                        panel = Panel.NONE
+                        toggleKeyboard()
+                    }
+                    QuickChip(stringResource(R.string.overlay_hide_controls), hiddenOn) {
+                        settings.controlsHidden = !settings.controlsHidden
+                        hiddenOn = settings.controlsHidden
+                        controls.invalidate()
+                    }
+                    QuickChip(stringResource(R.string.menu_edit)) { openEditor() }
                 }
                 Column(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
