@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,19 +31,25 @@ import java.util.Locale
 
 val Purple = Color(0xFF57197F)
 
+/// The Horizon site/launcher's background: near-black with a violet cast, not the
+/// flatter dark-purple the app used before.
+val BackgroundTop = Color(0xFF0B0712)
+val BackgroundBottom = Color(0xFF150A22)
+val CardBorder = Color(0xFF2E1E42)
+
 val PojarushColors = darkColorScheme(
-    primary = Color(0xFFD2A8F5),
-    onPrimary = Color(0xFF2A0B40),
+    primary = Color(0xFFB98CF2),
+    onPrimary = Color(0xFF1A0A2A),
     primaryContainer = Purple,
     onPrimaryContainer = Color(0xFFF3E4FF),
     secondary = Color(0xFFFFC857),
     secondaryContainer = Color(0xFF3B2050),
     onSecondaryContainer = Color(0xFFF3E4FF),
-    background = Color(0xFF140A1C),
-    surface = Color(0xFF1E1129),
-    surfaceVariant = Color(0xFF2B1A3A),
+    background = BackgroundTop,
+    surface = Color(0xFF160D22),
+    surfaceVariant = Color(0xFF231433),
     onSurface = Color(0xFFEDE0F5),
-    onSurfaceVariant = Color(0xFFCDBBDA),
+    onSurfaceVariant = Color(0xFFA996BC),
     error = Color(0xFFFF8A80),
 )
 
@@ -51,11 +58,18 @@ fun PojarushTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = PojarushColors, content = content)
 }
 
+/// The app's full-screen backdrop: a subtle top-to-bottom gradient instead of a flat
+/// fill, matching the Horizon site/launcher's depth.
+fun pojarushBackgroundBrush(): androidx.compose.ui.graphics.Brush =
+    androidx.compose.ui.graphics.Brush.verticalGradient(listOf(BackgroundTop, BackgroundBottom))
+
 @Composable
 fun PojarushCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
     }

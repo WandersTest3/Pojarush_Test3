@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -72,6 +73,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -116,7 +118,7 @@ class MainActivity : ComponentActivity() {
         Fullscreen.apply(this)
         setContent {
             PojarushTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Box(modifier = Modifier.fillMaxSize().background(com.wanderstest3.pojarush.ui.pojarushBackgroundBrush())) {
                     PojarushScreen()
                 }
             }
@@ -134,6 +136,24 @@ private fun PojarushScreen() {
         if (Paths.refresh(context)) storageVersion++
         resumes++
     }
+
+    val profile by Accounts.profile.collectAsStateWithLifecycle()
+    val hasStorage = remember(storageVersion) { Paths.hasStorageAccess(context) }
+    var onboardingDone by rememberSaveable { mutableStateOf(false) }
+    val prepared = remember(storageVersion, resumes) { HorizonManager.isPrepared() }
+    val needsOnboarding = !onboardingDone && (!hasStorage || profile == null || !prepared)
+
+    if (needsOnboarding) {
+        OnboardingFlow(
+            hasStorage = hasStorage,
+            storageVersion = storageVersion,
+            profile = profile,
+            prepared = prepared,
+            onFinished = { onboardingDone = true }
+        )
+        return
+    }
+
     Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(modifier = Modifier.width(176.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -187,14 +207,20 @@ private fun PojarushScreen() {
 @Composable
 private fun Header() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))) {
+        Box(
+            modifier = Modifier.size(44.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(com.wanderstest3.pojarush.ui.Purple.copy(alpha = 0.35f))
+        ) {
             Image(painterResource(R.drawable.ic_launcher_art), contentDescription = null, modifier = Modifier.fillMaxSize())
         }
         Spacer(Modifier.width(10.dp))
         Text(
             stringResource(R.string.app_name),
             style = MaterialTheme.typography.titleMedium,
+            fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -203,7 +229,7 @@ private fun Header() {
 
 @Composable
 private fun NavItem(section: Section, selected: Boolean, onClick: () -> Unit) {
-    val bg = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+    val bg = if (selected) com.wanderstest3.pojarush.ui.Purple else Color.Transparent
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -212,10 +238,129 @@ private fun NavItem(section: Section, selected: Boolean, onClick: () -> Unit) {
         Text(
             stringResource(section.label),
             style = MaterialTheme.typography.bodyLarge,
+            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+/// First run: ask for storage, then an account, then start the Minecraft download, in that
+/// order — each step unlocks the next; the player can keep configuring things once the
+/// download has started (Section.Home shows its progress under GameCard).
+@Composable
+private fun OnboardingFlow(
+    hasStorage: Boolean,
+    storageVersion: Int,
+    profile: Profile?,
+    prepared: Boolean,
+    onFinished: () -> Unit,
+) {
+    val context = LocalContext.current
+    val state by HorizonManager.state.collectAsStateWithLifecycle()
+    val downloadStarted = state !is HorizonManager.State.Idle || prepared
+    val step = when {
+        !hasStorage -> 0
+        profile == null -> 1
+        else -> 2
+    }
+    Box(
+        modifier = Modifier.fillMaxSize().background(com.wanderstest3.pojarush.ui.pojarushBackgroundBrush()).padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.widthIn(max = 460.dp).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(14.dp))) {
+                Image(painterResource(R.drawable.ic_launcher_art), contentDescription = null, modifier = Modifier.fillMaxSize())
+            }
+            Text(
+                stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(3) { i ->
+                    Box(
+                        modifier = Modifier.size(8.dp).clip(RoundedCornerShape(50))
+                            .background(if (i <= step) com.wanderstest3.pojarush.ui.Purple else MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                }
+            }
+            when (step) {
+                0 -> OnboardingStorageStep()
+                1 -> OnboardingAccountStep()
+                else -> OnboardingDownloadStep(
+                    downloadStarted = downloadStarted,
+                    state = state,
+                    onStart = { HorizonManager.prepare(context.applicationContext, true) },
+                    onContinue = onFinished
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingStorageStep() {
+    val context = LocalContext.current
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    PojarushCard {
+        CardTitle(stringResource(R.string.onboarding_storage_title))
+        Hint(stringResource(R.string.onboarding_storage_body))
+        Button(onClick = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val app = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${context.packageName}"))
+                runCatching { context.startActivity(app) }.onFailure {
+                    context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                }
+            } else {
+                permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }) { Text(stringResource(R.string.storage_grant)) }
+    }
+}
+
+@Composable
+private fun OnboardingAccountStep() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            stringResource(R.string.onboarding_account_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        AccountsCard()
+    }
+}
+
+@Composable
+private fun OnboardingDownloadStep(
+    downloadStarted: Boolean,
+    state: HorizonManager.State,
+    onStart: () -> Unit,
+    onContinue: () -> Unit,
+) {
+    PojarushCard {
+        CardTitle(stringResource(R.string.onboarding_download_title))
+        Hint(stringResource(R.string.onboarding_download_body))
+        if (downloadStarted) {
+            when (val s = state) {
+                is HorizonManager.State.Running -> {
+                    Text(s.step, style = MaterialTheme.typography.bodySmall)
+                    if (s.progress != null) LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth())
+                    else LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                else -> {}
+            }
+            Hint(stringResource(R.string.onboarding_download_background))
+            Button(onClick = onContinue) { Text(stringResource(R.string.onboarding_continue)) }
+        } else {
+            Button(onClick = onStart) { Text(stringResource(R.string.onboarding_download_start)) }
+        }
     }
 }
 
@@ -229,9 +374,9 @@ private fun PlayButton(modifier: Modifier) {
     val ready = remember(state) { HorizonManager.isSupported() && HorizonManager.isPrepared() }
     val enabled = ready && !busy && profile != null
     ExtendedFloatingActionButton(
-        modifier = modifier.height(64.dp),
-        containerColor = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.height(64.dp).clip(RoundedCornerShape(16.dp)),
+        containerColor = if (enabled) com.wanderstest3.pojarush.ui.Purple else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (enabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
         onClick = {
             if (!enabled) return@ExtendedFloatingActionButton
             scope.launch {
@@ -283,7 +428,15 @@ private fun GameCard(storageVersion: Int) {
     val busy = state is HorizonManager.State.Running
 
     PojarushCard {
-        CardTitle(stringResource(R.string.game_title))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val ready = supported && prepared
+            Text(
+                text = if (ready) "✔ " + stringResource(R.string.ready_to_play) else stringResource(R.string.game_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (ready) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+            )
+        }
         StatusLine(stringResource(R.string.status_device), supported)
         StatusLine(stringResource(R.string.status_prepared), prepared)
         StatusLine(stringResource(R.string.status_sounds), sounds)

@@ -529,7 +529,10 @@ class ControlsView(
     }
 
     @SuppressLint("ClickableViewAccessibility")
+    private fun fromMouse(e: MotionEvent): Boolean = e.source and android.view.InputDevice.SOURCE_MOUSE == android.view.InputDevice.SOURCE_MOUSE
+
     override fun onTouchEvent(e: MotionEvent): Boolean {
+        if (fromMouse(e)) return onMouseButtonEvent(e)
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val index = e.actionIndex
@@ -545,6 +548,67 @@ class ControlsView(
         }
         return true
     }
+
+    /// A physical mouse's clicks: Android delivers them as ACTION_DOWN/UP touch events
+    /// (not through onGenericMotionEvent), with the button in getButtonState(). Routed
+    /// straight to a real mouse click instead of the finger-touch roles above (which would
+    /// otherwise treat a physical click as a drag-to-look or a button tap at the pointer's
+    /// position, which is wrong once there's a real cursor to click with).
+    private fun onMouseButtonEvent(e: MotionEvent): Boolean {
+        val button = when {
+            e.buttonState and MotionEvent.BUTTON_SECONDARY != 0 -> 1
+            e.buttonState and MotionEvent.BUTTON_TERTIARY != 0 -> 2
+            else -> 0
+        }
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_BUTTON_PRESS -> {
+                if (!captured && virtualMouse) {
+                    cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
+                    cursorY = e.y.coerceIn(0f, (height - 1).coerceAtLeast(0).toFloat())
+                    HorizonBridge.cursor(cursorX, cursorY)
+                }
+                mouse(button, true)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_BUTTON_RELEASE -> mouse(button, false)
+        }
+        return true
+    }
+
+    /// A physical mouse's movement (no button held) and wheel: Android delivers these
+    /// through onGenericMotionEvent, as ACTION_HOVER_MOVE and ACTION_SCROLL, never through
+    /// onTouchEvent. Without this override a connected mouse could click (onTouchEvent above)
+    /// but never move the cursor or look around.
+    override fun onGenericMotionEvent(e: MotionEvent): Boolean {
+        if (!fromMouse(e)) return super.onGenericMotionEvent(e)
+        when (e.actionMasked) {
+            MotionEvent.ACTION_HOVER_MOVE -> {
+                if (captured) {
+                    val dx = if (lastHoverX.isNaN()) 0f else e.x - lastHoverX
+                    val dy = if (lastHoverY.isNaN()) 0f else e.y - lastHoverY
+                    lastHoverX = e.x
+                    lastHoverY = e.y
+                    look(dx, dy)
+                } else if (virtualMouse) {
+                    lastHoverX = Float.NaN
+                    lastHoverY = Float.NaN
+                    cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
+                    cursorY = e.y.coerceIn(0f, (height - 1).coerceAtLeast(0).toFloat())
+                    HorizonBridge.cursor(cursorX, cursorY)
+                    invalidate()
+                }
+                return true
+            }
+            MotionEvent.ACTION_SCROLL -> {
+                val lines = e.getAxisValue(MotionEvent.AXIS_VSCROLL)
+                if (lines != 0f) HorizonBridge.wheel(if (captured) -lines else lines)
+                return true
+            }
+        }
+        return super.onGenericMotionEvent(e)
+    }
+
+    private var lastHoverX = Float.NaN
+    private var lastHoverY = Float.NaN
 
     private fun pointerDown(id: Int, x: Float, y: Float, time: Long): Boolean {
         if (showHandle && menuRect.contains(x, y)) {

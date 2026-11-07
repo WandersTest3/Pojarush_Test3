@@ -389,7 +389,33 @@ fn pack_files(pack: &Pack) -> io::Result<BTreeMap<String, Provided>> {
 #[cfg(unix)]
 fn link(target: &Path, at: &Path) -> io::Result<()> {
     // Relative sources are relative to the process, not the overlay directory.
-    std::os::unix::fs::symlink(std::path::absolute(target)?, at)
+    let target = std::path::absolute(target)?;
+    // A symlink works when both ends sit on a filesystem that resolves them (most of
+    // unix). On Android, `at` is under the app's private storage so the link itself is
+    // always created there, but `target` can be a pack under the shared storage FUSE
+    // layer (where the player keeps resourcepacks/shaderpacks so they can edit them from
+    // outside the app). `symlink()` itself succeeds either way - it only writes a path
+    // string - but *reading through* a symlink that crosses from private storage into
+    // that FUSE mount isn't reliably resolved by Android's FUSE layer, and the file then
+    // fails to open later, deep inside the asset loader, far from here. So the link is
+    // verified by actually reading a byte back through it; on any failure (to create or
+    // to read back) the fallback is a plain copy, which always works.
+    std::os::unix::fs::symlink(&target, at)?;
+    if readable(at) {
+        Ok(())
+    } else {
+        let _ = std::fs::remove_file(at);
+        std::fs::copy(&target, at).map(|_| ())
+    }
+}
+/// Whether `path` (a freshly created symlink) can actually be opened and read from, not
+/// just whether creating the link itself succeeded.
+#[cfg(unix)]
+fn readable(path: &Path) -> bool {
+    use std::io::Read;
+    std::fs::File::open(path)
+        .and_then(|mut f| f.read(&mut [0u8; 1]))
+        .is_ok()
 }
 #[cfg(not(unix))]
 fn link(target: &Path, at: &Path) -> io::Result<()> {

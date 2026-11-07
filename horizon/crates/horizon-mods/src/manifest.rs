@@ -392,7 +392,10 @@ impl Package {
     }
 }
 
-/// The `.hmod` files and mod folders in `dir`, by name.
+/// The `.hmod` files and mod folders in `dir`, by name. The extension match is
+/// case-insensitive: file managers and mod registries often keep a download's original
+/// casing (`Mod.HMOD`), and the launcher's own import path doesn't guarantee lowercase
+/// either once a file is placed in the folder by hand instead of through it.
 pub fn find(dir: &Path) -> Vec<PathBuf> {
     let Ok(read) = std::fs::read_dir(dir) else {
         return Vec::new();
@@ -400,7 +403,11 @@ pub fn find(dir: &Path) -> Vec<PathBuf> {
     let mut found: Vec<PathBuf> = read
         .flatten()
         .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e == "hmod") || p.join(MANIFEST).is_file())
+        .filter(|p| {
+            p.extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("hmod"))
+                || p.join(MANIFEST).is_file()
+        })
         .collect();
     found.sort();
     found

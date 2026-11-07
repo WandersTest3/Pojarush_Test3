@@ -19,6 +19,7 @@
     <string name="account_offline">Offline: %1$s</string>
     <string name="account_none">Choose a player name or sign in to play.</string>
     <string name="game_title">Horizon 26.3</string>
+    <string name="ready_to_play">Ready to play</string>
     <string name="status_device">Horizon libraries for this device</string>
     <string name="status_prepared">Game files prepared</string>
     <string name="status_sounds">Sounds imported</string>
@@ -34,6 +35,14 @@
     <string name="storage_title">Pojarush_Test3 folder</string>
     <string name="storage_needed">Allow access to the internal storage to keep worlds, options, packs, layouts and logs in the Pojarush_Test3 folder at its root. Until then they stay in the app folder.</string>
     <string name="storage_grant">Allow access</string>
+    <string name="onboarding_storage_title">Where should Pojarush keep its files?</string>
+    <string name="onboarding_storage_body">Allow access to the internal storage so worlds, options, packs, layouts and logs live in the Pojarush_Test3 folder at its root, instead of Android/data where other apps can\'t reach them.</string>
+    <string name="onboarding_account_title">Sign in to play</string>
+    <string name="onboarding_download_title">Download Minecraft</string>
+    <string name="onboarding_download_body">Horizon needs your own copy of Minecraft: Java Edition to prepare the game files (about 330 MB, plus sounds).</string>
+    <string name="onboarding_download_start">Start download</string>
+    <string name="onboarding_download_background">You can keep setting things up while it downloads.</string>
+    <string name="onboarding_continue">Continue</string>
     <string name="tab_prepare">Preparation</string>
     <string name="tab_game">Game</string>
     <string name="tab_stdio">Native</string>
@@ -162,7 +171,7 @@
     <string name="mods_tab_shaders">Shaders</string>
     <string name="mods_desc_mods">Horizon content mods (.hmod). Fabric and NeoForge .jar files do not run in Horizon.</string>
     <string name="mods_desc_resource">Java Edition resource packs (.zip with pack.mcmeta).</string>
-    <string name="mods_desc_shaders">Horizon shader packs (.hshader or .zip).</string>
+    <string name="mods_desc_shaders">Horizon\'s own shader packs (.hshader) run. Classic OptiFine/Iris .zip packs are listed but not rendered yet: Horizon has no GLSL pipeline for them.</string>
     <string name="mods_empty">Nothing installed.</string>
     <string name="mods_import">Import file</string>
     <string name="mods_folder">Folder: %1$s</string>

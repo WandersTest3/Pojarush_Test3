@@ -123,7 +123,7 @@ object ControlLayouts {
         val base = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.')?.ifBlank { null } ?: "layout"
         val layout = ControlLayout.parse(text, base)
         dir.mkdirs()
-        val safe = base.replace(Regex("[^A-Za-z0-9._ -]"), "_").take(48)
+        val safe = base.replace(Regex("[^\\p{L}0-9._ -]"), "_").take(48)
         var file = File(dir, "$safe.json")
         var n = 2
         while (file.exists()) file = File(dir, "$safe ($n).json").also { n++ }
@@ -137,7 +137,7 @@ object ControlLayouts {
         val target = if (existing != null && existing.isFile) {
             existing
         } else {
-            val base = "${layout.name} $suffix".replace(Regex("[^A-Za-z0-9._ ()-]"), "_").trim().take(48)
+            val base = "${layout.name} $suffix".replace(Regex("[^\\p{L}0-9._ ()-]"), "_").trim().take(48)
             var f = File(dir, "$base.json")
             var n = 2
             while (f.exists()) f = File(dir, "$base $n.json").also { n++ }

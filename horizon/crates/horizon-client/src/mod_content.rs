@@ -1158,14 +1158,40 @@ fn out_path(overlay: &Overlay<'_>, rel: &str) -> PathBuf {
 }
 #[cfg(unix)]
 fn link(target: &Path, at: &Path) -> std::io::Result<()> {
-    std::os::unix::fs::symlink(target, at)
+    // Mirrors `horizon_client_render::packs::link`'s reasoning: `at` is always under the
+    // app's own private overlay cache on Android, but `target` (a mod's own files) can sit
+    // under the shared-storage FUSE layer the player imported it into. A symlink crossing
+    // that boundary can be created but then fail to resolve on read, far from here, so it
+    // is verified by actually reading it back and falls back to a real copy otherwise.
+    std::os::unix::fs::symlink(target, at)?;
+    if readable(at) {
+        Ok(())
+    } else {
+        let _ = fs::remove_file(at);
+        copy_tree(target, at)
+    }
+}
+#[cfg(unix)]
+fn readable(path: &Path) -> bool {
+    use std::io::Read;
+    if path.is_dir() {
+        return true;
+    }
+    fs::File::open(path)
+        .and_then(|mut f| f.read(&mut [0u8; 1]))
+        .is_ok()
 }
 #[cfg(not(unix))]
 fn link(target: &Path, at: &Path) -> std::io::Result<()> {
+    copy_tree(target, at)
+}
+/// A real, non-symlinked copy of `target` at `at`: the fallback every platform's `link`
+/// uses when a link isn't an option (Windows always, unix when the link doesn't resolve).
+fn copy_tree(target: &Path, at: &Path) -> std::io::Result<()> {
     if target.is_dir() {
         fs::create_dir_all(at)?;
         for entry in fs::read_dir(target)?.flatten() {
-            link(&entry.path(), &at.join(entry.file_name()))?;
+            copy_tree(&entry.path(), &at.join(entry.file_name()))?;
         }
         Ok(())
     } else {
