@@ -49,6 +49,24 @@ also reachable from the launcher. Edited layouts are saved as Pojarush `.json` f
 
 Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
 
+## 1.5.1
+
+- Fixed `.hmod` content mods and resource packs still not loading after 1.5.0's private-cache fix:
+  the overlay symlink itself lived in private storage, but when it pointed at a pack or mod the
+  player keeps in shared storage (so it stays visible from outside the app), reading through that
+  link across the two filesystems could still silently fail. The overlay builder now checks a link
+  actually reads back and falls back to a real copy when it doesn't.
+- `.hmod` files are now found regardless of case (`Mod.HMOD`, not just `mod.hmod`).
+- A connected physical mouse now moves the cursor and scrolls; only touch and a Bluetooth keyboard
+  worked before.
+- A first run now asks, in order: internal-storage permission, then to sign in, then to start the
+  Minecraft download — you can keep setting things up while it downloads.
+- Editing a layout you already saved updates that file instead of creating a new one each time, and
+  accented names (e.g. "Pojarush (padrão)") no longer get mangled when saved.
+- New look for the launcher's home screen.
+- Clarified in the Mods page: classic OptiFine/Iris `.zip` shader packs are listed but not rendered
+  yet — Horizon only runs its own `.hshader` format so far.
+
 ## 1.5.0
 
 - Several accounts (offline, Microsoft, Ely.by) with a switcher; skin viewer with cape.
