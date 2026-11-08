@@ -722,12 +722,20 @@ impl HudAtlas {
             }
         }
         images.sort_by(|a, b| b.2.cmp(&a.2).then(b.1.cmp(&a.1)));
-        let limit = if full { atlas_limit_after_device() } else { atlas_limit() };
-        let (width, placements, glyph_region) = match Self::fit(&images, limit) {
+        let mut limit = atlas_limit();
+        let first = Self::fit(&images, limit);
+        let first = match first {
+            Err(_) if full && ATLAS_LIMIT.load(std::sync::atomic::Ordering::Relaxed) == 0 && cfg!(target_os = "android") => {
+                limit = atlas_limit_after_device();
+                Self::fit(&images, limit)
+            }
+            other => other,
+        };
+        let (width, placements, glyph_region) = match first {
             Ok(done) => done,
-            Err(first) => {
+            Err(first_error) => {
                 let keep: HashSet<String> = animated.iter().cloned().chain(bordered.iter().cloned()).collect();
-                let mut result = Err(first);
+                let mut result = Err(first_error);
                 for side in [512, 256, 128, 64] {
                     if Self::shrink_gui(&mut images, side, &keep, &mut gui_sizes) == 0 {
                         continue;

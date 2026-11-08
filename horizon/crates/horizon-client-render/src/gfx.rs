@@ -625,11 +625,23 @@ pub(crate) const SPRITE_SPLIT: u32 = 2048;
 /// [`SPRITE_SPLIT`], or a smaller split from `HORIZON_SPRITE_SPLIT` (dev
 /// only: vanilla's sprites drawn from several arrays must look the same).
 fn sprite_split() -> u32 {
-    std::env::var("HORIZON_SPRITE_SPLIT")
+    let split = std::env::var("HORIZON_SPRITE_SPLIT")
         .ok()
         .and_then(|v| v.parse().ok())
         .filter(|&n| (1..=SPRITE_SPLIT).contains(&n))
-        .unwrap_or(SPRITE_SPLIT)
+        .unwrap_or(SPRITE_SPLIT);
+    match SPLIT_LIMIT.load(std::sync::atomic::Ordering::Relaxed) {
+        0 => split,
+        limit => split.min(limit),
+    }
+}
+/// The opened device's `max_texture_array_layers`: a GPU with fewer layers
+/// than [`SPRITE_SPLIT`] (1024 on many phones) gets more, smaller arrays.
+static SPLIT_LIMIT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+fn set_split_limit(layers: u32) {
+    if layers > 0 {
+        SPLIT_LIMIT.store(layers, std::sync::atomic::Ordering::Relaxed);
+    }
 }
 /// Sprite arrays terrain.wgsl binds (`sprites`, `sprites_1`...).
 const SPRITE_ARRAYS: u32 = 8;
@@ -712,6 +724,7 @@ fn terrain_group(
 pub struct PreparedTextures {
     sprites: Vec<(Vec<u8>, u32)>,
     forcefield: (Vec<u8>, u32),
+    split: u32,
 }
 impl PreparedTextures {
     pub fn new(
@@ -743,6 +756,7 @@ impl PreparedTextures {
                 })
                 .collect(),
             forcefield: mip_chain(forcefield.0, forcefield.1, &[], 0, 1),
+            split,
         }
     }
 }
@@ -909,11 +923,12 @@ fn describe_adapter(adapter: &wgpu::Adapter) {
 /// Whether an adapter's texture arrays hold the block textures Horizon puts
 /// in one array.
 fn check_layers(limits: &wgpu::Limits, layers: u32) -> Result<()> {
-    let needed = layers.min(sprite_split());
-    if limits.max_texture_array_layers < needed {
+    let split = sprite_split().min(limits.max_texture_array_layers);
+    if split == 0 || layers > split * SPRITE_ARRAYS {
         return Err(format!(
-            "GPU supports {} texture layers; {needed} required",
-            limits.max_texture_array_layers
+            "GPU supports {} texture layers; {} required",
+            limits.max_texture_array_layers,
+            layers.div_ceil(SPRITE_ARRAYS)
         )
         .into());
     }
@@ -1097,6 +1112,7 @@ async fn open_backend(
     match opened {
         Ok((device, queue)) => {
             crate::hud::set_atlas_limit(device.limits().max_texture_dimension_2d);
+            set_split_limit(device.limits().max_texture_array_layers);
             Ok(Opened {
                 instance,
                 surface,
@@ -1182,11 +1198,10 @@ impl Renderer {
         previous: Option<&Self>,
         api: GraphicsApi,
     ) -> Result<Self> {
-        let split = sprite_split();
-        if layers > split * SPRITE_ARRAYS {
+        if layers > SPRITE_SPLIT * SPRITE_ARRAYS {
             return Err(format!(
                 "{layers} block textures; Horizon draws at most {}",
-                split * SPRITE_ARRAYS
+                SPRITE_SPLIT * SPRITE_ARRAYS
             )
             .into());
         }
@@ -1225,6 +1240,9 @@ impl Renderer {
             }
             None => open_device(&window, offscreen, api, layers).await?,
         };
+        set_split_limit(device.limits().max_texture_array_layers);
+        let split = sprite_split();
+        let prepared = prepared.filter(|p| p.split == split);
         let info = adapter.get_info();
         crate::graphics::suggest_reduced_far_detail(crate::graphics::lod_capped(&info));
         let size = window.inner_size();

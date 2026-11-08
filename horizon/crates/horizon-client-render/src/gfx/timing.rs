@@ -77,6 +77,11 @@ impl GpuTimer {
         if !device.features().contains(wgpu::Features::TIMESTAMP_QUERY) {
             return None;
         }
+        // Mobile drivers fault on timestamp readback after a GPU reset, and the
+        // destroyed readback buffer then panics the frame; only opt in there.
+        if cfg!(target_os = "android") && std::env::var_os("HORIZON_GPU_TIMER").is_none() {
+            return None;
+        }
         let queries = device.create_query_set(&wgpu::QuerySetDescriptor {
             label: Some("Frame timestamps"),
             ty: wgpu::QueryType::Timestamp,

@@ -16,14 +16,15 @@ object JavaRuntime {
     private val versionFile: File get() = File(home, ".pojarush-version")
 
     fun ensure(context: Context, progress: (String) -> Unit): File {
-        val bundled = context.assets.open("$ASSETS/version").use { it.readBytes().decodeToString().trim() }
+        val arch = if (android.os.Process.is64Bit()) "arm64" else "arm"
+        val bundled = context.assets.open("$ASSETS/version").use { it.readBytes().decodeToString().trim() } + "-" + arch
         if (versionFile.isFile && versionFile.readText() == bundled && File(home, "lib/libjli.so").isFile) return home
         progress("Unpacking Java $MAJOR")
         home.deleteRecursively()
         home.mkdirs()
         try {
             context.assets.open("$ASSETS/universal.tar.xz").use { untarXz(it, home) }
-            context.assets.open("$ASSETS/bin-arm64.tar.xz").use { untarXz(it, home) }
+            context.assets.open("$ASSETS/bin-$arch.tar.xz").use { untarXz(it, home) }
             if (!File(home, "lib/libjli.so").isFile) throw IOException("Java $MAJOR is incomplete after unpacking")
             versionFile.writeText(bundled)
         } catch (e: Exception) {

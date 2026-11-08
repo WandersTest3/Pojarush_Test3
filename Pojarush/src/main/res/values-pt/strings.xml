@@ -201,8 +201,8 @@
     <string name="menu_button_size">Tamanho</string>
     <string name="menu_button_opacity">Opacidade</string>
     <string name="menu_button_radius">Arredondamento</string>
-    <string name="menu_button_color">Cor</string>
-    <string name="menu_button_icon_none">Ícone: padrão (☰\uFE0E)</string>
+    <string name="menu_button_color">Cor do contorno</string>
+    <string name="menu_button_icon_none">Ícone: Pojarush_Test3 (predefinido)</string>
     <string name="menu_button_icon_choose">Escolher imagem</string>
     <string name="menu_button_hint">Arraste o botão flutuante no jogo para o mudar de sítio.</string>
     <string name="mouse_screen_touch">Toque fora dos botões</string>
@@ -226,4 +226,26 @@
     <string name="keep_alive">Manter aberto em segundo plano</string>
     <string name="keep_alive_desc">Mantém o jogo e as transferências a correr enquanto usa outras apps (mostra uma notificação).</string>
     <string name="last_exit_reason">Motivo: %1$s</string>
+    <string name="nav_others">Outros</string>
+    <string name="interface_title">Interface</string>
+    <string name="menu_background">Opacidade do fundo dos menus</string>
+    <string name="minecraft_font">Fonte do Minecraft</string>
+    <string name="minecraft_font_desc">Usa a letra pixelizada ao estilo do Minecraft no launcher.</string>
+    <string name="lod_title">Terreno distante (LOD)</string>
+    <string name="lod_distance">Distância do LOD (blocos)</string>
+    <string name="lod_desc">Até onde o terreno simplificado é desenhado para lá da distância de renderização normal, de 1k até cerca de 1 milhão de blocos. Distâncias maiores gastam mais memória e bateria; aplica-se da próxima vez que o jogo abrir.</string>
+    <string name="lod_off">Desligado</string>
+    <string name="hud_title">Imagens de HUD</string>
+    <string name="hud_desc">Imagens para os botões e joysticks dos controlos. Importe um .zip (por exemplo as imagens de UI do Bedrock) ou imagens soltas; a imagem estica para o tamanho do botão. O esquema Bedrock Controls usa nomes como attack, interact, jump, sneak, sprint, perspective, joystick_frame e joystick_knob (com variantes _pressed).</string>
+    <string name="hud_count">%1$d imagens</string>
+    <string name="hud_import">Importar imagens ou .zip</string>
+    <string name="hud_imported">%1$s imagens importadas</string>
+    <string name="hud_image">Imagem</string>
+    <string name="hud_image_pressed">Imagem ao premir</string>
+    <string name="hud_image_none">Sem imagem</string>
+    <string name="hud_image_gallery">Da galeria</string>
+    <string name="hud_stick_frame">Imagem da base do joystick</string>
+    <string name="hud_stick_knob">Imagem do botão do joystick</string>
+    <string name="open_folder">Abrir pasta</string>
+    <string name="folder_path_toast">Pasta: %1$s</string>
 </resources>

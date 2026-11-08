@@ -2,6 +2,7 @@ package com.wanderstest3.pojarush.horizon
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
@@ -9,6 +10,7 @@ import android.graphics.ImageDecoder
 import android.graphics.Movie
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.AnimatedImageDrawable
@@ -97,21 +99,27 @@ class ControlsView(
     private val cursorPath = Path()
     private var cursorDrawable: Drawable? = null
     private var menuDrawable: Drawable? = null
+    private val appIcon: Drawable? = runCatching { context.packageManager.getApplicationIcon(context.packageName) }.getOrNull()
+    private val images = HashMap<String, Bitmap?>()
+    private val imagePaint = Paint().apply { isFilterBitmap = false }
+    private val dstRect = Rect()
+
+    private fun image(ref: String): Bitmap? {
+        if (ref.isEmpty()) return null
+        return images.getOrPut(ref) { runCatching { com.wanderstest3.pojarush.controls.HudImages.decode(ref) }.getOrNull() }
+    }
+
+    private fun drawImage(canvas: Canvas, bitmap: Bitmap, left: Float, top: Float, right: Float, bottom: Float, opacity: Float) {
+        imagePaint.alpha = (opacity * 255).toInt().coerceIn(0, 255)
+        dstRect.set(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
+        canvas.drawBitmap(bitmap, null, dstRect, imagePaint)
+    }
     private var lastHotbarSlot = -1
     private var lastHotbarTime = 0L
     private var cursorMovie: Movie? = null
     private var movieStart = 0L
 
-    private val defaultStyle = Style(
-        fill = Color.argb(110, 0x57, 0x19, 0x7F),
-        fillPressed = Color.argb(235, 0x57, 0x19, 0x7F),
-        text = Color.WHITE,
-        textPressed = Color.WHITE,
-        stroke = Color.argb(170, 255, 255, 255),
-        strokeDp = 1f,
-        radiusDp = 10f,
-        textSp = 15f,
-    )
+    private val defaultStyle = com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE
 
     private val vibrator: Vibrator? = runCatching {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -183,6 +191,7 @@ class ControlsView(
     }
 
     fun setLayout(next: ControlLayout) {
+        images.clear()
         releaseAll()
         savedToggles = null
         savedLocks = null
@@ -232,6 +241,7 @@ class ControlsView(
     }
 
     fun reloadSettings() {
+        images.clear()
         virtualMouse = settings.virtualMouse
         relayout()
         loadCursor()
@@ -1002,6 +1012,25 @@ class ControlsView(
             val st = s.style ?: defaultStyle
             val c = stickCenters[i]
             val active = stickHeld[i].isNotEmpty() || stickLocked[i]
+            val frame = image(st.image)
+            if (frame != null) {
+                drawImage(canvas, frame, c[0] - c[2], c[1] - c[2], c[0] + c[2], c[1] + c[2], opacity)
+                val knob = image(st.imagePressed)
+                val kr = c[2] * 0.5f
+                val kx = c[0] + stickKnob[i][0]
+                val ky = c[1] + stickKnob[i][1]
+                if (knob != null) drawImage(canvas, knob, kx - kr, ky - kr, kx + kr, ky + kr, opacity)
+                else {
+                    fill.color = alpha(st.stroke, opacity)
+                    canvas.drawCircle(kx, ky, c[2] * 0.38f, fill)
+                }
+                if (editMode && selection == Selection.Stick(i)) {
+                    stroke.color = Color.YELLOW
+                    stroke.strokeWidth = 2.5f * density
+                    canvas.drawCircle(c[0], c[1], c[2] + 3f * density, stroke)
+                }
+                return@forEachIndexed
+            }
             fill.color = alpha(if (stickArmed[i] || stickLocked[i]) st.fillPressed else st.fill, opacity)
             canvas.drawCircle(c[0], c[1], c[2], fill)
             stroke.color = alpha(st.stroke, opacity)
@@ -1043,7 +1072,7 @@ class ControlsView(
         if (!showHandle) return
         val a = settings.menuOpacity
         val r = menuRect.width().coerceAtMost(menuRect.height()) * settings.menuRadius
-        val icon = menuDrawable
+        val icon = menuDrawable ?: appIcon
         if (icon != null) {
             icon.alpha = (a * 255).toInt().coerceIn(0, 255)
             icon.setBounds(menuRect.left.toInt(), menuRect.top.toInt(), menuRect.right.toInt(), menuRect.bottom.toInt())
@@ -1053,6 +1082,11 @@ class ControlsView(
             canvas.clipPath(menuPath)
             icon.draw(canvas)
             canvas.restore()
+            val border = 2f * density
+            stroke.color = alpha(settings.menuColor, a.coerceAtLeast(0.35f))
+            stroke.strokeWidth = border
+            val inset = border / 2f
+            canvas.drawRoundRect(menuRect.left + inset, menuRect.top + inset, menuRect.right - inset, menuRect.bottom - inset, (r - inset).coerceAtLeast(0f), (r - inset).coerceAtLeast(0f), stroke)
             return
         }
         fill.color = alpha(settings.menuColor, a)
@@ -1072,6 +1106,15 @@ class ControlsView(
 
     private fun drawButton(canvas: Canvas, b: ControlButton, r: RectF, active: Boolean, opacity: Float) {
         val st = b.style ?: defaultStyle
+        val picture = (if (active) image(st.imagePressed) else null) ?: image(st.image)
+        if (picture != null) {
+            drawImage(canvas, picture, r.left, r.top, r.right, r.bottom, opacity)
+            if (active && st.imagePressed.isEmpty()) {
+                fill.color = Color.argb((70 * opacity).toInt(), 255, 255, 255)
+                canvas.drawRect(r, fill)
+            }
+            return
+        }
         val radius = if (st.radiusInPx) st.radiusDp else st.radiusDp * density
         val rad = min(radius, min(r.width(), r.height()) / 2f)
         fill.color = alpha(if (active) st.fillPressed else st.fill, opacity)

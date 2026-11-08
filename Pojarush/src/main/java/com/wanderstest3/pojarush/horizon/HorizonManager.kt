@@ -259,6 +259,29 @@ object HorizonManager {
         lines.drop(start + 1).firstOrNull { it.isNotBlank() }?.trim()
     }.getOrNull()
 
+    val LOD_STEPS = listOf(0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536)
+
+    private fun graphicsLines(): MutableList<String> {
+        val file = File(gameDir, "horizon-graphics.txt")
+        return if (file.isFile) file.readLines().toMutableList() else mutableListOf()
+    }
+
+    private fun setGraphics(key: String, value: String) {
+        runCatching {
+            val lines = graphicsLines()
+            val index = lines.indexOfFirst { it.startsWith("$key:") }
+            if (index >= 0) lines[index] = "$key:$value" else lines += "$key:$value"
+            gameDir.mkdirs()
+            File(gameDir, "horizon-graphics.txt").writeText(lines.joinToString("\n", postfix = "\n"))
+        }
+    }
+
+    fun lodDistance(): Int = runCatching {
+        graphicsLines().firstOrNull { it.startsWith("lodDistance:") }?.substringAfter(':')?.trim()?.toIntOrNull() ?: 0
+    }.getOrDefault(0)
+
+    fun setLodDistance(chunks: Int) = setGraphics("lodDistance", chunks.toString())
+
     fun applyFpsCounter(enabled: Boolean) {
         runCatching {
             val file = File(gameDir, "horizon-graphics.txt")

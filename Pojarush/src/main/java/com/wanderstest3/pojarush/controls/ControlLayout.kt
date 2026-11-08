@@ -40,6 +40,8 @@ data class Style(
     val radiusDp: Float,
     val textSp: Float,
     val radiusInPx: Boolean = false,
+    val image: String = "",
+    val imagePressed: String = "",
 )
 
 data class ControlButton(
@@ -721,6 +723,65 @@ object DefaultLayout {
     }
 }
 
+object BedrockLayout {
+    const val ID = "builtin:bedrock"
+    const val NAME = "Bedrock Controls"
+
+    fun create(): ControlLayout {
+        val play = "play"
+        val always = "always"
+        val gray = Style(
+            fill = Color.argb(150, 64, 64, 64),
+            fillPressed = Color.argb(200, 120, 120, 120),
+            text = Color.WHITE,
+            textPressed = Color.WHITE,
+            stroke = Color.argb(255, 30, 30, 30),
+            strokeDp = 2f,
+            radiusDp = 2f,
+            textSp = 15f,
+        )
+        fun look(image: String, pressed: String = "${image}_pressed") = gray.copy(image = image, imagePressed = pressed)
+        fun key(code: Int) = listOf(Action.Key(code))
+        fun btn(
+            id: String, text: String, layer: String, x: Float, y: Float, w: Float, h: Float, vis: Visibility, style: Style,
+            press: List<Action> = emptyList(), tap: List<Action> = emptyList(), toggle: List<Action> = emptyList(), swipe: Boolean = false,
+        ) = ControlButton(id, text, layer, x, y, Size(w), Size(h), vis, press, tap, toggle, swipe, style = style)
+        val buttons = listOf(
+            btn("perspective", "F5", play, 0.409f, 0.0f, 40f, 40f, Visibility.IN_GAME, look("perspective", ""), tap = key(KeyEvent.KEYCODE_F5)),
+            btn("chat", "T", play, 0.533f, 0.0f, 40f, 40f, Visibility.IN_GAME, gray, tap = key(KeyEvent.KEYCODE_T)),
+            btn("pause", "II", always, 0.594f, 0.0f, 40f, 40f, Visibility.ALWAYS, gray, tap = key(KeyEvent.KEYCODE_ESCAPE)),
+            btn("attack", "⚔", play, 0.952f, 0.618f, 72f, 72f, Visibility.IN_GAME, look("attack"), press = listOf(Action.Mouse(0)), swipe = true),
+            btn("interact", "✋", play, 0.819f, 0.669f, 72f, 72f, Visibility.IN_GAME, look("interact"), press = listOf(Action.Mouse(1)), swipe = true),
+            btn("jump", "⤒", play, 0.891f, 0.942f, 80f, 80f, Visibility.IN_GAME, look("jump"), press = key(KeyEvent.KEYCODE_SPACE), swipe = true),
+            btn("sneak", "⇩", play, 0.224f, 0.988f, 56f, 56f, Visibility.IN_GAME, look("sneak"), toggle = key(KeyEvent.KEYCODE_SHIFT_LEFT)),
+            btn("sprint", "»", play, 0.068f, 0.64f, 52f, 52f, Visibility.IN_GAME, look("sprint"), toggle = key(KeyEvent.KEYCODE_CTRL_LEFT)),
+            btn("inventory", "•••", play, 0.757f, 1.0f, 40f, 40f, Visibility.IN_GAME, gray, tap = key(KeyEvent.KEYCODE_E)),
+            btn("keyboard", "⌨", always, 1.0f, 0.0f, 40f, 40f, Visibility.ALWAYS, gray, tap = listOf(Action.Keyboard)),
+            btn("mouse", "🖱", always, 0.94f, 0.0f, 40f, 40f, Visibility.IN_MENU, gray, tap = listOf(Action.ToggleMouse)),
+        )
+        val stick = ControlStick(
+            id = "move",
+            layer = play,
+            x = 0.03f,
+            y = 0.92f,
+            size = Size(null, 0.36f, false),
+            visibility = Visibility.IN_GAME,
+            directions = ControlLayout.wasd(KeyEvent.KEYCODE_W, KeyEvent.KEYCODE_S, KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_D),
+            lock = key(KeyEvent.KEYCODE_CTRL_LEFT),
+            canLock = false,
+            lockThreshold = 0.25f,
+            deadZone = 0.15f,
+            style = gray.copy(image = "joystick_frame", imagePressed = "joystick_knob"),
+        )
+        return ControlLayout(
+            name = NAME,
+            layers = listOf(ControlLayer(play, true, Visibility.ALWAYS), ControlLayer(always, true, Visibility.ALWAYS)),
+            buttons = buttons,
+            sticks = listOf(stick),
+        )
+    }
+}
+
 private object PojarushFormat {
     fun write(l: ControlLayout): JSONObject = JSONObject()
         .put("pojarush", 1)
@@ -742,6 +803,10 @@ private object PojarushFormat {
         JSONObject().put("fill", it.fill).put("fillPressed", it.fillPressed).put("text", it.text).put("textPressed", it.textPressed)
             .put("stroke", it.stroke).put("strokeDp", it.strokeDp.toDouble()).put("radiusDp", it.radiusDp.toDouble())
             .put("textSp", it.textSp.toDouble()).put("radiusInPx", it.radiusInPx)
+            .apply {
+                if (it.image.isNotEmpty()) put("image", it.image)
+                if (it.imagePressed.isNotEmpty()) put("imagePressed", it.imagePressed)
+            }
     }
 
     private fun style(o: JSONObject?): Style? = o?.let {
@@ -749,6 +814,7 @@ private object PojarushFormat {
             it.optInt("fill"), it.optInt("fillPressed"), it.optInt("text", Color.WHITE), it.optInt("textPressed", Color.WHITE),
             it.optInt("stroke"), it.optDouble("strokeDp", 1.0).toFloat(), it.optDouble("radiusDp", 10.0).toFloat(),
             it.optDouble("textSp", 15.0).toFloat(), it.optBoolean("radiusInPx", false),
+            it.optString("image", ""), it.optString("imagePressed", ""),
         )
     }
 

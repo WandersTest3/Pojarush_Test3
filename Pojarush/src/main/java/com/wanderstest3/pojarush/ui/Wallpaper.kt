@@ -167,11 +167,66 @@ private class WallpaperVideoView(context: Context, private val file: File) : Tex
 }
 
 @Composable
-fun AppearanceSettings(settings: ControlSettings) {
-    val context = LocalContext.current
-    var path by remember { mutableStateOf(settings.wallpaper) }
+fun InterfaceSettings(settings: ControlSettings) {
+    var font by remember { mutableStateOf(settings.minecraftFont) }
+    PojarushCard {
+        CardTitle(stringResource(R.string.interface_title))
+        SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) {
+            settings.menuBackground = it
+            UiPrefs.menuBackground = it
+        }
+        SettingSwitch(stringResource(R.string.minecraft_font), font, stringResource(R.string.minecraft_font_desc)) {
+            settings.minecraftFont = it
+            font = it
+            UiPrefs.minecraftFont = it
+        }
+    }
+}
+
+@Composable
+fun LodSettings() {
+    val steps = com.wanderstest3.pojarush.horizon.HorizonManager.LOD_STEPS
+    var lod by remember { mutableStateOf(com.wanderstest3.pojarush.horizon.HorizonManager.lodDistance()) }
+    val index = steps.indexOfFirst { it >= lod }.let { if (it < 0) steps.lastIndex else it }
+    val off = stringResource(R.string.lod_off)
+    PojarushCard {
+        CardTitle(stringResource(R.string.lod_title))
+        SettingSlider(stringResource(R.string.lod_distance), index.toFloat(), 0f..steps.lastIndex.toFloat(), 1f, { v ->
+            val chunks = steps[v.toInt().coerceIn(0, steps.lastIndex)]
+            when {
+                chunks == 0 -> off
+                chunks >= 65536 -> "1M"
+                else -> "${chunks * 16 / 1024}k"
+            }
+        }) { v ->
+            lod = steps[Math.round(v).coerceIn(0, steps.lastIndex)]
+            com.wanderstest3.pojarush.horizon.HorizonManager.setLodDistance(lod)
+        }
+        Hint(stringResource(R.string.lod_desc))
+    }
+}
+
+@Composable
+fun ExtrasSettings(settings: ControlSettings) {
     var fps by remember { mutableStateOf(settings.fpsCounter) }
     var keep by remember { mutableStateOf(settings.keepAlive) }
+    PojarushCard {
+        CardTitle(stringResource(R.string.extras_title))
+        SettingSwitch(stringResource(R.string.fps_counter), fps, stringResource(R.string.fps_counter_desc)) {
+            settings.fpsCounter = it
+            fps = it
+        }
+        SettingSwitch(stringResource(R.string.keep_alive), keep, stringResource(R.string.keep_alive_desc)) {
+            settings.keepAlive = it
+            keep = it
+        }
+    }
+}
+
+@Composable
+fun WallpaperSettings(settings: ControlSettings) {
+    val context = LocalContext.current
+    var path by remember { mutableStateOf(settings.wallpaper) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
@@ -204,16 +259,5 @@ fun AppearanceSettings(settings: ControlSettings) {
             }
         }
         Hint(stringResource(R.string.wallpaper_hint))
-    }
-    PojarushCard {
-        CardTitle(stringResource(R.string.extras_title))
-        SettingSwitch(stringResource(R.string.fps_counter), fps, stringResource(R.string.fps_counter_desc)) {
-            settings.fpsCounter = it
-            fps = it
-        }
-        SettingSwitch(stringResource(R.string.keep_alive), keep, stringResource(R.string.keep_alive_desc)) {
-            settings.keepAlive = it
-            keep = it
-        }
     }
 }

@@ -327,6 +327,10 @@ pub fn hdr_offered() -> bool {
 /// Apple's: they share the CPU's memory bandwidth, and past it far terrain
 /// costs them more frame time than it is worth.
 pub const INTEGRATED_LOD_DISTANCE: u32 = 128;
+/// The farthest LOD Distance, in chunks: 65536 chunks, about a million blocks.
+pub const MAX_LOD_DISTANCE: u32 = 65536;
+/// LOD Distance's choices, in chunks.
+pub const LOD_STEPS: [u32; 12] = [0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 /// Whether `INTEGRATED_LOD_DISTANCE` applies to this adapter. Apple's GPUs
 /// are integrated too, with memory and bandwidth enough for every distance.
 pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
@@ -334,8 +338,9 @@ pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
 }
 /// A LOD distance as far terrain uses it on this adapter.
 pub fn lod_distance_capped(distance: u32, info: &wgpu::AdapterInfo) -> u32 {
-    let distance = distance.min(1024);
-    if lod_capped(info) {
+    let distance = distance.min(MAX_LOD_DISTANCE);
+    // The phone's player picks the distance on purpose: no integrated cap there.
+    if lod_capped(info) && !cfg!(target_os = "android") {
         distance.min(INTEGRATED_LOD_DISTANCE)
     } else {
         distance
@@ -421,7 +426,7 @@ impl Default for Graphics {
             present_mode: PresentMode::Auto,
             pacing: Pacing::Efficient,
             workers: 0,
-            overlay: Overlay::Off,
+            overlay: if cfg!(target_os = "android") { Overlay::Counter } else { Overlay::Off },
             resolution_scale: 100,
             fxaa: false,
             taa: false,
@@ -469,7 +474,7 @@ impl Graphics {
             let number = |d: u32| value.parse().unwrap_or(d);
             match key.trim() {
                 "preset" => g.preset = Preset::parse(value),
-                "lodDistance" => g.lod_distance = number(g.lod_distance).min(1024),
+                "lodDistance" => g.lod_distance = number(g.lod_distance).min(MAX_LOD_DISTANCE),
                 "farDetail" => g.far_detail = FarDetail::parse(value),
                 "caveCulling" => g.cave_culling = flag(g.cave_culling),
                 "entityCulling" => g.entity_culling = flag(g.entity_culling),
@@ -767,7 +772,8 @@ mod tests {
             assert_eq!(g.lod_distance, distance);
             assert_eq!(Graphics::parse(&g.serialize()), g);
         }
-        assert_eq!(Graphics::parse("lodDistance:10000\n").lod_distance, 1024);
+        assert_eq!(Graphics::parse("lodDistance:10000\n").lod_distance, 10000);
+        assert_eq!(Graphics::parse("lodDistance:900000\n").lod_distance, MAX_LOD_DISTANCE);
         assert_eq!(Graphics::parse("lodDistance:-1\n").lod_distance, 0);
         assert_eq!(Graphics::parse("lodDistance:invalid\n").lod_distance, 0);
     }

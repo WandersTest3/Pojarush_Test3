@@ -17,7 +17,7 @@ natively on the phone (no JVM while playing).
 | `.../horizon/HorizonActivity.kt`, `HorizonOverlay.kt`, `HorizonBridge.kt` | The game (`GameActivity`, process `:horizon`) and its touch controls |
 | `Pojarush/src/main/jniLibs/arm64-v8a/` | `libhorizon_android.so` (the game), `libhorizon_prepare.so`, `libpojajava.so` (Java launcher for the exporters), `libc++_shared.so` (needed by Java 25) |
 | `Pojarush/src/main/assets/horizon/` | `research-lock.json`, exporter sources and precompiled exporter classes |
-| `Pojarush/src/main/assets/runtimes/jre-25/` | Java 25 for arm64 |
+| `Pojarush/src/main/assets/runtimes/jre-25/` | Java 25 for arm64 and 32-bit arm (from Zalith Launcher 2) |
 | `horizon/` | Horizon's source with the Android port (`crates/horizon-android`, `horizon-client/src/android.rs`, `game/android_bridge.rs`, `android/`) |
 
 ## Build
@@ -49,6 +49,32 @@ directly, with quick actions for the virtual mouse, keyboard, hiding the control
 `Pojarush_Test3/controls/`. Back is Escape.
 
 Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
+
+## 1.7.0
+
+- 32-bit phones (armeabi-v7a): the APK now carries Horizon, horizon-prepare, the Java shim and
+  Java 25 for 32-bit arm as well as arm64.
+- Fixed the crash on GPUs with 1024 texture layers ("GPU supports 1024 texture layers; 1291
+  required"): block textures are split into arrays of the GPU's real layer limit.
+- GPU timestamp queries are off on Android: after a GPU reset (Adreno 610 logs) the destroyed
+  readback buffer panicked the game. `HORIZON_GPU_TIMER=1` turns them back on.
+- Slower start fixed: 1.6.0 made the GUI atlas wait for the GPU and lowered the background
+  loader's priority; the atlas now waits only when it does not fit 4096×4096, and the priority
+  change is reverted.
+- LOD Distance goes up to 65536 chunks (about 1 million blocks), as a slider in game and in the
+  launcher's Graphics page; phones are no longer capped at 128 chunks.
+- The FPS counter is the default overlay on Android.
+- Launcher: "Others" page (interface, wallpaper, floating button, HUD images, extras), menu
+  background opacity, Minecraft-style font (Pwnage_Block's "Minecraft" font, CC BY-SA 3.0, with
+  Portuguese accented letters added), long labels scroll instead of being cut, RAM and
+  resolution apply as you type, the 67%/45% shortcuts are gone, "Open folder" opens ZArchiver
+  when installed.
+- Floating button: Pojarush_Test3 icon by default (23 dp, 60% opacity, round) with a colored
+  border and 20 colors; opens Controls, Mouse and Graphics.
+- HUD images: import a .zip or images and use them on buttons and joysticks (stretched to the
+  control); the built-in "Bedrock Controls" layout uses the Bedrock UI image names. No Mojang
+  images are bundled: import your own pack.
+- The skin preview now uses a per-pixel depth buffer, so the cape is never cut by an arm or leg.
 
 ## 1.6.0
 

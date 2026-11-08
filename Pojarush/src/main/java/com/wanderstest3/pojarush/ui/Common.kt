@@ -53,9 +53,33 @@ val PojarushColors = darkColorScheme(
     error = Color(0xFFFF8A80),
 )
 
+object UiPrefs {
+    var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.80f)
+    var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
+
+    fun load(context: android.content.Context) {
+        val s = com.wanderstest3.pojarush.controls.ControlSettings(context)
+        menuBackground = s.menuBackground
+        minecraftFont = s.minecraftFont
+    }
+}
+
+val MinecraftFont = androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(com.wanderstest3.pojarush.R.font.minecraft))
+
+private fun androidx.compose.material3.Typography.withFont(f: androidx.compose.ui.text.font.FontFamily) = androidx.compose.material3.Typography(
+    displayLarge = displayLarge.copy(fontFamily = f), displayMedium = displayMedium.copy(fontFamily = f), displaySmall = displaySmall.copy(fontFamily = f),
+    headlineLarge = headlineLarge.copy(fontFamily = f), headlineMedium = headlineMedium.copy(fontFamily = f), headlineSmall = headlineSmall.copy(fontFamily = f),
+    titleLarge = titleLarge.copy(fontFamily = f), titleMedium = titleMedium.copy(fontFamily = f), titleSmall = titleSmall.copy(fontFamily = f),
+    bodyLarge = bodyLarge.copy(fontFamily = f), bodyMedium = bodyMedium.copy(fontFamily = f), bodySmall = bodySmall.copy(fontFamily = f),
+    labelLarge = labelLarge.copy(fontFamily = f), labelMedium = labelMedium.copy(fontFamily = f), labelSmall = labelSmall.copy(fontFamily = f),
+)
+
 @Composable
 fun PojarushTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = PojarushColors, content = content)
+    val typography = if (UiPrefs.minecraftFont) androidx.compose.material3.Typography().withFont(MinecraftFont) else androidx.compose.material3.Typography()
+    MaterialTheme(colorScheme = PojarushColors, typography = typography) {
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides PojarushColors.onSurface, content = content)
+    }
 }
 
 /// The app's full-screen backdrop: a subtle top-to-bottom gradient instead of a flat
@@ -67,7 +91,7 @@ fun pojarushBackgroundBrush(): androidx.compose.ui.graphics.Brush =
 fun PojarushCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = UiPrefs.menuBackground)),
         border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
         shape = RoundedCornerShape(14.dp)
     ) {

@@ -304,6 +304,12 @@ private fun ButtonEditor(
         }
     }
     VisibilityChips(b.visibility) { v -> onChange { it.copy(visibility = v) } }
+    HudImagePicker(stringResource(R.string.hud_image), b.style?.image.orEmpty()) { ref ->
+        onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(image = ref)) }
+    }
+    HudImagePicker(stringResource(R.string.hud_image_pressed), b.style?.imagePressed.orEmpty()) { ref ->
+        onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(imagePressed = ref)) }
+    }
     SettingSwitch(stringResource(R.string.editor_swipe), b.swipe) { v -> onChange { it.copy(swipe = v) } }
     SettingSwitch(stringResource(R.string.editor_penetrable), b.penetrable) { v -> onChange { it.copy(penetrable = v) } }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -322,6 +328,12 @@ private fun StickEditor(
 ) {
     SettingSlider(stringResource(R.string.editor_size), dpOf(s.size), 60f..360f, 4f, { "${it.toInt()} dp" }) { v -> onChange { it.copy(size = Size(v)) } }
     VisibilityChips(s.visibility) { v -> onChange { it.copy(visibility = v) } }
+    HudImagePicker(stringResource(R.string.hud_stick_frame), s.style?.image.orEmpty()) { ref ->
+        onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(image = ref)) }
+    }
+    HudImagePicker(stringResource(R.string.hud_stick_knob), s.style?.imagePressed.orEmpty()) { ref ->
+        onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(imagePressed = ref)) }
+    }
     SettingSwitch(stringResource(R.string.editor_sprint_lock), s.canLock) { v -> onChange { it.copy(canLock = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     SettingSwitch(stringResource(R.string.editor_auto_run), s.autoRun, stringResource(R.string.editor_auto_run_desc)) { v -> onChange { it.copy(autoRun = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     OutlinedButton(onClick = onDelete) { Text(stringResource(R.string.editor_delete), color = MaterialTheme.colorScheme.error) }

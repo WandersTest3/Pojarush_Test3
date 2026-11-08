@@ -13611,7 +13611,7 @@ impl Game<'_> {
             Some(renderer) => {
                 horizon_client::graphics::lod_distance_capped(distance, &renderer.info)
             }
-            None => distance.min(1024),
+            None => distance.min(horizon_client::graphics::MAX_LOD_DISTANCE),
         }
     }
     /// Only enabled LOD worlds extend the renderer's range, never simulation.
@@ -16041,8 +16041,6 @@ fn load_resources(
         let handle = std::thread::Builder::new()
             .name("world-rest-loader".into())
             .spawn(move || {
-                #[cfg(target_os = "android")]
-                let _ = rustix::process::setpriority_process(None, 10);
                 let rest = load_world_rest(
                     &root,
                     &resources,

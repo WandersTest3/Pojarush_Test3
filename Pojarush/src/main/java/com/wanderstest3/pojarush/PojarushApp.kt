@@ -15,6 +15,7 @@ class PojarushApp : Application() {
         super.onCreate()
         Paths.init(this)
         Accounts.init(this)
+        com.wanderstest3.pojarush.ui.UiPrefs.load(this)
     }
 }
 

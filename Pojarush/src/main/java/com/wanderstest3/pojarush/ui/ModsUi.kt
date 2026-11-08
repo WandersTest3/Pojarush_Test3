@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,7 +55,7 @@ fun ModsPage() {
         CardTitle(stringResource(R.string.nav_mods))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(R.string.mods_tab_mods, R.string.mods_tab_resource, R.string.mods_tab_shaders).forEachIndexed { i, label ->
-                FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label), maxLines = 1) })
+                FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label), maxLines = 1, modifier = Modifier.basicMarquee()) })
             }
         }
         Hint(
@@ -69,7 +70,7 @@ fun ModsPage() {
         if (entries.isEmpty()) Hint(stringResource(R.string.mods_empty))
         entries.forEach { e ->
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(e.name, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Text(e.name, modifier = Modifier.weight(1f).basicMarquee(), maxLines = 1, style = MaterialTheme.typography.bodyMedium)
                 if (e.enabled != null) {
                     SettingSwitchInline(e.enabled) {
                         GameFiles.setEnabled(kind, e, it)
@@ -82,7 +83,10 @@ fun ModsPage() {
                 }) { Text(stringResource(R.string.controls_delete)) }
             }
         }
-        Button(onClick = { picker.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.mods_import)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { picker.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.mods_import)) }
+            androidx.compose.material3.OutlinedButton(onClick = { FolderOpener.open(context, GameFiles.dir(kind)) }) { Text(stringResource(R.string.open_folder)) }
+        }
         Hint(stringResource(R.string.mods_folder, GameFiles.dir(kind).absolutePath))
         when (kind) {
             PackKind.MOD -> Hint(stringResource(R.string.mods_restart))

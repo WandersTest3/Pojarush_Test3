@@ -40,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -105,7 +106,7 @@ fun AccountsCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(selected = active?.key == p.key, onClick = { Accounts.select(p.key) })
-                Text(p.name, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Text(p.name, modifier = Modifier.weight(1f).basicMarquee(), maxLines = 1, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     stringResource(
                         when {
@@ -257,76 +258,128 @@ fun SkinViewer(data: SkinData, modifier: Modifier = Modifier) {
     }
 }
 
-private class Face(val group: Float, val depth: Float, val src: Rect, val dst: RectF, val bitmap: Bitmap, val layer: Float = 0f)
+private class Texels(bitmap: Bitmap) {
+    val w = bitmap.width
+    val h = bitmap.height
+    val px = IntArray(w * h).also { bitmap.getPixels(it, 0, w, 0, 0, w, h) }
+}
+
+private val texelCache = java.util.WeakHashMap<Bitmap, Texels>()
+
+private fun texelsOf(b: Bitmap): Texels = synchronized(texelCache) { texelCache.getOrPut(b) { Texels(b) } }
+
+private const val PPU = 6
+private const val HALF_SPAN = 13f
+private const val ROWS = 33
+
+private class Raster {
+    val width = (HALF_SPAN * 2 * PPU).toInt()
+    val height = ROWS * PPU
+    val color = IntArray(width * height)
+    val depth = FloatArray(width * height)
+    val bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+}
+
+private var raster: Raster? = null
 
 private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data: SkinData, angle: Float, paint: Paint) {
     val skin = data.skin ?: return
+    val r = raster ?: Raster().also { raster = it }
+    java.util.Arrays.fill(r.color, 0)
+    java.util.Arrays.fill(r.depth, Float.NEGATIVE_INFINITY)
     val rad = Math.toRadians(angle.toDouble())
     val cs = cos(rad).toFloat()
     val sn = sin(rad).toFloat()
-    val scale = h * 0.88f / 32f
-    val cx = w / 2f
-    val top0 = (h - 32f * scale) / 2f
-    val k = skin.width / 64f
+    val skinTex = texelsOf(skin)
     val full = skin.height == skin.width
     val armW = if (data.slim) 3f else 4f
-    val faces = ArrayList<Face>()
 
-    fun sx(x: Float, z: Float) = cx + (x * cs + z * sn) * scale
     fun depthOf(x: Float, z: Float) = -x * sn + z * cs
-    fun src(l: Float, t: Float, r: Float, b: Float) = Rect((l * k).toInt(), (t * k).toInt(), (r * k).toInt(), (b * k).toInt())
 
-    fun add(group: Float, bitmap: Bitmap, s: Rect, ax: Float, az: Float, bx: Float, bz: Float, top: Float, bottom: Float, layer: Float = 0f) {
-        val xa = sx(ax, az)
-        val xb = sx(bx, bz)
-        if (abs(xb - xa) < 0.5f) return
-        val depth = depthOf((ax + bx) / 2f, (az + bz) / 2f)
-        faces += Face(group, depth, s, RectF(minOf(xa, xb), top0 + top * scale, maxOf(xa, xb), top0 + bottom * scale), bitmap, layer)
+    fun face(
+        tex: Texels, k: Float, ul: Float, vt: Float, ur: Float, vb: Float,
+        ax: Float, az: Float, bx: Float, bz: Float, top: Float, bottom: Float, bias: Float,
+    ) {
+        val xa = (ax * cs + az * sn + HALF_SPAN) * PPU
+        val xb = (bx * cs + bz * sn + HALF_SPAN) * PPU
+        if (xb - xa < 0.05f) return
+        val da = depthOf(ax, az) + bias
+        val db = depthOf(bx, bz) + bias
+        val c0 = kotlin.math.ceil(xa - 0.5f).toInt().coerceAtLeast(0)
+        val c1 = kotlin.math.floor(xb - 0.5f).toInt().coerceAtMost(r.width - 1)
+        val yTop = (top + 0.5f) * PPU
+        val yBottom = (bottom + 0.5f) * PPU
+        val r0 = kotlin.math.ceil(yTop - 0.5f).toInt().coerceAtLeast(0)
+        val r1 = kotlin.math.floor(yBottom - 0.5f).toInt().coerceAtMost(r.height - 1)
+        val uMin = minOf(ul, ur) * k
+        val uMax = maxOf(ul, ur) * k
+        val vMin = minOf(vt, vb) * k
+        val vMax = maxOf(vt, vb) * k
+        for (c in c0..c1) {
+            val t = (c + 0.5f - xa) / (xb - xa)
+            val d = da + t * (db - da)
+            val u = ((ul + t * (ur - ul)) * k).coerceIn(uMin, uMax - 0.001f).toInt().coerceIn(0, tex.w - 1)
+            for (row in r0..r1) {
+                val i = row * r.width + c
+                if (d <= r.depth[i]) continue
+                val s = (row + 0.5f - yTop) / (yBottom - yTop)
+                val v = ((vt + s * (vb - vt)) * k).coerceIn(vMin, vMax - 0.001f).toInt().coerceIn(0, tex.h - 1)
+                val texel = tex.px[v * tex.w + u]
+                if (texel ushr 24 == 0) continue
+                r.depth[i] = d
+                r.color[i] = texel or (0xFF shl 24)
+            }
+        }
     }
 
-    fun box(bitmap: Bitmap, px: Float, pz: Float, top: Float, bw: Float, bh: Float, bd: Float, u: Float, v: Float, inf: Float, layer: Float = 0f) {
-        val group = depthOf(px, pz)
+    val k = skin.width / 64f
+    fun box(px: Float, pz: Float, top: Float, bw: Float, bh: Float, bd: Float, u: Float, v: Float, inf: Float, bias: Float = 0f) {
         val gw = bw / 2f + inf
         val gd = bd / 2f + inf
         val t = top - inf
         val b = top + bh + inf
-        if (cs > 0f) add(group, bitmap, src(u + bd, v + bd, u + bd + bw, v + bd + bh), px - gw, pz + gd, px + gw, pz + gd, t, b, layer)
-        if (cs < 0f) add(group, bitmap, src(u + 2 * bd + bw, v + bd, u + 2 * bd + 2 * bw, v + bd + bh), px + gw, pz - gd, px - gw, pz - gd, t, b, layer)
-        if (sn > 0f) add(group, bitmap, src(u, v + bd, u + bd, v + bd + bh), px - gw, pz - gd, px - gw, pz + gd, t, b, layer)
-        if (sn < 0f) add(group, bitmap, src(u + bd + bw, v + bd, u + 2 * bd + bw, v + bd + bh), px + gw, pz + gd, px + gw, pz - gd, t, b, layer)
+        if (cs > 0f) face(skinTex, k, u + bd, v + bd, u + bd + bw, v + bd + bh, px - gw, pz + gd, px + gw, pz + gd, t, b, bias)
+        if (cs < 0f) face(skinTex, k, u + 2 * bd + bw, v + bd, u + 2 * bd + 2 * bw, v + bd + bh, px + gw, pz - gd, px - gw, pz - gd, t, b, bias)
+        if (sn > 0f) face(skinTex, k, u, v + bd, u + bd, v + bd + bh, px - gw, pz - gd, px - gw, pz + gd, t, b, bias)
+        if (sn < 0f) face(skinTex, k, u + bd + bw, v + bd, u + 2 * bd + bw, v + bd + bh, px + gw, pz + gd, px + gw, pz - gd, t, b, bias)
     }
 
     val rightArmX = -(4f + armW / 2f)
     val leftArmX = 4f + armW / 2f
-    box(skin, 0f, 0f, 0f, 8f, 8f, 8f, 0f, 0f, 0f)
-    box(skin, 0f, 0f, 8f, 8f, 12f, 4f, 16f, 16f, 0f)
-    box(skin, rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 16f, 0f)
-    box(skin, leftArmX, 0f, 8f, armW, 12f, 4f, if (full) 32f else 40f, if (full) 48f else 16f, 0f)
-    box(skin, -2f, 0f, 20f, 4f, 12f, 4f, 0f, 16f, 0f)
-    box(skin, 2f, 0f, 20f, 4f, 12f, 4f, if (full) 16f else 0f, if (full) 48f else 16f, 0f)
+    box(0f, 0f, 0f, 8f, 8f, 8f, 0f, 0f, 0f)
+    box(0f, 0f, 8f, 8f, 12f, 4f, 16f, 16f, 0f)
+    box(rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 16f, 0f)
+    box(leftArmX, 0f, 8f, armW, 12f, 4f, if (full) 32f else 40f, if (full) 48f else 16f, 0f)
+    box(-2f, 0f, 20f, 4f, 12f, 4f, 0f, 16f, 0f)
+    box(2f, 0f, 20f, 4f, 12f, 4f, if (full) 16f else 0f, if (full) 48f else 16f, 0f)
     if (full) {
-        box(skin, 0f, 0f, 0f, 8f, 8f, 8f, 32f, 0f, 0.5f, layer = 0.01f)
-        box(skin, 0f, 0f, 8f, 8f, 12f, 4f, 16f, 32f, 0.25f, layer = 0.01f)
-        box(skin, rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 32f, 0.25f, layer = 0.01f)
-        box(skin, leftArmX, 0f, 8f, armW, 12f, 4f, 48f, 48f, 0.25f, layer = 0.01f)
-        box(skin, -2f, 0f, 20f, 4f, 12f, 4f, 0f, 32f, 0.25f, layer = 0.01f)
-        box(skin, 2f, 0f, 20f, 4f, 12f, 4f, 0f, 48f, 0.25f, layer = 0.01f)
+        box(0f, 0f, 0f, 8f, 8f, 8f, 32f, 0f, 0.5f, 0.01f)
+        box(0f, 0f, 8f, 8f, 12f, 4f, 16f, 32f, 0.25f, 0.01f)
+        box(rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 32f, 0.25f, 0.01f)
+        box(leftArmX, 0f, 8f, armW, 12f, 4f, 48f, 48f, 0.25f, 0.01f)
+        box(-2f, 0f, 20f, 4f, 12f, 4f, 0f, 32f, 0.25f, 0.01f)
+        box(2f, 0f, 20f, 4f, 12f, 4f, 0f, 48f, 0.25f, 0.01f)
     }
     val cape = data.cape
     if (cape != null) {
+        val ct = texelsOf(cape)
         val ck = cape.width / 64f
-        fun csrc(l: Float, t: Float, r: Float, b: Float) = Rect((l * ck).toInt(), (t * ck).toInt(), (r * ck).toInt(), (b * ck).toInt())
         val back = -3.3f
         val front = back + 1f
         val half = 5f
         val top = 8f
         val bottom = 24f
-        val group = depthOf(0f, (back + front) / 2f)
-        if (cs < 0f) add(group, cape, csrc(1f, 1f, 11f, 17f), half, back, -half, back, top, bottom)
-        if (cs > 0f) add(group, cape, csrc(12f, 1f, 22f, 17f), -half, front, half, front, top, bottom)
-        if (sn > 0f) add(group, cape, csrc(11f, 1f, 12f, 17f), -half, back, -half, front, top, bottom)
-        if (sn < 0f) add(group, cape, csrc(0f, 1f, 1f, 17f), half, front, half, back, top, bottom)
+        if (cs < 0f) face(ct, ck, 1f, 1f, 11f, 17f, half, back, -half, back, top, bottom, 0f)
+        if (cs > 0f) face(ct, ck, 12f, 1f, 22f, 17f, -half, front, half, front, top, bottom, 0f)
+        if (sn > 0f) face(ct, ck, 11f, 1f, 12f, 17f, -half, back, -half, front, top, bottom, 0f)
+        if (sn < 0f) face(ct, ck, 0f, 1f, 1f, 17f, half, front, half, back, top, bottom, 0f)
     }
-    faces.sortWith(compareBy({ it.group }, { it.layer }, { it.depth }))
-    faces.forEach { canvas.drawBitmap(it.bitmap, it.src, it.dst, paint) }
+    r.bitmap.setPixels(r.color, 0, r.width, 0, 0, r.width, r.height)
+    val scale = h * 0.88f / (32f * PPU)
+    val dw = r.width * scale
+    val dh = r.height * scale
+    val left = (w - dw) / 2f
+    val topPx = (h - 32f * PPU * scale) / 2f - 0.5f * PPU * scale
+    paint.isFilterBitmap = false
+    canvas.drawBitmap(r.bitmap, null, RectF(left, topPx, left + dw, topPx + dh), paint)
 }

@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -76,7 +78,7 @@ fun LayoutSettings(settings: ControlSettings, onEdit: (() -> Unit)?, onChange: (
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(selected = selected == e.id, onClick = { choose(e.id) })
-                Text(e.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(e.name, modifier = Modifier.weight(1f).basicMarquee(), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                 if (e.removable) {
                     TextButton(onClick = {
                         ControlLayouts.delete(e.id)
@@ -123,10 +125,13 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         }
         Hint(stringResource(R.string.controls_help))
     }
-    MenuButtonSettings(settings, onChange)
 }
 
-private val MENU_COLORS = listOf(0xFF57197F, 0xFF1E1E1E, 0xFF0D47A1, 0xFF1B5E20, 0xFFB71C1C, 0xFFE65100, 0xFFFFFFFF).map { it.toInt() }
+private val MENU_COLORS = listOf(
+    0xFF57197F, 0xFF9C27B0, 0xFFE91E63, 0xFFB71C1C, 0xFFFF5722, 0xFFE65100, 0xFFFFC107, 0xFFFFEB3B,
+    0xFF8BC34A, 0xFF1B5E20, 0xFF009688, 0xFF00BCD4, 0xFF03A9F4, 0xFF0D47A1, 0xFF3F51B5, 0xFF795548,
+    0xFF9E9E9E, 0xFF1E1E1E, 0xFF000000, 0xFFFFFFFF,
+).map { it.toInt() }
 
 @Composable
 fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
@@ -150,7 +155,7 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         SettingSlider(stringResource(R.string.menu_button_opacity), settings.menuOpacity, 0.05f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.menuOpacity = it; onChange(Change.MENU_BUTTON) }
         SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
         Text(stringResource(R.string.menu_button_color), style = MaterialTheme.typography.bodyMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MENU_COLORS.forEach { c ->
                 androidx.compose.foundation.layout.Box(
                     modifier = Modifier.size(32.dp).clip(RoundedCornerShape(50))
@@ -258,7 +263,10 @@ fun MemorySettings(settings: ControlSettings) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = heapText,
-                    onValueChange = { heapText = it.filter(Char::isDigit).take(5) },
+                    onValueChange = { t ->
+                        heapText = t.filter(Char::isDigit).take(5)
+                        heapText.toIntOrNull()?.takeIf { it in 512..maxMb }?.let { settings.javaHeapMb = it }
+                    },
                     modifier = Modifier.width(150.dp),
                     singleLine = true,
                     label = { Text(stringResource(R.string.memory_exact)) },
@@ -266,7 +274,6 @@ fun MemorySettings(settings: ControlSettings) {
                     keyboardActions = KeyboardActions(onDone = { heapText.toIntOrNull()?.let(::applyHeap) })
                 )
                 Text("MB")
-                Button(onClick = { heapText.toIntOrNull()?.let(::applyHeap) }) { Text(stringResource(R.string.graphics_apply)) }
             }
             Hint(stringResource(R.string.memory_range, 512, maxMb))
         }
@@ -323,20 +330,34 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = percentText,
-                    onValueChange = { percentText = it.filter(Char::isDigit).take(3) },
+                    onValueChange = { t ->
+                        percentText = t.filter(Char::isDigit).take(3)
+                        percentText.toIntOrNull()?.takeIf { it in 10..100 }?.let {
+                            percent = it
+                            settings.renderScale = it / 100f
+                            version++
+                            onChange(Change.RESOLUTION)
+                        }
+                    },
                     modifier = Modifier.width(150.dp),
                     singleLine = true,
                     label = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { percentText.toIntOrNull()?.let(::applyPercent) })
                 )
-                Button(onClick = { percentText.toIntOrNull()?.let(::applyPercent) }) { Text(stringResource(R.string.graphics_apply)) }
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = widthText,
-                    onValueChange = { widthText = it.filter(Char::isDigit).take(4) },
+                    onValueChange = { t ->
+                        widthText = t.filter(Char::isDigit).take(4)
+                        widthText.toIntOrNull()?.takeIf { it in 64..7680 }?.let {
+                            settings.fixedWidth = it
+                            version++
+                            onChange(Change.RESOLUTION)
+                        }
+                    },
                     modifier = Modifier.width(120.dp),
                     singleLine = true,
                     label = { Text(stringResource(R.string.graphics_width)) },
@@ -345,31 +366,24 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
                 Text("×")
                 OutlinedTextField(
                     value = heightText,
-                    onValueChange = { heightText = it.filter(Char::isDigit).take(4) },
+                    onValueChange = { t ->
+                        heightText = t.filter(Char::isDigit).take(4)
+                        heightText.toIntOrNull()?.takeIf { it in 64..4320 }?.let {
+                            settings.fixedHeight = it
+                            version++
+                            onChange(Change.RESOLUTION)
+                        }
+                    },
                     modifier = Modifier.width(120.dp),
                     singleLine = true,
                     label = { Text(stringResource(R.string.graphics_height)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { applyFixed() })
                 )
-                Button(onClick = { applyFixed() }) { Text(stringResource(R.string.graphics_apply)) }
             }
             Hint(stringResource(R.string.graphics_stretch))
         }
         Hint(stringResource(R.string.graphics_recommended))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(67, 45).forEach { p ->
-                FilterChip(
-                    selected = !fixed && percent == p,
-                    onClick = {
-                        fixed = false
-                        settings.fixedResolution = false
-                        applyPercent(p)
-                    },
-                    label = { Text(stringResource(R.string.graphics_rec_fps, p)) }
-                )
-            }
-        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(1100 to 720, 1600 to 1080).forEach { (w, h) ->
                 FilterChip(

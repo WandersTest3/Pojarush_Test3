@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,6 +107,7 @@ private enum class Section(val label: Int, val glyph: String) {
     Mouse(R.string.nav_mouse, "➚$TEXT_STYLE"),
     Mods(R.string.nav_mods, "✚$TEXT_STYLE"),
     Graphics(R.string.nav_graphics, "▣$TEXT_STYLE"),
+    Others(R.string.nav_others, "✦$TEXT_STYLE"),
     Logs(R.string.nav_logs, "☰$TEXT_STYLE"),
 }
 
@@ -118,6 +120,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Fullscreen.apply(this)
+        com.wanderstest3.pojarush.ui.UiPrefs.load(this)
         setContent {
             PojarushTheme {
                 Box(modifier = Modifier.fillMaxSize().background(com.wanderstest3.pojarush.ui.pojarushBackgroundBrush())) {
@@ -210,8 +213,16 @@ private fun PojarushScreen() {
                                 val settings = remember { ControlSettings(context) }
                                 ResolutionSettings(settings) {}
                                 GraphicsApiSettings(settings)
+                                com.wanderstest3.pojarush.ui.LodSettings()
                                 MemorySettings(settings)
-                                com.wanderstest3.pojarush.ui.AppearanceSettings(settings)
+                            }
+                            Section.Others -> {
+                                val settings = remember { ControlSettings(context) }
+                                com.wanderstest3.pojarush.ui.InterfaceSettings(settings)
+                                com.wanderstest3.pojarush.ui.WallpaperSettings(settings)
+                                com.wanderstest3.pojarush.ui.MenuButtonSettings(settings) {}
+                                com.wanderstest3.pojarush.ui.HudImagesSettings()
+                                com.wanderstest3.pojarush.ui.ExtrasSettings(settings)
                             }
                             Section.Logs -> {}
                         }
@@ -236,19 +247,21 @@ private fun Header() {
         Spacer(Modifier.width(10.dp))
         Text(
             stringResource(R.string.app_name),
+            modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = com.wanderstest3.pojarush.ui.UiPrefs.menuBackground * 0.75f))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .basicMarquee(),
             style = MaterialTheme.typography.titleMedium,
-            fontFamily = FontFamily.Monospace,
+            color = Color.White,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
 @Composable
 private fun NavItem(section: Section, selected: Boolean, onClick: () -> Unit) {
-    val bg = if (selected) com.wanderstest3.pojarush.ui.Purple else Color.Transparent
+    val bg = if (selected) com.wanderstest3.pojarush.ui.Purple else Color.Black.copy(alpha = com.wanderstest3.pojarush.ui.UiPrefs.menuBackground * 0.75f)
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -267,7 +280,7 @@ private fun NavItem(section: Section, selected: Boolean, onClick: () -> Unit) {
             color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            modifier = Modifier.basicMarquee()
         )
     }
 }
@@ -548,13 +561,13 @@ private fun LogCard(modifier: Modifier) {
         Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(R.string.tab_prepare, R.string.tab_game, R.string.tab_stdio).forEachIndexed { i, label ->
-                    FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label), maxLines = 1) })
+                    FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label), maxLines = 1, modifier = Modifier.basicMarquee()) })
                 }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { refresh++ }) { Text(stringResource(R.string.refresh), maxLines = 1) }
+                TextButton(onClick = { refresh++ }) { Text(stringResource(R.string.refresh), maxLines = 1, modifier = Modifier.basicMarquee()) }
                 TextButton(onClick = {
                     scope.launch(Dispatchers.IO) { runCatching { HorizonManager.shareLogs(context) } }
-                }) { Text(stringResource(R.string.share_logs), maxLines = 1) }
+                }) { Text(stringResource(R.string.share_logs), maxLines = 1, modifier = Modifier.basicMarquee()) }
             }
             val listState = rememberLazyListState()
             LaunchedEffect(lines.size, tab) {

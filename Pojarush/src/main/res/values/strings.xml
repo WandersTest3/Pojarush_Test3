@@ -202,8 +202,8 @@
     <string name="menu_button_size">Size</string>
     <string name="menu_button_opacity">Opacity</string>
     <string name="menu_button_radius">Roundness</string>
-    <string name="menu_button_color">Color</string>
-    <string name="menu_button_icon_none">Icon: default (☰\uFE0E)</string>
+    <string name="menu_button_color">Border color</string>
+    <string name="menu_button_icon_none">Icon: Pojarush_Test3 (default)</string>
     <string name="menu_button_icon_choose">Choose image</string>
     <string name="menu_button_hint">Drag the floating button in game to move it.</string>
     <string name="mouse_screen_touch">Touch outside the buttons</string>
@@ -227,4 +227,26 @@
     <string name="keep_alive">Keep running in background</string>
     <string name="keep_alive_desc">Keeps the game and downloads alive while you use other apps (shows a notification).</string>
     <string name="last_exit_reason">Reason: %1$s</string>
+    <string name="nav_others">Others</string>
+    <string name="interface_title">Interface</string>
+    <string name="menu_background">Menu background opacity</string>
+    <string name="minecraft_font">Minecraft font</string>
+    <string name="minecraft_font_desc">Uses the Minecraft-style pixel font in the launcher.</string>
+    <string name="lod_title">Far terrain (LOD)</string>
+    <string name="lod_distance">LOD distance (blocks)</string>
+    <string name="lod_desc">How far simplified terrain is drawn past the normal render distance, from 1k up to about 1 million blocks. Long distances use more memory and battery; it is applied the next time the game starts.</string>
+    <string name="lod_off">Off</string>
+    <string name="hud_title">HUD images</string>
+    <string name="hud_desc">Images for control buttons and joysticks. Import a .zip (for example the Bedrock UI images) or single images; an image stretches to the button\'s size. The Bedrock Controls layout uses names such as attack, interact, jump, sneak, sprint, perspective, joystick_frame and joystick_knob (with _pressed variants).</string>
+    <string name="hud_count">%1$d images</string>
+    <string name="hud_import">Import images or .zip</string>
+    <string name="hud_imported">%1$s images imported</string>
+    <string name="hud_image">Image</string>
+    <string name="hud_image_pressed">Image when pressed</string>
+    <string name="hud_image_none">No image</string>
+    <string name="hud_image_gallery">From gallery</string>
+    <string name="hud_stick_frame">Joystick frame image</string>
+    <string name="hud_stick_knob">Joystick knob image</string>
+    <string name="open_folder">Open folder</string>
+    <string name="folder_path_toast">Folder: %1$s</string>
 </resources>

@@ -365,6 +365,11 @@ impl H {
     fn slider(self, s: &Settings) -> Option<f32> {
         let g = &s.horizon;
         match self {
+            H::LodDistance => {
+                let steps = &crate::graphics::LOD_STEPS;
+                let i = steps.iter().position(|&d| d >= g.lod_distance).unwrap_or(steps.len() - 1);
+                Some(i as f32 / (steps.len() - 1) as f32)
+            }
             H::ChunkUpdates => Some(g.chunk_updates as f32 / 64.0),
             H::UploadBudget => {
                 let i = UPLOAD_STEPS
@@ -396,6 +401,8 @@ impl H {
             H::Preset => labelled("Preset", g.preset.label()),
             H::LodDistance => match g.lod_distance {
                 0 => labelled("LOD Distance", "Off"),
+                n if n >= 65536 => labelled("LOD Distance", "1M blocks"),
+                n if n >= 64 => labelled("LOD Distance", format!("{}k blocks", n * 16 / 1024)),
                 n => labelled("LOD Distance", format!("{n} chunks")),
             },
             H::FarDetail => labelled("Far Detail", g.far_detail.label()),
@@ -470,6 +477,10 @@ impl H {
     fn set_slider(self, s: &mut Settings, v: f32) {
         let g = &mut s.horizon;
         match self {
+            H::LodDistance => {
+                let steps = &crate::graphics::LOD_STEPS;
+                g.lod_distance = steps[(v * (steps.len() - 1) as f32).round() as usize];
+            }
             H::ChunkUpdates => g.chunk_updates = (v * 64.0).round() as u32,
             H::UploadBudget => {
                 g.upload_budget_kib =
@@ -509,7 +520,7 @@ impl H {
         let g = &mut s.horizon;
         match self {
             H::LodDistance => {
-                g.lod_distance = step(&[0, 64, 128, 256, 512, 1024], g.lod_distance, back)
+                g.lod_distance = step(&crate::graphics::LOD_STEPS, g.lod_distance, back)
             }
             H::FarDetail => {
                 g.far_detail = step(&[FarDetail::Full, FarDetail::Reduced], g.far_detail, back)
@@ -1249,14 +1260,19 @@ mod tests {
                 .unwrap();
             assert_eq!(items[render + 1], item);
         }
-        for distance in [64, 128, 256, 512, 1024, 0] {
+        for distance in crate::graphics::LOD_STEPS.iter().skip(1).chain(&[0]) {
             item.cycle(&mut s, false, [854, 480]);
-            assert_eq!(s.horizon.lod_distance, distance);
+            assert_eq!(s.horizon.lod_distance, *distance);
             assert_eq!(s.render_distance, near);
         }
         item.cycle(&mut s, true, [854, 480]);
+        assert_eq!(s.horizon.lod_distance, 65536);
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 1M blocks");
+        item.cycle(&mut s, true, [854, 480]);
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 512k blocks");
+        item.set_slider(&mut s, 5.0 / 11.0);
         assert_eq!(s.horizon.lod_distance, 1024);
-        assert_eq!(item.label(&s).plain(), "LOD Distance: 1024 chunks");
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 16k blocks");
         assert_eq!(
             Item::Vanilla(Opt::RenderDistance).label(&s).plain(),
             format!("Full Detail Distance: {near} chunks")

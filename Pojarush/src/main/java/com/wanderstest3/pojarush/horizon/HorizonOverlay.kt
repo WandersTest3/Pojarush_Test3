@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
@@ -167,7 +168,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
 
     @Composable
     private fun QuickChip(label: String, selected: Boolean = false, onClick: () -> Unit) {
-        FilterChip(selected = selected, onClick = onClick, label = { Text(label, maxLines = 1) })
+        FilterChip(selected = selected, onClick = onClick, label = { Text(label, maxLines = 1, modifier = Modifier.basicMarquee()) })
     }
 
     @Composable
@@ -186,7 +187,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(R.string.nav_controls, R.string.nav_mouse, R.string.graphics_resolution).forEachIndexed { i, label ->
+                    listOf(R.string.nav_controls, R.string.nav_mouse, R.string.nav_graphics).forEachIndexed { i, label ->
                         FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label)) })
                     }
                     Box(modifier = Modifier.weight(1f))
@@ -210,7 +211,6 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                         hiddenOn = settings.controlsHidden
                         controls.invalidate()
                     }
-                    QuickChip(stringResource(R.string.menu_edit)) { openEditor() }
                 }
                 Column(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -218,7 +218,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                 ) {
                     when (tab) {
                         0 -> {
-                            LayoutSettings(settings, onEdit = { openEditor() }, onChange = ::apply)
+                            LayoutSettings(settings, onEdit = null, onChange = ::apply)
                             ControlsSettings(settings, ::apply)
                         }
                         1 -> MouseSettings(settings, ::apply)

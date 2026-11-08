@@ -91,13 +91,13 @@ class ControlSettings(context: Context) {
         get() = prefs.getBoolean("hotbar_swap", true)
         set(v) = prefs.edit().putBoolean("hotbar_swap", v).apply()
     var menuSize: Float
-        get() = prefs.getFloat("menu_size", 34f).coerceIn(20f, 80f)
+        get() = prefs.getFloat("menu_size", 23f).coerceIn(20f, 80f)
         set(v) = prefs.edit().putFloat("menu_size", v.coerceIn(20f, 80f)).apply()
     var menuOpacity: Float
-        get() = prefs.getFloat("menu_opacity", 0.80f).coerceIn(0.05f, 1.00f)
+        get() = prefs.getFloat("menu_opacity", 0.60f).coerceIn(0.05f, 1.00f)
         set(v) = prefs.edit().putFloat("menu_opacity", v.coerceIn(0.05f, 1.00f)).apply()
     var menuRadius: Float
-        get() = prefs.getFloat("menu_radius", 0.20f).coerceIn(0f, 0.50f)
+        get() = prefs.getFloat("menu_radius", 0.50f).coerceIn(0f, 0.50f)
         set(v) = prefs.edit().putFloat("menu_radius", v.coerceIn(0f, 0.50f)).apply()
     var menuColor: Int
         get() = prefs.getInt("menu_color", 0xFF57197F.toInt())
@@ -105,6 +105,12 @@ class ControlSettings(context: Context) {
     var menuIcon: String
         get() = prefs.getString("menu_icon", "").orEmpty()
         set(v) = prefs.edit().putString("menu_icon", v).apply()
+    var menuBackground: Float
+        get() = prefs.getFloat("menu_background", 0.55f).coerceIn(0f, 1.00f)
+        set(v) = prefs.edit().putFloat("menu_background", v.coerceIn(0f, 1.00f)).apply()
+    var minecraftFont: Boolean
+        get() = prefs.getBoolean("minecraft_font", true)
+        set(v) = prefs.edit().putBoolean("minecraft_font", v).apply()
     var fpsCounter: Boolean
         get() = prefs.getBoolean("fps_counter", true)
         set(v) = prefs.edit().putBoolean("fps_counter", v).apply()
@@ -139,6 +145,7 @@ object ControlLayouts {
     fun list(context: Context, defaultName: String): List<Entry> {
         val builtIn = listOf(
             Entry(DefaultLayout.ID, defaultName, false),
+            Entry(BedrockLayout.ID, BedrockLayout.NAME, false),
         )
         val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".json", true) }.orEmpty()
             .sortedBy { it.name.lowercase() }
@@ -154,6 +161,7 @@ object ControlLayouts {
             id.startsWith("asset:") -> context.assets.open("controls/${id.removePrefix("asset:")}").bufferedReader().use {
                 ControlLayout.parse(it.readText(), id.removePrefix("asset:"))
             }
+            id == BedrockLayout.ID -> BedrockLayout.create()
             id.startsWith("file:") -> File(dir, id.removePrefix("file:")).let { ControlLayout.parse(it.readText(), it.nameWithoutExtension) }
             else -> null
         }
