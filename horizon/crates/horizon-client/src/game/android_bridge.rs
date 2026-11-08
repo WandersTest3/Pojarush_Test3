@@ -46,6 +46,12 @@ impl Game<'_> {
                 android::set_ready();
             }
         }
+        if android::muted() && android::ready() {
+            let until = Instant::now() + std::time::Duration::from_millis(1000);
+            while android::muted() && Instant::now() < until {
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+        }
         if let Some(size) = self.window.as_ref().map(|w| w.inner_size()) {
             android::set_surface(size.width, size.height);
         }

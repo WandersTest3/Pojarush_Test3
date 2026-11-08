@@ -54,7 +54,9 @@ Not an official Minecraft product; no Mojang files are included. You must own Mi
 
 - Controles padrão: `Pojarush_Default_V1.0.json` e `Bedrock_Default_V1.0.json`.
 - Mod de zoom removido do app; distribuído separadamente.
-- Pré-carregamento do jogo ao abrir o Pojarush (chave em Outros); mods importados reiniciam o jogo em segundo plano.
+- Pré-carregamento sempre ativo: o jogo abre em segundo plano a 1 FPS e volta sozinho ao sair do jogo; mods importados reiniciam o jogo nos bastidores.
+- Slider de LOD em chunks, até 1 milhão.
+- Contador de FPS removido do launcher; agora é o mod Pojarush FPS (distribuído à parte).
 - Editor: cor de fundo (com transparente), opacidade por botão, quebra de linha e redução automática da fonte.
 - Botão de fechar o jogo no menu flutuante.
 - Mouse físico: controles e mouse virtual ocultos, captura de ponteiro no jogo, sensibilidade maior.

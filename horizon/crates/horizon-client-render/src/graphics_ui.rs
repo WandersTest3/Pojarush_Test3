@@ -401,8 +401,8 @@ impl H {
             H::Preset => labelled("Preset", g.preset.label()),
             H::LodDistance => match g.lod_distance {
                 0 => labelled("LOD Distance", "Off"),
-                n if n >= 65536 => labelled("LOD Distance", "1M blocks"),
-                n if n >= 64 => labelled("LOD Distance", format!("{}k blocks", n * 16 / 1024)),
+                n if n >= 1_000_000 => labelled("LOD Distance", "1M chunks"),
+                n if n >= 1024 => labelled("LOD Distance", format!("{}k chunks", n / 1024)),
                 n => labelled("LOD Distance", format!("{n} chunks")),
             },
             H::FarDetail => labelled("Far Detail", g.far_detail.label()),
@@ -1266,13 +1266,13 @@ mod tests {
             assert_eq!(s.render_distance, near);
         }
         item.cycle(&mut s, true, [854, 480]);
-        assert_eq!(s.horizon.lod_distance, 65536);
-        assert_eq!(item.label(&s).plain(), "LOD Distance: 1M blocks");
+        assert_eq!(s.horizon.lod_distance, 1_000_000);
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 1M chunks");
         item.cycle(&mut s, true, [854, 480]);
-        assert_eq!(item.label(&s).plain(), "LOD Distance: 512k blocks");
-        item.set_slider(&mut s, 5.0 / 11.0);
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 512k chunks");
+        item.set_slider(&mut s, 5.0 / 15.0);
         assert_eq!(s.horizon.lod_distance, 1024);
-        assert_eq!(item.label(&s).plain(), "LOD Distance: 16k blocks");
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 1k chunks");
         assert_eq!(
             Item::Vanilla(Opt::RenderDistance).label(&s).plain(),
             format!("Full Detail Distance: {near} chunks")

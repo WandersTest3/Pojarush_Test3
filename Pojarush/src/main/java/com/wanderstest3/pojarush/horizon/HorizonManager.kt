@@ -259,7 +259,7 @@ object HorizonManager {
         lines.drop(start + 1).firstOrNull { it.isNotBlank() }?.trim()
     }.getOrNull()
 
-    val LOD_STEPS = listOf(0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536)
+    val LOD_STEPS = listOf(0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1_000_000)
 
     private fun graphicsLines(): MutableList<String> {
         val file = File(gameDir, "horizon-graphics.txt")
@@ -282,19 +282,14 @@ object HorizonManager {
 
     fun setLodDistance(chunks: Int) = setGraphics("lodDistance", chunks.toString())
 
-    fun applyFpsCounter(enabled: Boolean) {
+    fun disableBuiltInCounter() {
         runCatching {
             val file = File(gameDir, "horizon-graphics.txt")
             val lines = if (file.isFile) file.readLines().toMutableList() else mutableListOf()
             val index = lines.indexOfFirst { it.startsWith("overlay:") }
             val current = lines.getOrNull(index)?.substringAfter(':')
-            val next = when {
-                enabled -> "counter"
-                current == "counter" -> "off"
-                else -> return
-            }
-            if (current == next) return
-            if (index >= 0) lines[index] = "overlay:$next" else lines += "overlay:$next"
+            if (current != "counter") return
+            lines[index] = "overlay:off"
             gameDir.mkdirs()
             file.writeText(lines.joinToString("\n", postfix = "\n"))
         }
@@ -519,9 +514,8 @@ object HorizonManager {
 
     fun prewarm(context: Context, profile: Profile?, force: Boolean = false) {
         if (!isSupported() || !isPrepared()) return
-        if (!com.wanderstest3.pojarush.controls.ControlSettings(context).prewarm) return
         val now = android.os.SystemClock.uptimeMillis()
-        if (!force && now - lastPrewarm < 15_000) return
+        if (!force && now - lastPrewarm < 700) return
         if (isGameRunning(context)) return
         if (!force && lastRunFailed()) return
         lastPrewarm = now
@@ -583,7 +577,7 @@ object HorizonManager {
     fun launchIntent(context: Context, profile: Profile?): Intent {
         ensureFolders()
         removeLegacyBundledMods(context)
-        applyFpsCounter(com.wanderstest3.pojarush.controls.ControlSettings(context).fpsCounter)
+        disableBuiltInCounter()
         privateRoot.mkdirs()
         val args = arrayListOf(
             "--resources", resources.absolutePath,

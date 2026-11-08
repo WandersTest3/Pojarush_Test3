@@ -144,7 +144,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         Thread { HorizonManager.syncLogs() }.start()
-        window.decorView.postDelayed({ HorizonManager.prewarm(this, Accounts.profile.value) }, 400)
+        for (delay in longArrayOf(0, 800, 2500, 6000)) {
+            window.decorView.postDelayed({ HorizonManager.prewarm(this, Accounts.profile.value) }, delay)
+        }
     }
 }
 

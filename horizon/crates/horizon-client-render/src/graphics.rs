@@ -328,9 +328,9 @@ pub fn hdr_offered() -> bool {
 /// costs them more frame time than it is worth.
 pub const INTEGRATED_LOD_DISTANCE: u32 = 128;
 /// The farthest LOD Distance, in chunks: 65536 chunks, about a million blocks.
-pub const MAX_LOD_DISTANCE: u32 = 65536;
+pub const MAX_LOD_DISTANCE: u32 = 1_000_000;
 /// LOD Distance's choices, in chunks.
-pub const LOD_STEPS: [u32; 12] = [0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+pub const LOD_STEPS: [u32; 16] = [0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1_000_000];
 /// Whether `INTEGRATED_LOD_DISTANCE` applies to this adapter. Apple's GPUs
 /// are integrated too, with memory and bandwidth enough for every distance.
 pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
@@ -426,7 +426,7 @@ impl Default for Graphics {
             present_mode: PresentMode::Auto,
             pacing: Pacing::Efficient,
             workers: 0,
-            overlay: if cfg!(target_os = "android") { Overlay::Counter } else { Overlay::Off },
+            overlay: Overlay::Off,
             resolution_scale: 100,
             fxaa: false,
             taa: false,
@@ -773,7 +773,7 @@ mod tests {
             assert_eq!(Graphics::parse(&g.serialize()), g);
         }
         assert_eq!(Graphics::parse("lodDistance:10000\n").lod_distance, 10000);
-        assert_eq!(Graphics::parse("lodDistance:900000\n").lod_distance, MAX_LOD_DISTANCE);
+        assert_eq!(Graphics::parse("lodDistance:9000000\n").lod_distance, MAX_LOD_DISTANCE);
         assert_eq!(Graphics::parse("lodDistance:-1\n").lod_distance, 0);
         assert_eq!(Graphics::parse("lodDistance:invalid\n").lod_distance, 0);
     }

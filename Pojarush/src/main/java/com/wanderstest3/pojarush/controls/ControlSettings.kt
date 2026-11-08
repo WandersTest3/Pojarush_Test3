@@ -114,18 +114,12 @@ class ControlSettings(context: Context) {
     var mirrorSize: Boolean
         get() = prefs.getBoolean("mirror_size", false)
         set(v) = prefs.edit().putBoolean("mirror_size", v).apply()
-    var fpsCounter: Boolean
-        get() = prefs.getBoolean("fps_counter", true)
-        set(v) = prefs.edit().putBoolean("fps_counter", v).apply()
     var wallpaper: String
         get() = prefs.getString("wallpaper", "").orEmpty()
         set(v) = prefs.edit().putString("wallpaper", v).apply()
     var wallpaperDim: Float
         get() = prefs.getFloat("wallpaper_dim", 0.45f).coerceIn(0f, 0.90f)
         set(v) = prefs.edit().putFloat("wallpaper_dim", v.coerceIn(0f, 0.90f)).apply()
-    var prewarm: Boolean
-        get() = prefs.getBoolean("prewarm", true)
-        set(v) = prefs.edit().putBoolean("prewarm", v).apply()
     var keepAlive: Boolean
         get() = prefs.getBoolean("keep_alive", true)
         set(v) = prefs.edit().putBoolean("keep_alive", v).apply()

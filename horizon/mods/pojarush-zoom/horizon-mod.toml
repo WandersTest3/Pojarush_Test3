@@ -1,6 +1,6 @@
 id = "pojarush_zoom"
 name = "Pojarush Zoom"
-version = "2.0.0"
+version = "2.1.0"
 description = "Hold C to zoom in, release to zoom out. Mouse wheel zooms further in or out while held. Settings for zoom distance and animation speed."
 authors = ["Wanders_Test3"]
 api = "0.1"

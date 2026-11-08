@@ -63,7 +63,7 @@ impl Zoom {
     }
 
     fn rate(&self) -> f32 {
-        1.5 * self.speed as f32
+        2.4 * self.speed as f32
     }
 }
 
@@ -78,8 +78,8 @@ impl Mod for Zoom {
     fn init() -> Result<(Self, Registration), String> {
         input::register_key(KEY, "Zoom", "key.keyboard.c")?;
         let zoom = Zoom {
-            level: stored("level", 4, LEVEL_MIN, LEVEL_MAX),
-            speed: stored("speed", 6, SPEED_MIN, SPEED_MAX),
+            level: stored("level", 5, LEVEL_MIN, LEVEL_MAX),
+            speed: stored("speed", 8, SPEED_MIN, SPEED_MAX),
             held: false,
             target: 1.0,
             current: 1.0,

@@ -195,8 +195,9 @@ fun LodSettings() {
             val chunks = steps[v.toInt().coerceIn(0, steps.lastIndex)]
             when {
                 chunks == 0 -> off
-                chunks >= 65536 -> "1M"
-                else -> "${chunks * 16 / 1024}k"
+                chunks >= 1_000_000 -> "1M"
+                chunks >= 1024 -> "${chunks / 1024}k"
+                else -> "$chunks"
             }
         }) { v ->
             lod = steps[Math.round(v).coerceIn(0, steps.lastIndex)]
@@ -208,19 +209,9 @@ fun LodSettings() {
 
 @Composable
 fun ExtrasSettings(settings: ControlSettings) {
-    var fps by remember { mutableStateOf(settings.fpsCounter) }
     var keep by remember { mutableStateOf(settings.keepAlive) }
-    var warm by remember { mutableStateOf(settings.prewarm) }
     PojarushCard {
         CardTitle(stringResource(R.string.extras_title))
-        SettingSwitch(stringResource(R.string.fps_counter), fps, stringResource(R.string.fps_counter_desc)) {
-            settings.fpsCounter = it
-            fps = it
-        }
-        SettingSwitch(stringResource(R.string.prewarm), warm, stringResource(R.string.prewarm_desc)) {
-            settings.prewarm = it
-            warm = it
-        }
         SettingSwitch(stringResource(R.string.keep_alive), keep, stringResource(R.string.keep_alive_desc)) {
             settings.keepAlive = it
             keep = it

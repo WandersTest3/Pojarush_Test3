@@ -221,8 +221,6 @@
     <string name="wallpaper_dim">Escurecer</string>
     <string name="wallpaper_hint">Imagens (PNG, JPG, WebP, GIF) ou vídeos (MP4, WebM). Vídeos sempre tocam sem som.</string>
     <string name="extras_title">Extras</string>
-    <string name="fps_counter">Contador de FPS</string>
-    <string name="fps_counter_desc">Contador no estilo do Minecraft no canto do jogo, com a fonte do jogo e fundo preto semitransparente.</string>
     <string name="keep_alive">Manter aberto em segundo plano</string>
     <string name="keep_alive_desc">Mantém o jogo e os downloads rodando enquanto você usa outros apps (mostra uma notificação).</string>
     <string name="last_exit_reason">Motivo: %1$s</string>
@@ -232,8 +230,8 @@
     <string name="minecraft_font">Fonte do Minecraft</string>
     <string name="minecraft_font_desc">Usa a fonte pixelada no estilo do Minecraft no launcher.</string>
     <string name="lod_title">Terreno distante (LOD)</string>
-    <string name="lod_distance">Distância do LOD (blocos)</string>
-    <string name="lod_desc">Até onde o terreno simplificado é desenhado além da distância de renderização normal, de 1k até cerca de 1 milhão de blocos. Distâncias maiores usam mais memória e bateria; vale a partir da próxima vez que o jogo abrir.</string>
+    <string name="lod_distance">Distância do LOD (chunks)</string>
+    <string name="lod_desc">Até onde o terreno simplificado é desenhado além da distância de renderização normal, de 64 chunks até 1 milhão de chunks. Distâncias maiores usam mais memória e bateria; vale a partir da próxima vez que o jogo abrir.</string>
     <string name="lod_off">Desligado</string>
     <string name="hud_title">Imagens de HUD</string>
     <string name="hud_desc">Imagens para os botões e joysticks dos controles. Importe um .zip (por exemplo as imagens de UI do Bedrock) ou imagens soltas; a imagem estica para o tamanho do botão. O layout Bedrock Controls usa nomes como attack, interact, jump, sneak, sprint, perspective, joystick_frame e joystick_knob (com variantes _pressed).</string>
@@ -272,6 +270,4 @@
     <string name="editor_background">Cor do fundo</string>
     <string name="editor_transparent">Transparente</string>
     <string name="editor_background_alpha">Opacidade do fundo</string>
-    <string name="prewarm">Pré-carregar o jogo</string>
-    <string name="prewarm_desc">Inicia o Minecraft escondido atrás do launcher para o Jogar abrir na hora. Importar um pacote reinicia o jogo por trás. Usa mais memória enquanto o launcher está aberto.</string>
 </resources>
