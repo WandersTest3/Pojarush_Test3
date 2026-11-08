@@ -38,6 +38,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -123,12 +127,33 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
         controls.editLayout(l.copy(sticks = l.sticks.toMutableList().also { it[index] = change(s) }), Selection.Stick(index))
     }
 
-    fun save() {
-        val id = ControlLayouts.save(controls.layout, settings.layout, suffix)
+    var naming by remember { mutableStateOf(false) }
+    var exitAfterSave by remember { mutableStateOf(false) }
+    var panelX by remember { mutableFloatStateOf(0f) }
+    var panelY by remember { mutableFloatStateOf(0f) }
+
+    fun save(name: String) {
+        val id = ControlLayouts.saveNamed(controls.layout, settings.layout, name)
         settings.layout = id
         dirty = false
-        val name = ControlLayouts.list(context, defaultName).firstOrNull { it.id == id }?.name ?: id
         Toast.makeText(context, savedText.replace("%s", name), Toast.LENGTH_SHORT).show()
+    }
+
+    fun suggestedName(): String {
+        val current = settings.layout
+        return if (current.startsWith("file:")) ControlLayouts.nameOf(current, controls.layout.name)
+        else "${controls.layout.name.ifBlank { defaultName }} $suffix"
+    }
+
+    if (naming) {
+        NameDialog(stringResource(R.string.editor_save), suggestedName(), stringResource(R.string.editor_save), {
+            naming = false
+            exitAfterSave = false
+        }) { name ->
+            naming = false
+            save(name)
+            if (exitAfterSave) onExit()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -136,12 +161,21 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 6.dp)
+                .offset { androidx.compose.ui.unit.IntOffset(panelX.toInt(), panelY.toInt()) }
+                .pointerInput(Unit) {
+                    detectDragGesturesAfterLongPress { change, drag ->
+                        change.consume()
+                        panelX += drag.x
+                        panelY += drag.y
+                    }
+                }
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color(0xDD1E1129))
                 .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
+            Text("⠿", color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 4.dp))
             TextButton(onClick = {
                 val (l, layer) = layerId(controls.layout)
                 val b = ControlButton(
@@ -164,7 +198,7 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
             if (dirty) {
                 Text(stringResource(R.string.editor_modified), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             }
-            TextButton(onClick = { save() }) {
+            TextButton(onClick = { naming = true }) {
                 Text(stringResource(R.string.editor_save), fontWeight = FontWeight.Bold, color = if (dirty) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary)
             }
             TextButton(onClick = { if (dirty) confirmExit = true else onExit() }) { Text(stringResource(R.string.editor_exit)) }
@@ -177,8 +211,8 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                 confirmButton = {
                     TextButton(onClick = {
                         confirmExit = false
-                        save()
-                        onExit()
+                        exitAfterSave = true
+                        naming = true
                     }) { Text(stringResource(R.string.editor_save_exit)) }
                 },
                 dismissButton = {
@@ -278,8 +312,18 @@ private fun ButtonEditor(
         singleLine = true,
         label = { Text(stringResource(R.string.editor_text)) }
     )
-    SettingSlider(stringResource(R.string.editor_width), dpOf(b.width), 20f..240f, 2f, { "${it.toInt()} dp" }) { v -> onChange { it.copy(width = Size(v)) } }
-    SettingSlider(stringResource(R.string.editor_height), dpOf(b.height), 20f..240f, 2f, { "${it.toInt()} dp" }) { v -> onChange { it.copy(height = Size(v)) } }
+    val prefs = remember { com.wanderstest3.pojarush.controls.ControlSettings(context) }
+    var mirror by remember { mutableStateOf(prefs.mirrorSize) }
+    SettingNumber(stringResource(R.string.editor_width), dpOf(b.width), 8f..400f, 1f, "dp") { v ->
+        onChange { if (mirror) it.copy(width = Size(v), height = Size(v)) else it.copy(width = Size(v)) }
+    }
+    SettingNumber(stringResource(R.string.editor_height), dpOf(b.height), 8f..400f, 1f, "dp") { v ->
+        onChange { if (mirror) it.copy(width = Size(v), height = Size(v)) else it.copy(height = Size(v)) }
+    }
+    SettingSwitch(stringResource(R.string.editor_mirror_size), mirror, stringResource(R.string.editor_mirror_size_desc)) {
+        mirror = it
+        prefs.mirrorSize = it
+    }
     Text(stringResource(R.string.editor_mode), style = MaterialTheme.typography.bodyMedium)
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf(Mode.HOLD to R.string.editor_mode_hold, Mode.TOGGLE to R.string.editor_mode_toggle).forEach { (m, label) ->
@@ -326,7 +370,7 @@ private fun StickEditor(
     onChange: ((ControlStick) -> ControlStick) -> Unit,
     onDelete: () -> Unit,
 ) {
-    SettingSlider(stringResource(R.string.editor_size), dpOf(s.size), 60f..360f, 4f, { "${it.toInt()} dp" }) { v -> onChange { it.copy(size = Size(v)) } }
+    SettingNumber(stringResource(R.string.editor_size), dpOf(s.size), 30f..600f, 1f, "dp") { v -> onChange { it.copy(size = Size(v)) } }
     VisibilityChips(s.visibility) { v -> onChange { it.copy(visibility = v) } }
     HudImagePicker(stringResource(R.string.hud_stick_frame), s.style?.image.orEmpty()) { ref ->
         onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(image = ref)) }

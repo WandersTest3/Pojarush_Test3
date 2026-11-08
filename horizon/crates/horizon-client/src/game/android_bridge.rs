@@ -20,11 +20,28 @@ struct TouchPointer {
 
 thread_local! {
     static POINTER: Cell<TouchPointer> = Cell::new(TouchPointer::default());
+    static SMOOTH: Cell<(Option<Instant>, u32)> = const { Cell::new((None, 0)) };
 }
+
+const READY_FRAMES: u32 = 12;
+const READY_GAP_MS: u128 = 90;
 
 impl Game<'_> {
     pub(super) fn android_frame(&mut self, event_loop: &ActiveEventLoop) {
         android::set_captured(self.captured && self.screen == Screen::Playing);
+        if !android::ready() {
+            let loaded = self.rest_loader.is_none()
+                && self.res.rest.get().is_some()
+                && self.renderer.is_some();
+            let now = Instant::now();
+            let (last, count) = SMOOTH.get();
+            let smooth = last.is_some_and(|l| now.duration_since(l).as_millis() < READY_GAP_MS);
+            let count = if loaded && smooth { count + 1 } else { 0 };
+            SMOOTH.set((Some(now), count));
+            if count >= READY_FRAMES {
+                android::set_ready();
+            }
+        }
         if let Some(size) = self.window.as_ref().map(|w| w.inner_size()) {
             android::set_surface(size.width, size.height);
         }

@@ -81,6 +81,14 @@ class HorizonActivity : GameActivity() {
             view,
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         )
+        if (!HorizonBridge.isReady()) {
+            val cover = LoadingCover(this)
+            addContentView(
+                cover,
+                ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            )
+            cover.start {}
+        }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (overlay?.back() != true) tapKey(KeyEvent.KEYCODE_ESCAPE)

@@ -146,8 +146,13 @@ object GameFiles {
         return uri.lastPathSegment?.substringAfterLast('/') ?: "file"
     }
 
-    fun import(context: Context, kind: PackKind, uri: Uri): PackEntry {
-        val raw = displayName(context, uri)
+    fun import(context: Context, kind: PackKind, uri: Uri): PackEntry =
+        install(kind, displayName(context, uri)) { out ->
+            context.contentResolver.openInputStream(uri)?.use { input -> input.copyTo(out) }
+                ?: throw IOException("Empty file")
+        }
+
+    fun install(kind: PackKind, raw: String, write: (java.io.OutputStream) -> Unit): PackEntry {
         val ext = raw.substringAfterLast('.', "").lowercase()
         if (kind == PackKind.MOD && ext == "jar") {
             throw IOException("Fabric and NeoForge .jar mods do not run in Horizon; use a Horizon .hmod file")
@@ -164,8 +169,12 @@ object GameFiles {
             f
         }
         val temp = File(target.parentFile, target.name + ".part")
-        context.contentResolver.openInputStream(uri)?.use { input -> temp.outputStream().use { input.copyTo(it) } }
-            ?: throw IOException("Empty file")
+        try {
+            temp.outputStream().use { write(it) }
+        } catch (e: Exception) {
+            temp.delete()
+            throw e
+        }
         val nested = try {
             validate(kind, temp)
         } catch (e: Exception) {

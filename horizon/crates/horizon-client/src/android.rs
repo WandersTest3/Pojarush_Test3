@@ -22,6 +22,15 @@ use std::{
 static APP: OnceLock<AndroidApp> = OnceLock::new();
 static INPUT: Mutex<VecDeque<Input>> = Mutex::new(VecDeque::new());
 static CAPTURED: AtomicBool = AtomicBool::new(false);
+static READY: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn ready() -> bool {
+    READY.load(Ordering::Relaxed)
+}
+
+pub(crate) fn set_ready() {
+    READY.store(true, Ordering::Relaxed);
+}
 
 /// What the overlay sent since the last frame.
 pub(crate) enum Input {
@@ -251,6 +260,20 @@ pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nati
     _class: JClass<'local>,
 ) -> jboolean {
     if CAPTURED.load(Ordering::Relaxed) {
+        JNI_TRUE
+    } else {
+        JNI_FALSE
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeIsReady<
+    'local,
+>(
+    _env: JNIEnv<'local>,
+    _class: JClass<'local>,
+) -> jboolean {
+    if READY.load(Ordering::Relaxed) {
         JNI_TRUE
     } else {
         JNI_FALSE

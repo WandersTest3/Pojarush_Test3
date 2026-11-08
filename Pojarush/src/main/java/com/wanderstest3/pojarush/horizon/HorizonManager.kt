@@ -505,8 +505,25 @@ object HorizonManager {
         }
     }
 
+    fun installBundledMods(context: Context) {
+        val prefs = context.getSharedPreferences("bundled_mods", Context.MODE_PRIVATE)
+        val names = runCatching { context.assets.list("bundled-mods") }.getOrNull().orEmpty()
+        for (name in names) {
+            val key = "installed_$name"
+            if (prefs.getBoolean(key, false)) continue
+            val target = File(modsDir, name)
+            runCatching {
+                modsDir.mkdirs()
+                context.assets.open("bundled-mods/$name").use { input -> target.outputStream().use { input.copyTo(it) } }
+                GameFiles.setModEnabled(name.substringBeforeLast('.'), true)
+                prefs.edit().putBoolean(key, true).apply()
+            }
+        }
+    }
+
     fun launchIntent(context: Context, profile: Profile?): Intent {
         ensureFolders()
+        installBundledMods(context)
         applyFpsCounter(com.wanderstest3.pojarush.controls.ControlSettings(context).fpsCounter)
         privateRoot.mkdirs()
         val args = arrayListOf(

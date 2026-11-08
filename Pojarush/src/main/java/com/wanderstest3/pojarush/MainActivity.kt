@@ -205,6 +205,7 @@ private fun PojarushScreen() {
                                 androidx.compose.runtime.key(resumes) {
                                     LayoutSettings(settings, onEdit = { context.startActivity(Intent(context, ControlEditorActivity::class.java)) }) {}
                                 }
+                                com.wanderstest3.pojarush.ui.HudImagesSettings()
                                 ControlsSettings(settings) {}
                             }
                             Section.Mods -> ModsPage()
@@ -221,7 +222,6 @@ private fun PojarushScreen() {
                                 com.wanderstest3.pojarush.ui.InterfaceSettings(settings)
                                 com.wanderstest3.pojarush.ui.WallpaperSettings(settings)
                                 com.wanderstest3.pojarush.ui.MenuButtonSettings(settings) {}
-                                com.wanderstest3.pojarush.ui.HudImagesSettings()
                                 com.wanderstest3.pojarush.ui.ExtrasSettings(settings)
                             }
                             Section.Logs -> {}

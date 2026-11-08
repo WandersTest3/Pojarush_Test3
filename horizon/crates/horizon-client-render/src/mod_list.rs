@@ -38,6 +38,7 @@ pub struct Installed {
     pub problem: Option<String>,
     /// Loaded with `--dev-mod`: always on.
     pub dev: bool,
+    pub has_settings: bool,
     /// A native mod (`game/native_hooks.rs`): built into the game, on until
     /// the player turns it off, and its settings page.
     pub native: Option<NativePage>,
@@ -175,6 +176,7 @@ mod tests {
             description: String::new(),
             problem: None,
             dev,
+            has_settings: false,
             native: None,
         };
         let mut list = ModList {
@@ -189,6 +191,7 @@ mod tests {
         list.toggle(0);
         assert!(!list.is_on(0));
         list.installed.push(Installed {
+            has_settings: false,
             native: Some(NativePage::default()),
             ..installed("c", false)
         });

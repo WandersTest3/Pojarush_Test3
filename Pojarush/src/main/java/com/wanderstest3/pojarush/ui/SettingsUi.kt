@@ -70,6 +70,15 @@ fun LayoutSettings(settings: ControlSettings, onEdit: (() -> Unit)?, onChange: (
             }
             .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
     }
+    var renaming by remember { mutableStateOf<Pair<String, String>?>(null) }
+    renaming?.let { (id, name) ->
+        NameDialog(stringResource(R.string.controls_rename), name, stringResource(R.string.controls_rename), { renaming = null }) { newName ->
+            val newId = ControlLayouts.rename(id, newName)
+            renaming = null
+            version++
+            if (selected == id) choose(newId)
+        }
+    }
     PojarushCard {
         CardTitle(stringResource(R.string.controls_layout))
         entries.forEach { e ->
@@ -80,6 +89,7 @@ fun LayoutSettings(settings: ControlSettings, onEdit: (() -> Unit)?, onChange: (
                 RadioButton(selected = selected == e.id, onClick = { choose(e.id) })
                 Text(e.name, modifier = Modifier.weight(1f).basicMarquee(), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                 if (e.removable) {
+                    TextButton(onClick = { renaming = e.id to e.name }) { Text(stringResource(R.string.controls_rename)) }
                     TextButton(onClick = {
                         ControlLayouts.delete(e.id)
                         version++

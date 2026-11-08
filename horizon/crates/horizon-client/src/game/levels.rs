@@ -126,6 +126,15 @@ impl Levels {
         self.parked.get_mut(&dim)
     }
 
+    #[cfg_attr(not(feature = "mods"), allow(dead_code))]
+    pub(super) fn parked_chunks(
+        &mut self,
+    ) -> impl Iterator<Item = (Dim, &mut horizon_client::chunk_map::ChunkMap)> {
+        self.parked
+            .iter_mut()
+            .map(|(d, p)| (*d, &mut p.world.chunks))
+    }
+
     /// The mobs of a parked level.
     pub(super) fn parked_mobs(&self, dim: Dim) -> Option<&[Mob]> {
         self.parked.get(&dim).map(|level| level.mobs.as_slice())

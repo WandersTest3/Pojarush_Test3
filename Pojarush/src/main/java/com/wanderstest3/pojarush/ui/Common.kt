@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -132,6 +133,67 @@ fun SettingSlider(
         Slider(
             value = current,
             onValueChange = { current = it },
+            onValueChangeFinished = { onDone(current) },
+            valueRange = range,
+            steps = stepsFor(range, step)
+        )
+    }
+}
+
+@Composable
+fun NameDialog(title: String, initial: String, confirm: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf(initial) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(48) },
+                singleLine = true,
+                label = { Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.layout_name)) },
+            )
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { onConfirm(name.trim()) }, enabled = name.isNotBlank()) { Text(confirm) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.cancel)) } },
+    )
+}
+
+@Composable
+fun SettingNumber(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    step: Float,
+    unit: String,
+    onDone: (Float) -> Unit,
+) {
+    var current by remember(value) { mutableFloatStateOf(value) }
+    var text by remember(value) { mutableStateOf(value.toInt().toString()) }
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            androidx.compose.material3.OutlinedTextField(
+                value = text,
+                onValueChange = { t ->
+                    text = t.filter(Char::isDigit).take(4)
+                    text.toIntOrNull()?.toFloat()?.takeIf { it in range }?.let {
+                        current = it
+                        onDone(it)
+                    }
+                },
+                modifier = Modifier.width(96.dp),
+                singleLine = true,
+                suffix = { Text(unit) },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+            )
+        }
+        Slider(
+            value = current.coerceIn(range),
+            onValueChange = {
+                current = it
+                text = it.toInt().toString()
+            },
             onValueChangeFinished = { onDone(current) },
             valueRange = range,
             steps = stepsFor(range, step)

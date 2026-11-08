@@ -22,13 +22,6 @@ import com.wanderstest3.pojarush.ui.ControlEditor
 import com.wanderstest3.pojarush.ui.PojarushTheme
 
 class ControlEditorActivity : ComponentActivity(), ControlsHost {
-    private var backgroundAnimator: ValueAnimator? = null
-
-    override fun onDestroy() {
-        backgroundAnimator?.cancel()
-        super.onDestroy()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Fullscreen.apply(this)
@@ -41,22 +34,8 @@ class ControlEditorActivity : ComponentActivity(), ControlsHost {
             showHandle = false,
         )
         controls.setEditMode(true)
-        val from = intArrayOf(0xFF000000.toInt(), 0xFF3A3A3A.toInt(), 0xFF57197F.toInt(), 0xFF8E8E8E.toInt(), 0xFFFFFFFF.toInt(), 0xFF5A5A5A.toInt())
-        val to = intArrayOf(0xFF2A0B40.toInt(), 0xFF57197F.toInt(), 0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFF8E8E8E.toInt(), 0xFF3A3A3A.toInt())
-        val gradient = GradientDrawable(GradientDrawable.Orientation.TL_BR, from.copyOf())
-        val evaluator = ArgbEvaluator()
-        backgroundAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 9000L
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            interpolator = LinearInterpolator()
-            addUpdateListener { a ->
-                val t = a.animatedValue as Float
-                gradient.colors = IntArray(from.size) { i -> evaluator.evaluate(t, from[i], to[i]) as Int }
-            }
-            start()
-        }
-        val root = FrameLayout(this).apply { this.background = gradient }
+        val root = FrameLayout(this)
+        root.addView(EditorBackgroundView(this), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(controls, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(ComposeView(this).apply {
             setContent { PojarushTheme { ControlEditor(controls, settings) { finish() } } }

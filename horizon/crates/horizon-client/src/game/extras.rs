@@ -205,7 +205,10 @@ impl Game<'_> {
     /// A mod's zoom in effect (`native_zoom`): (factor, smooth, turning
     /// scale); none is 1.
     fn zoom_now(&self) -> (f32, bool, f64) {
-        self.native_zoom_now().map_or((1.0, true, 1.0), |z| {
+        if let Some(z) = self.native_zoom_now() {
+            return (z.factor, z.smooth, f64::from(z.turn));
+        }
+        self.mod_zoom().map_or((1.0, true, 1.0), |z| {
             (z.factor, z.smooth, f64::from(z.turn))
         })
     }
@@ -230,6 +233,7 @@ impl Game<'_> {
     /// The minimap and mods' corner panels, in the HUD layer (hidden with F1
     /// by the caller). The top left corner gives way to the debug screen.
     pub(super) fn draw_extras(&mut self, batch: &mut HudBatch) {
+        let mod_panels = self.mods.has_panels();
         let map = self.minimap_shown();
         let visible = |corner| !(self.debug && corner == Corner::TopLeft);
         let mut corners = Corners::new(batch.width, batch.height, self.effect_rows_height());
@@ -252,6 +256,9 @@ impl Game<'_> {
                 north,
             };
             extras_hud::draw_minimap(batch, atlas, &mut corners, &look);
+        }
+        if mod_panels {
+            self.draw_mod_panels(batch, &mut corners);
         }
         self.native_hud(batch, &mut corners);
     }

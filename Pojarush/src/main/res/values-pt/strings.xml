@@ -168,7 +168,7 @@
     <string name="mods_tab_mods">Mods</string>
     <string name="mods_tab_resource">Resource packs</string>
     <string name="mods_tab_shaders">Shaders</string>
-    <string name="mods_desc_mods">Mods de conteúdo do Horizon (.hmod): blocos, itens, texturas e dados. Os mods de código (WebAssembly, como o Compass Enhanced) ainda não correm nesta versão do Horizon. Ficheiros .jar do Fabric e NeoForge não correm no Horizon.</string>
+    <string name="mods_desc_mods">Mods do Horizon (.hmod): mods de conteúdo e mods de código (WebAssembly, como o Compass Enhanced; só em dispositivos de 64 bits). Ficheiros .jar de Fabric e NeoForge não funcionam no Horizon.</string>
     <string name="mods_desc_resource">Resource packs do Java Edition (.zip com pack.mcmeta).</string>
     <string name="mods_desc_shaders">Shader packs próprios do Horizon (.hshader) funcionam. Packs clássicos OptiFine/Iris .zip são listados mas ainda não são renderizados: o Horizon não tem pipeline GLSL para eles.</string>
     <string name="mods_empty">Nada instalado.</string>
@@ -248,4 +248,23 @@
     <string name="hud_stick_knob">Imagem do botão do joystick</string>
     <string name="open_folder">Abrir pasta</string>
     <string name="folder_path_toast">Pasta: %1$s</string>
+    <string name="layout_name">Nome do layout</string>
+    <string name="controls_rename">Mudar o nome</string>
+    <string name="editor_mirror_size">Espelhar tamanho</string>
+    <string name="editor_mirror_size_desc">Alterar a largura também altera a altura (e vice-versa).</string>
+    <string name="registry_tab_installed">Instalados</string>
+    <string name="registry_tab_download">Transferir</string>
+    <string name="registry_desc">Transferências do playhorizon.dev, verificadas com SHA-256 e instaladas na pasta certa.</string>
+    <string name="registry_refresh">Atualizar</string>
+    <string name="registry_open_site">Abrir site</string>
+    <string name="registry_search">Pesquisar</string>
+    <string name="registry_loading">A carregar a lista…</string>
+    <string name="registry_failed">Falhou: %1$s</string>
+    <string name="registry_empty">Nada encontrado.</string>
+    <string name="registry_native_hidden">%1$d mods nativos (.hnmod) do site estão ocultos: só funcionam em builds de PC.</string>
+    <string name="registry_install">Instalar</string>
+    <string name="registry_installed">Instalado</string>
+    <string name="registry_installed_toast">%1$s instalado</string>
+    <string name="loading_game">A carregar o jogo…</string>
+    <string name="loading_game_slow">Ainda a carregar os recursos, quase lá…</string>
 </resources>

@@ -169,7 +169,7 @@
     <string name="mods_tab_mods">Mods</string>
     <string name="mods_tab_resource">Resource packs</string>
     <string name="mods_tab_shaders">Shaders</string>
-    <string name="mods_desc_mods">Horizon content mods (.hmod): blocks, items, textures and data. Code mods (WebAssembly, like Compass Enhanced) do not run in this Horizon version yet. Fabric and NeoForge .jar files do not run in Horizon.</string>
+    <string name="mods_desc_mods">Horizon mods (.hmod): content mods and code mods (WebAssembly, like Compass Enhanced; 64-bit devices only). Fabric and NeoForge .jar files do not run in Horizon.</string>
     <string name="mods_desc_resource">Java Edition resource packs (.zip with pack.mcmeta).</string>
     <string name="mods_desc_shaders">Horizon\'s own shader packs (.hshader) run. Classic OptiFine/Iris .zip packs are listed but not rendered yet: Horizon has no GLSL pipeline for them.</string>
     <string name="mods_empty">Nothing installed.</string>
@@ -249,4 +249,23 @@
     <string name="hud_stick_knob">Joystick knob image</string>
     <string name="open_folder">Open folder</string>
     <string name="folder_path_toast">Folder: %1$s</string>
+    <string name="layout_name">Layout name</string>
+    <string name="controls_rename">Rename</string>
+    <string name="editor_mirror_size">Mirror size</string>
+    <string name="editor_mirror_size_desc">Changing the width also changes the height (and the other way around).</string>
+    <string name="registry_tab_installed">Installed</string>
+    <string name="registry_tab_download">Download</string>
+    <string name="registry_desc">Downloads from playhorizon.dev, checked with SHA-256 and installed in the right folder.</string>
+    <string name="registry_refresh">Refresh</string>
+    <string name="registry_open_site">Open site</string>
+    <string name="registry_search">Search</string>
+    <string name="registry_loading">Loading the list…</string>
+    <string name="registry_failed">Failed: %1$s</string>
+    <string name="registry_empty">Nothing found.</string>
+    <string name="registry_native_hidden">%1$d native mods (.hnmod) from the site are hidden: they only run on PC builds.</string>
+    <string name="registry_install">Install</string>
+    <string name="registry_installed">Installed</string>
+    <string name="registry_installed_toast">%1$s installed</string>
+    <string name="loading_game">Loading the game…</string>
+    <string name="loading_game_slow">Still loading resources, almost there…</string>
 </resources>

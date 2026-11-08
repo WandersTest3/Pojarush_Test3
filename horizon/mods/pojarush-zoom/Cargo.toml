@@ -1,0 +1,20 @@
+[package]
+name = "pojarush_zoom"
+version = "1.0.0"
+edition = "2024"
+license-file = "LICENSE.txt"
+publish = false
+description = "Pojarush test mod: press C to zoom."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+horizon-mod-sdk = { path = "../../crates/horizon-mod-sdk" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+
+[workspace]

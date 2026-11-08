@@ -1,0 +1,9 @@
+id = "pojarush_zoom"
+name = "Pojarush Zoom"
+version = "1.0.0"
+description = "Press C to zoom in, press C again to zoom out."
+authors = ["Wanders_Test3"]
+api = "0.1"
+side = "client"
+capabilities = ["render", "input"]
+experimental = ["render", "input"]

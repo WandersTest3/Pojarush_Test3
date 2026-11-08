@@ -15,6 +15,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -34,10 +35,12 @@ import com.wanderstest3.pojarush.horizon.PackKind
 fun ModsPage() {
     val context = LocalContext.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var browse by rememberSaveable { mutableStateOf(false) }
     var version by remember { mutableIntStateOf(0) }
     val kind = PackKind.entries[tab]
     val entries = remember(tab, version) {
         HorizonManager.ensureFolders()
+        HorizonManager.installBundledMods(context)
         GameFiles.list(kind)
     }
     val failed = stringResource(R.string.controls_import_failed, "%s")
@@ -57,6 +60,15 @@ fun ModsPage() {
             listOf(R.string.mods_tab_mods, R.string.mods_tab_resource, R.string.mods_tab_shaders).forEachIndexed { i, label ->
                 FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label), maxLines = 1, modifier = Modifier.basicMarquee()) })
             }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = !browse, onClick = { browse = false }, label = { Text(stringResource(R.string.registry_tab_installed), maxLines = 1) })
+            FilterChip(selected = browse, onClick = { browse = true }, label = { Text(stringResource(R.string.registry_tab_download), maxLines = 1) })
+        }
+        if (browse) {
+            Hint(stringResource(R.string.registry_desc))
+            RegistryBrowser(kind) { version++ }
+            return@PojarushCard
         }
         Hint(
             stringResource(

@@ -50,6 +50,24 @@ directly, with quick actions for the virtual mouse, keyboard, hiding the control
 
 Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
 
+## 1.8.0
+
+- Code mods (.hmod with WebAssembly) run again on arm64: the sandboxed mod runtime (wasmtime) from
+  Starling (Vasysik/horizon-android, MIT) is ported into the game, with its tick, frame, key,
+  mouse, chat, command, HUD panel, zoom and settings-screen hooks. 32-bit phones load content mods
+  only (wasmtime has no 32-bit arm backend).
+- Mods page: "Download" lists the mods, resource packs and shaders of playhorizon.dev (its
+  registry index), checks each file's SHA-256 and installs it in the right folder, turned on.
+  Native mods (.hnmod) are hidden: they only run in PC builds.
+- Pojarush Zoom (`horizon/mods/pojarush-zoom`), a test mod installed and turned on once: press C
+  to zoom in, press C again to zoom out.
+- Starting the game: the launcher-styled loading screen stays up until the resources finished
+  loading and the game draws smoothly, then the game shows at once.
+- Controls editor: the top panel moves (hold and drag), exact sizes can be typed, "Mirror size"
+  keeps width and height equal, layouts can be named when saved and renamed later, and the
+  background has random particles instead of stripes. "Edit layout" is back in the in-game menu.
+  HUD images moved to the Controls page, under the editor.
+
 ## 1.7.0
 
 - 32-bit phones (armeabi-v7a): the APK now carries Horizon, horizon-prepare, the Java shim and

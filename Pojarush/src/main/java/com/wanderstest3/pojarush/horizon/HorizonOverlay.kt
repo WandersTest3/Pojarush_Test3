@@ -218,7 +218,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                 ) {
                     when (tab) {
                         0 -> {
-                            LayoutSettings(settings, onEdit = null, onChange = ::apply)
+                            LayoutSettings(settings, onEdit = { openEditor() }, onChange = ::apply)
                             ControlsSettings(settings, ::apply)
                         }
                         1 -> MouseSettings(settings, ::apply)

@@ -20,7 +20,7 @@ TARGET_DIR="${CARGO_TARGET_DIR:-$HORIZON/target}"
 
 rustup target add aarch64-linux-android
 cd "$HORIZON"
-cargo build --profile android --target aarch64-linux-android -p horizon-android -p horizon-prepare
+cargo build --profile android --target aarch64-linux-android -p horizon-android --features horizon-android/mods -p horizon-prepare
 
 mkdir -p "$JNI"
 cp "$TARGET_DIR/aarch64-linux-android/android/libhorizon_android.so" "$JNI/libhorizon_android.so"

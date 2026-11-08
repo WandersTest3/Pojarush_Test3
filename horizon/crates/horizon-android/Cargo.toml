@@ -63,6 +63,7 @@ default = ["audio"]
 audio = ["horizon-client/audio"]
 controllers = []
 rng-trace = ["horizon-core/rng-trace"]
+mods = ["horizon-mods/runtime"]
 
 [lints]
 workspace = true

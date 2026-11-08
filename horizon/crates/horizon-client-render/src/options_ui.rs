@@ -1113,6 +1113,7 @@ struct Widget {
 /// What the game must do after an interaction.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
+    ModSettings(usize),
     /// An accepted button press or the release of a slider.
     ButtonClick,
     /// Close the options screens (back to the pause menu or title).
@@ -1823,7 +1824,7 @@ impl OptionsUi {
                         let dead = installed.dev || installed.id.is_empty();
                         // A native mod gets its settings page's button beside
                         // the toggle.
-                        if installed.native.is_some() {
+                        if installed.native.is_some() || installed.has_settings {
                             let toggle = button(0.0, 0.0, 150.0, label, Act::ToggleMod(i));
                             let settings = button(
                                 0.0,
@@ -2850,8 +2851,12 @@ impl OptionsUi {
                         }
                         Act::ModSettings(i) => {
                             events.push(Event::ButtonClick);
-                            self.push(Page::NativeMod(i));
-                            events.push(Event::NativeSettings(i));
+                            if s.mods.installed.get(i).is_some_and(|m| m.native.is_some()) {
+                                self.push(Page::NativeMod(i));
+                                events.push(Event::NativeSettings(i));
+                            } else {
+                                events.push(Event::ModSettings(i));
+                            }
                         }
                         Act::NativeKey(i, k) => {
                             self.selected_key = Some(NATIVE_KEY);
@@ -3585,6 +3590,7 @@ mod tests {
                 description: "May show HUD panels.".into(),
                 problem: id.is_empty().then(|| "Invalid package".into()),
                 dev,
+                has_settings: false,
                 native: None,
             });
         }
@@ -3652,6 +3658,7 @@ mod tests {
             description: String::new(),
             problem: None,
             dev: false,
+            has_settings: false,
             native: Some(crate::mod_list::NativePage::default()),
         });
         ui.show(Page::Mods);
@@ -3696,6 +3703,7 @@ mod tests {
             description: String::new(),
             problem: None,
             dev: false,
+            has_settings: false,
             native: Some(crate::mod_list::NativePage {
                 keys: vec![["zoom".into(), "Zoom key".into(), "key.keyboard.z".into()]],
                 buttons: Vec::new(),

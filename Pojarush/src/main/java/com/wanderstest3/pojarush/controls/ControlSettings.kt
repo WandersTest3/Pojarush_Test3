@@ -111,6 +111,9 @@ class ControlSettings(context: Context) {
     var minecraftFont: Boolean
         get() = prefs.getBoolean("minecraft_font", true)
         set(v) = prefs.edit().putBoolean("minecraft_font", v).apply()
+    var mirrorSize: Boolean
+        get() = prefs.getBoolean("mirror_size", false)
+        set(v) = prefs.edit().putBoolean("mirror_size", v).apply()
     var fpsCounter: Boolean
         get() = prefs.getBoolean("fps_counter", true)
         set(v) = prefs.edit().putBoolean("fps_counter", v).apply()
@@ -237,6 +240,38 @@ object ControlLayouts {
         }
         return file
     }
+
+    private fun safeName(name: String) = name.replace(Regex("[^\\p{L}0-9._ ()-]"), "_").trim().take(48).ifEmpty { "Layout" }
+
+    private fun freeFile(base: String, keep: File? = null): File {
+        var f = File(dir, "$base.json")
+        var n = 2
+        while (f.exists() && f != keep) f = File(dir, "$base $n.json").also { n++ }
+        return f
+    }
+
+    fun saveNamed(layout: ControlLayout, currentId: String, name: String): String {
+        dir.mkdirs()
+        val existing = currentId.takeIf { it.startsWith("file:") }?.let { File(dir, it.removePrefix("file:")) }?.takeIf { it.isFile }
+        val target = freeFile(safeName(name), existing)
+        target.writeText(ControlLayout.write(layout.copy(name = name.trim().ifEmpty { target.nameWithoutExtension })))
+        if (existing != null && existing != target) existing.delete()
+        return "file:${target.name}"
+    }
+
+    fun rename(id: String, name: String): String {
+        if (!id.startsWith("file:")) return id
+        val file = File(dir, id.removePrefix("file:"))
+        if (!file.isFile) return id
+        val layout = ControlLayout.parse(file.readText(), file.nameWithoutExtension)
+        return saveNamed(layout, id, name)
+    }
+
+    fun nameOf(id: String, fallback: String): String = runCatching {
+        if (!id.startsWith("file:")) return fallback
+        val file = File(dir, id.removePrefix("file:"))
+        ControlLayout.parse(file.readText(), file.nameWithoutExtension).name
+    }.getOrDefault(fallback)
 
     fun delete(id: String) {
         if (id.startsWith("file:")) File(dir, id.removePrefix("file:")).delete()
