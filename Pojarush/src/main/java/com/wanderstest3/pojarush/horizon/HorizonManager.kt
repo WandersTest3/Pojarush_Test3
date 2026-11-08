@@ -505,25 +505,84 @@ object HorizonManager {
         }
     }
 
-    fun installBundledMods(context: Context) {
-        val prefs = context.getSharedPreferences("bundled_mods", Context.MODE_PRIVATE)
-        val names = runCatching { context.assets.list("bundled-mods") }.getOrNull().orEmpty()
-        for (name in names) {
-            val key = "installed_$name"
-            if (prefs.getBoolean(key, false)) continue
-            val target = File(modsDir, name)
-            runCatching {
-                modsDir.mkdirs()
-                context.assets.open("bundled-mods/$name").use { input -> target.outputStream().use { input.copyTo(it) } }
-                GameFiles.setModEnabled(name.substringBeforeLast('.'), true)
-                prefs.edit().putBoolean(key, true).apply()
-            }
+    private val prewarmKeyFile get() = File(homeDir, "prewarm-key")
+    private val revealFile get() = File(homeDir, "reveal")
+    private var lastPrewarm = 0L
+
+    fun isGameRunning(context: Context): Boolean {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val name = context.packageName + ":horizon"
+        return am.runningAppProcesses.orEmpty().any { it.processName == name }
+    }
+
+    private fun keyOf(intent: Intent) = intent.getStringArrayListExtra(HorizonActivity.EXTRA_ARGS).orEmpty().joinToString("\u001f")
+
+    fun prewarm(context: Context, profile: Profile?, force: Boolean = false) {
+        if (!isSupported() || !isPrepared()) return
+        if (!com.wanderstest3.pojarush.controls.ControlSettings(context).prewarm) return
+        val now = android.os.SystemClock.uptimeMillis()
+        if (!force && now - lastPrewarm < 15_000) return
+        if (isGameRunning(context)) return
+        if (!force && lastRunFailed()) return
+        lastPrewarm = now
+        runCatching {
+            val intent = launchIntent(context, profile).putExtra(HorizonActivity.EXTRA_PREWARM, true)
+            revealFile.delete()
+            prewarmKeyFile.writeText(keyOf(intent))
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION))
         }
+    }
+
+    private val restartHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var restartTask: Runnable? = null
+
+    fun restartPrewarm(context: Context, profile: Profile?) {
+        val app = context.applicationContext
+        restartTask?.let(restartHandler::removeCallbacks)
+        val task = Runnable {
+            Thread {
+                if (isGameRunning(app)) stopRunningGame(app)
+                lastPrewarm = 0L
+                restartHandler.post { prewarm(app, profile, force = true) }
+            }.start()
+        }
+        restartTask = task
+        restartHandler.postDelayed(task, 1200)
+    }
+
+    private fun lastRunFailed(): Boolean = runCatching {
+        File(homeDir, "exit-code").takeIf { it.isFile }?.readText()?.trim()?.let { it.isNotEmpty() && it != "0" } ?: false
+    }.getOrDefault(false)
+
+    fun play(context: Context, profile: Profile?) {
+        val intent = launchIntent(context, profile)
+        val warm = isGameRunning(context) && runCatching { prewarmKeyFile.readText() == keyOf(intent) }.getOrDefault(false)
+        if (warm) {
+            revealFile.writeText("1")
+            context.startActivity(
+                Intent(context, HorizonActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            )
+        } else {
+            stopRunningGame(context)
+            runCatching { prewarmKeyFile.delete() }
+            context.startActivity(intent)
+        }
+    }
+
+    fun consumeReveal(): Boolean = revealFile.exists().also { if (it) revealFile.delete() }
+
+    fun removeLegacyBundledMods(context: Context) {
+        val prefs = context.getSharedPreferences("bundled_mods", Context.MODE_PRIVATE)
+        val key = "installed_pojarush_zoom.hmod"
+        if (!prefs.getBoolean(key, false)) return
+        runCatching { File(modsDir, "pojarush_zoom.hmod").delete() }
+        prefs.edit().remove(key).apply()
     }
 
     fun launchIntent(context: Context, profile: Profile?): Intent {
         ensureFolders()
-        installBundledMods(context)
+        removeLegacyBundledMods(context)
         applyFpsCounter(com.wanderstest3.pojarush.controls.ControlSettings(context).fpsCounter)
         privateRoot.mkdirs()
         val args = arrayListOf(

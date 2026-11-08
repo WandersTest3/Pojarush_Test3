@@ -942,7 +942,7 @@ impl Game<'_> {
             return;
         };
         if ms.settings {
-            self.open_options_at(self.options_from_title, Page::Mods);
+            self.open_options_at(self.title.is_some(), Page::Mods);
         } else {
             self.screen = ms.under;
             if self.screen == Screen::Playing && self.player.is_some() {

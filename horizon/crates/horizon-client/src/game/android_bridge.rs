@@ -29,6 +29,10 @@ const READY_GAP_MS: u128 = 90;
 impl Game<'_> {
     pub(super) fn android_frame(&mut self, event_loop: &ActiveEventLoop) {
         android::set_captured(self.captured && self.screen == Screen::Playing);
+        let master = if android::muted() { 0.0 } else { self.settings.master_volume };
+        if self.audio.master != master {
+            self.audio.master = master;
+        }
         if !android::ready() {
             let loaded = self.rest_loader.is_none()
                 && self.res.rest.get().is_some()

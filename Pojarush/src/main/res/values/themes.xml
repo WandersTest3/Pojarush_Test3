@@ -2,6 +2,7 @@
 <resources>
     <style name="Theme.Pojarush" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/pojarush_background</item>
+        <item name="android:windowIsTranslucent">true</item>
         <item name="android:statusBarColor">@color/pojarush_background</item>
         <item name="android:navigationBarColor">@color/pojarush_background</item>
     </style>

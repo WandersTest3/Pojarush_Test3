@@ -123,6 +123,9 @@ class ControlSettings(context: Context) {
     var wallpaperDim: Float
         get() = prefs.getFloat("wallpaper_dim", 0.45f).coerceIn(0f, 0.90f)
         set(v) = prefs.edit().putFloat("wallpaper_dim", v.coerceIn(0f, 0.90f)).apply()
+    var prewarm: Boolean
+        get() = prefs.getBoolean("prewarm", true)
+        set(v) = prefs.edit().putBoolean("prewarm", v).apply()
     var keepAlive: Boolean
         get() = prefs.getBoolean("keep_alive", true)
         set(v) = prefs.edit().putBoolean("keep_alive", v).apply()
@@ -147,8 +150,8 @@ object ControlLayouts {
 
     fun list(context: Context, defaultName: String): List<Entry> {
         val builtIn = listOf(
-            Entry(DefaultLayout.ID, defaultName, false),
-            Entry(BedrockLayout.ID, BedrockLayout.NAME, false),
+            Entry(DefaultLayout.ID, bundled(context, "Pojarush_Default_V1.0.json")?.name ?: defaultName, false),
+            Entry(BedrockLayout.ID, bundled(context, "Bedrock_Default_V1.0.json")?.name ?: BedrockLayout.NAME, false),
         )
         val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".json", true) }.orEmpty()
             .sortedBy { it.name.lowercase() }
@@ -164,11 +167,16 @@ object ControlLayouts {
             id.startsWith("asset:") -> context.assets.open("controls/${id.removePrefix("asset:")}").bufferedReader().use {
                 ControlLayout.parse(it.readText(), id.removePrefix("asset:"))
             }
-            id == BedrockLayout.ID -> BedrockLayout.create()
+            id == BedrockLayout.ID -> bundled(context, "Bedrock_Default_V1.0.json") ?: BedrockLayout.create()
+            id == DefaultLayout.ID -> bundled(context, "Pojarush_Default_V1.0.json") ?: DefaultLayout.create(defaultName)
             id.startsWith("file:") -> File(dir, id.removePrefix("file:")).let { ControlLayout.parse(it.readText(), it.nameWithoutExtension) }
             else -> null
         }
     }.getOrNull() ?: DefaultLayout.create(defaultName)
+
+    private fun bundled(context: Context, name: String): ControlLayout? = runCatching {
+        context.assets.open("controls/$name").bufferedReader().use { ControlLayout.parse(it.readText(), name) }
+    }.getOrNull()
 
     fun import(context: Context, uri: Uri): Entry {
         val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }

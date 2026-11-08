@@ -42,6 +42,7 @@ data class Style(
     val radiusInPx: Boolean = false,
     val image: String = "",
     val imagePressed: String = "",
+    val opacity: Float = 1f,
 )
 
 data class ControlButton(
@@ -806,6 +807,7 @@ private object PojarushFormat {
             .apply {
                 if (it.image.isNotEmpty()) put("image", it.image)
                 if (it.imagePressed.isNotEmpty()) put("imagePressed", it.imagePressed)
+                if (it.opacity < 0.999f) put("opacity", it.opacity.toDouble())
             }
     }
 
@@ -815,6 +817,7 @@ private object PojarushFormat {
             it.optInt("stroke"), it.optDouble("strokeDp", 1.0).toFloat(), it.optDouble("radiusDp", 10.0).toFloat(),
             it.optDouble("textSp", 15.0).toFloat(), it.optBoolean("radiusInPx", false),
             it.optString("image", ""), it.optString("imagePressed", ""),
+            it.optDouble("opacity", 1.0).toFloat().coerceIn(0f, 1f),
         )
     }
 

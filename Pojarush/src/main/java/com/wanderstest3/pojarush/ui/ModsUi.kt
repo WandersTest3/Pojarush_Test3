@@ -40,9 +40,10 @@ fun ModsPage() {
     val kind = PackKind.entries[tab]
     val entries = remember(tab, version) {
         HorizonManager.ensureFolders()
-        HorizonManager.installBundledMods(context)
+        HorizonManager.removeLegacyBundledMods(context)
         GameFiles.list(kind)
     }
+    val restart = { HorizonManager.restartPrewarm(context, com.wanderstest3.pojarush.Accounts.profile.value) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
     val imported = stringResource(R.string.controls_imported, "%s")
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -50,6 +51,7 @@ fun ModsPage() {
         runCatching { GameFiles.import(context, kind, uri) }
             .onSuccess {
                 version++
+                restart()
                 Toast.makeText(context, imported.replace("%s", it.name), Toast.LENGTH_SHORT).show()
             }
             .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
@@ -67,7 +69,10 @@ fun ModsPage() {
         }
         if (browse) {
             Hint(stringResource(R.string.registry_desc))
-            RegistryBrowser(kind) { version++ }
+            RegistryBrowser(kind) {
+                version++
+                restart()
+            }
             return@PojarushCard
         }
         Hint(
@@ -87,11 +92,13 @@ fun ModsPage() {
                     SettingSwitchInline(e.enabled) {
                         GameFiles.setEnabled(kind, e, it)
                         version++
+                        restart()
                     }
                 }
                 TextButton(onClick = {
                     GameFiles.delete(kind, e)
                     version++
+                    restart()
                 }) { Text(stringResource(R.string.controls_delete)) }
             }
         }

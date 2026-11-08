@@ -23,6 +23,11 @@ static APP: OnceLock<AndroidApp> = OnceLock::new();
 static INPUT: Mutex<VecDeque<Input>> = Mutex::new(VecDeque::new());
 static CAPTURED: AtomicBool = AtomicBool::new(false);
 static READY: AtomicBool = AtomicBool::new(false);
+static MUTED: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn muted() -> bool {
+    MUTED.load(Ordering::Relaxed)
+}
 
 pub(crate) fn ready() -> bool {
     READY.load(Ordering::Relaxed)
@@ -278,4 +283,15 @@ pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nati
     } else {
         JNI_FALSE
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeSetMuted<
+    'local,
+>(
+    _env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    muted: jboolean,
+) {
+    MUTED.store(muted != 0, Ordering::Relaxed);
 }

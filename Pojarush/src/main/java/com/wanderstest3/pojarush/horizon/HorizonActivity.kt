@@ -25,6 +25,7 @@ class HorizonActivity : GameActivity() {
         const val EXTRA_GAME_DIR = "horizon_game_dir"
         const val EXTRA_HOME = "horizon_home"
         const val EXTRA_CACHE = "horizon_cache"
+        const val EXTRA_PREWARM = "horizon_prewarm"
     }
 
     private var stdio: ParcelFileDescriptor? = null
@@ -75,6 +76,16 @@ class HorizonActivity : GameActivity() {
         mSurfaceView?.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
             if (r - l != or - ol || b - t != ob - ot) applyResolution()
         }
+        if (intent.getBooleanExtra(EXTRA_PREWARM, false)) {
+            HorizonBridge.setMuted(true)
+            prewarmed = true
+            window.decorView.postDelayed({
+                startActivity(
+                    android.content.Intent(this, com.wanderstest3.pojarush.MainActivity::class.java)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                )
+            }, 120)
+        }
         val view = HorizonOverlay(this)
         overlay = view
         addContentView(
@@ -97,6 +108,23 @@ class HorizonActivity : GameActivity() {
     }
 
     private var overlay: HorizonOverlay? = null
+    private var prewarmed = false
+
+    override fun onResume() {
+        super.onResume()
+        revealIfAsked()
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        revealIfAsked()
+    }
+
+    private fun revealIfAsked() {
+        if (!prewarmed || !HorizonManager.consumeReveal()) return
+        prewarmed = false
+        HorizonBridge.setMuted(false)
+    }
 
     fun applyResolution() {
         val surface = mSurfaceView ?: return

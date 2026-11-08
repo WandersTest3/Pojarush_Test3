@@ -50,6 +50,17 @@ directly, with quick actions for the virtual mouse, keyboard, hiding the control
 
 Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
 
+## 1.9.0
+
+- Controles padrão: `Pojarush_Default_V1.0.json` e `Bedrock_Default_V1.0.json`.
+- Mod de zoom removido do app; distribuído separadamente.
+- Pré-carregamento do jogo ao abrir o Pojarush (chave em Outros); mods importados reiniciam o jogo em segundo plano.
+- Editor: cor de fundo (com transparente), opacidade por botão, quebra de linha e redução automática da fonte.
+- Botão de fechar o jogo no menu flutuante.
+- Mouse físico: controles e mouse virtual ocultos, captura de ponteiro no jogo, sensibilidade maior.
+- Correção ao abrir configurações de um mod.
+- "Mods" renomeado para "Pacotes".
+
 ## 1.8.0
 
 - Code mods (.hmod with WebAssembly) run again on arm64: the sandboxed mod runtime (wasmtime) from

@@ -3,6 +3,9 @@ package com.wanderstest3.pojarush.ui
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -307,9 +310,10 @@ private fun ButtonEditor(
 
     OutlinedTextField(
         value = text,
-        onValueChange = { v -> text = v.take(24); onChange { it.copy(text = text) } },
+        onValueChange = { v -> text = v.take(60); onChange { it.copy(text = text) } },
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
+        singleLine = false,
+        maxLines = 3,
         label = { Text(stringResource(R.string.editor_text)) }
     )
     val prefs = remember { com.wanderstest3.pojarush.controls.ControlSettings(context) }
@@ -354,6 +358,16 @@ private fun ButtonEditor(
     HudImagePicker(stringResource(R.string.hud_image_pressed), b.style?.imagePressed.orEmpty()) { ref ->
         onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(imagePressed = ref)) }
     }
+    BackgroundColorPicker(b.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE) { st ->
+        onChange { it.copy(style = st) }
+    }
+    SettingSlider(
+        stringResource(R.string.editor_opacity),
+        (b.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).opacity,
+        0.05f..1f, 0.05f, { "${(it * 100).toInt()}%" },
+    ) { v ->
+        onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(opacity = v)) }
+    }
     SettingSwitch(stringResource(R.string.editor_swipe), b.swipe) { v -> onChange { it.copy(swipe = v) } }
     SettingSwitch(stringResource(R.string.editor_penetrable), b.penetrable) { v -> onChange { it.copy(penetrable = v) } }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -381,4 +395,50 @@ private fun StickEditor(
     SettingSwitch(stringResource(R.string.editor_sprint_lock), s.canLock) { v -> onChange { it.copy(canLock = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     SettingSwitch(stringResource(R.string.editor_auto_run), s.autoRun, stringResource(R.string.editor_auto_run_desc)) { v -> onChange { it.copy(autoRun = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     OutlinedButton(onClick = onDelete) { Text(stringResource(R.string.editor_delete), color = MaterialTheme.colorScheme.error) }
+}
+
+private val BACKGROUND_SWATCHES = listOf(
+    0xFF57197F.toInt(), 0xFF000000.toInt(), 0xFF404040.toInt(), 0xFFFFFFFF.toInt(), 0xFFE53935.toInt(), 0xFFFB8C00.toInt(),
+    0xFFFDD835.toInt(), 0xFF43A047.toInt(), 0xFF00ACC1.toInt(), 0xFF1E88E5.toInt(), 0xFF8E24AA.toInt(), 0xFFEC407A.toInt(),
+)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BackgroundColorPicker(style: com.wanderstest3.pojarush.controls.Style, onChange: (com.wanderstest3.pojarush.controls.Style) -> Unit) {
+    val alpha = android.graphics.Color.alpha(style.fill)
+    val transparent = alpha == 0
+    fun apply(rgb: Int, a: Int): com.wanderstest3.pojarush.controls.Style {
+        val fill = android.graphics.Color.argb(a, android.graphics.Color.red(rgb), android.graphics.Color.green(rgb), android.graphics.Color.blue(rgb))
+        val pressed = if (a == 0) android.graphics.Color.argb(80, 255, 255, 255)
+        else android.graphics.Color.argb((a + 90).coerceAtMost(255), android.graphics.Color.red(rgb), android.graphics.Color.green(rgb), android.graphics.Color.blue(rgb))
+        return style.copy(fill = fill, fillPressed = pressed)
+    }
+    val rgb = if (transparent) BACKGROUND_SWATCHES[0] else style.fill
+    Text(stringResource(R.string.editor_background), style = MaterialTheme.typography.bodyMedium)
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        androidx.compose.material3.FilterChip(
+            selected = transparent,
+            onClick = { onChange(apply(rgb, 0)) },
+            label = { Text(stringResource(R.string.editor_transparent), maxLines = 1) },
+        )
+        BACKGROUND_SWATCHES.forEach { c ->
+            val selected = !transparent && (style.fill and 0xFFFFFF) == (c and 0xFFFFFF)
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(androidx.compose.ui.graphics.Color(c))
+                    .border(if (selected) 3.dp else 1.dp, if (selected) androidx.compose.ui.graphics.Color.Yellow else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape)
+                    .clickable { onChange(apply(c, if (transparent) 150 else alpha)) },
+            )
+        }
+    }
+    if (!transparent) {
+        SettingSlider(stringResource(R.string.editor_background_alpha), alpha / 255f, 0.05f..1f, 0.05f, { "${(it * 100).toInt()}%" }) { v ->
+            onChange(apply(style.fill, (v * 255).toInt().coerceIn(1, 255)))
+        }
+    }
 }

@@ -210,11 +210,16 @@ fun LodSettings() {
 fun ExtrasSettings(settings: ControlSettings) {
     var fps by remember { mutableStateOf(settings.fpsCounter) }
     var keep by remember { mutableStateOf(settings.keepAlive) }
+    var warm by remember { mutableStateOf(settings.prewarm) }
     PojarushCard {
         CardTitle(stringResource(R.string.extras_title))
         SettingSwitch(stringResource(R.string.fps_counter), fps, stringResource(R.string.fps_counter_desc)) {
             settings.fpsCounter = it
             fps = it
+        }
+        SettingSwitch(stringResource(R.string.prewarm), warm, stringResource(R.string.prewarm_desc)) {
+            settings.prewarm = it
+            warm = it
         }
         SettingSwitch(stringResource(R.string.keep_alive), keep, stringResource(R.string.keep_alive_desc)) {
             settings.keepAlive = it

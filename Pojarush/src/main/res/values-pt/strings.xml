@@ -142,7 +142,7 @@
     <string name="memory_value">%1$d MB</string>
     <string name="memory_exact">Quantidade exata</string>
     <string name="memory_range">Intervalo permitido: %1$d–%2$d MB</string>
-    <string name="nav_mods">Mods</string>
+    <string name="nav_mods">Pacotes</string>
     <string name="accounts_title">Contas</string>
     <string name="account_type_microsoft">Microsoft</string>
     <string name="account_type_ely">Ely.by</string>
@@ -267,4 +267,11 @@
     <string name="registry_installed_toast">%1$s instalado</string>
     <string name="loading_game">A carregar o jogo…</string>
     <string name="loading_game_slow">Ainda a carregar os recursos, quase lá…</string>
+    <string name="overlay_close_game">Fechar jogo</string>
+    <string name="editor_opacity">Opacidade do botão</string>
+    <string name="editor_background">Cor do fundo</string>
+    <string name="editor_transparent">Transparente</string>
+    <string name="editor_background_alpha">Opacidade do fundo</string>
+    <string name="prewarm">Pré-carregar o jogo</string>
+    <string name="prewarm_desc">Inicia o Minecraft escondido atrás do launcher para o Jogar abrir logo. Importar um pacote reinicia o jogo em segundo plano. Usa mais memória enquanto o launcher está aberto.</string>
 </resources>

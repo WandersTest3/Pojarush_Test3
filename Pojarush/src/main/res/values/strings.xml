@@ -143,7 +143,7 @@
     <string name="memory_value">%1$d MB</string>
     <string name="memory_exact">Exact amount</string>
     <string name="memory_range">Allowed range: %1$d–%2$d MB</string>
-    <string name="nav_mods">Mods</string>
+    <string name="nav_mods">Packs</string>
     <string name="accounts_title">Accounts</string>
     <string name="account_type_microsoft">Microsoft</string>
     <string name="account_type_ely">Ely.by</string>
@@ -268,4 +268,11 @@
     <string name="registry_installed_toast">%1$s installed</string>
     <string name="loading_game">Loading the game…</string>
     <string name="loading_game_slow">Still loading resources, almost there…</string>
+    <string name="overlay_close_game">Close game</string>
+    <string name="editor_opacity">Button opacity</string>
+    <string name="editor_background">Background color</string>
+    <string name="editor_transparent">Transparent</string>
+    <string name="editor_background_alpha">Background opacity</string>
+    <string name="prewarm">Preload the game</string>
+    <string name="prewarm_desc">Starts Minecraft hidden behind the launcher so Play opens instantly. Importing a pack restarts it in the background. Uses more memory while the launcher is open.</string>
 </resources>

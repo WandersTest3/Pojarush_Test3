@@ -144,6 +144,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         Thread { HorizonManager.syncLogs() }.start()
+        window.decorView.postDelayed({ HorizonManager.prewarm(this, Accounts.profile.value) }, 400)
     }
 }
 
@@ -425,8 +426,7 @@ private fun PlayButton(modifier: Modifier) {
                         .onFailure { e -> Toast.makeText(context, e.message, Toast.LENGTH_LONG).show() }
                         .getOrDefault(p)
                 }
-                withContext(Dispatchers.IO) { HorizonManager.stopRunningGame(context) }
-                context.startActivity(HorizonManager.launchIntent(context, current))
+                withContext(Dispatchers.IO) { HorizonManager.play(context, current) }
             }
         }
     ) {

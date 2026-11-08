@@ -23,6 +23,9 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.hardware.input.InputManager
+import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import com.wanderstest3.pojarush.controls.Action
@@ -82,6 +85,96 @@ class ControlsView(
 
     var captured = false
         private set
+    var physicalMouse = false
+        private set
+    var physicalInput = false
+        private set
+    private var pointerCaptured = false
+    private val inputManager = context.getSystemService(Context.INPUT_SERVICE) as InputManager
+    private val deviceListener = object : InputManager.InputDeviceListener {
+        override fun onInputDeviceAdded(deviceId: Int) = scanDevices()
+        override fun onInputDeviceRemoved(deviceId: Int) = scanDevices()
+        override fun onInputDeviceChanged(deviceId: Int) = scanDevices()
+    }
+
+    private fun scanDevices() {
+        var mouse = false
+        var keyboard = false
+        for (id in InputDevice.getDeviceIds()) {
+            val d = InputDevice.getDevice(id) ?: continue
+            if (d.isVirtual) continue
+            if (d.sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE) mouse = true
+            if (d.sources and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD &&
+                d.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC &&
+                d.hasKeys(KeyEvent.KEYCODE_A)[0]
+            ) keyboard = true
+        }
+        val both = mouse && keyboard
+        if (mouse == physicalMouse && both == physicalInput) return
+        physicalMouse = mouse
+        physicalInput = both
+        if (both) releaseAll()
+        syncPointerCapture()
+        invalidate()
+    }
+
+    fun syncPointerCapture() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val want = physicalMouse && captured && !editMode && hasWindowFocus()
+        if (want && !pointerCaptured) {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            requestFocus()
+            requestPointerCapture()
+            pointerCaptured = true
+        } else if (!want && pointerCaptured) {
+            releasePointerCapture()
+            pointerCaptured = false
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        inputManager.registerInputDeviceListener(deviceListener, uiHandler)
+        scanDevices()
+    }
+
+    override fun onDetachedFromWindow() {
+        inputManager.unregisterInputDeviceListener(deviceListener)
+        if (pointerCaptured && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) releasePointerCapture()
+        pointerCaptured = false
+        super.onDetachedFromWindow()
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        if (!hasWindowFocus) pointerCaptured = false
+        syncPointerCapture()
+    }
+
+    override fun onPointerCaptureChange(hasCapture: Boolean) {
+        super.onPointerCaptureChange(hasCapture)
+        pointerCaptured = hasCapture
+    }
+
+    override fun onCapturedPointerEvent(e: MotionEvent): Boolean {
+        when (e.actionMasked) {
+            MotionEvent.ACTION_MOVE -> look(e.x * PHYSICAL_LOOK, e.y * PHYSICAL_LOOK)
+            MotionEvent.ACTION_BUTTON_PRESS, MotionEvent.ACTION_BUTTON_RELEASE -> {
+                val button = when (e.actionButton) {
+                    MotionEvent.BUTTON_SECONDARY -> 1
+                    MotionEvent.BUTTON_TERTIARY -> 2
+                    else -> 0
+                }
+                mouse(button, e.actionMasked == MotionEvent.ACTION_BUTTON_PRESS)
+            }
+            MotionEvent.ACTION_SCROLL -> {
+                val lines = e.getAxisValue(MotionEvent.AXIS_VSCROLL)
+                if (lines != 0f) HorizonBridge.wheel(-lines)
+            }
+        }
+        return true
+    }
     var virtualMouse = settings.virtualMouse
         private set
     var editMode = false
@@ -253,6 +346,7 @@ class ControlsView(
         if (on == captured) return
         if (on) releaseAll() else pause()
         captured = on
+        syncPointerCapture()
         if (on) resumeIfPossible()
         if (!on) {
             if (width > 0) {
@@ -602,7 +696,7 @@ class ControlsView(
         }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_BUTTON_PRESS -> {
-                if (!captured && virtualMouse) {
+                if (!captured && (virtualMouse || physicalMouse)) {
                     cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
                     cursorY = e.y.coerceIn(0f, (height - 1).coerceAtLeast(0).toFloat())
                     HorizonBridge.cursor(cursorX, cursorY)
@@ -627,8 +721,8 @@ class ControlsView(
                     val dy = if (lastHoverY.isNaN()) 0f else e.y - lastHoverY
                     lastHoverX = e.x
                     lastHoverY = e.y
-                    look(dx, dy)
-                } else if (virtualMouse) {
+                    look(dx * PHYSICAL_LOOK, dy * PHYSICAL_LOOK)
+                } else if (virtualMouse || physicalMouse) {
                     lastHoverX = Float.NaN
                     lastHoverY = Float.NaN
                     cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
@@ -647,12 +741,20 @@ class ControlsView(
         return super.onGenericMotionEvent(e)
     }
 
+    private companion object {
+        const val PHYSICAL_LOOK = 1.3f
+    }
+
     private var lastHoverX = Float.NaN
     private var lastHoverY = Float.NaN
 
     private fun pointerDown(id: Int, x: Float, y: Float, time: Long): Boolean {
         if (showHandle && menuRect.contains(x, y)) {
             roles[id] = Role.Handle(x, y, x - menuRect.left, y - menuRect.top)
+            return true
+        }
+        if (physicalInput && !editMode) {
+            roles[id] = Role.Ignore
             return true
         }
         if (editMode) {
@@ -1002,9 +1104,9 @@ class ControlsView(
 
     override fun onDraw(canvas: Canvas) {
         val opacity = if (editMode) settings.opacity.coerceAtLeast(0.60f) else settings.opacity
-        if (settings.controlsHidden && !editMode) {
+        if ((settings.controlsHidden || physicalInput) && !editMode) {
             drawMenuHandle(canvas)
-            if (!captured && virtualMouse) drawCursor(canvas)
+            if (!captured && virtualMouse && !physicalMouse) drawCursor(canvas)
             return
         }
         layout.sticks.forEachIndexed { i, s ->
@@ -1065,7 +1167,7 @@ class ControlsView(
             guideY?.let { canvas.drawLine(0f, it, width.toFloat(), it, stroke) }
         }
         drawMenuHandle(canvas)
-        if (!editMode && !captured && virtualMouse) drawCursor(canvas)
+        if (!editMode && !captured && virtualMouse && !physicalMouse) drawCursor(canvas)
     }
 
     private fun drawMenuHandle(canvas: Canvas) {
@@ -1104,8 +1206,9 @@ class ControlsView(
 
     private val menuPath = Path()
 
-    private fun drawButton(canvas: Canvas, b: ControlButton, r: RectF, active: Boolean, opacity: Float) {
+    private fun drawButton(canvas: Canvas, b: ControlButton, r: RectF, active: Boolean, baseOpacity: Float) {
         val st = b.style ?: defaultStyle
+        val opacity = baseOpacity * st.opacity
         val picture = (if (active) image(st.imagePressed) else null) ?: image(st.image)
         if (picture != null) {
             drawImage(canvas, picture, r.left, r.top, r.right, r.bottom, opacity)
@@ -1126,16 +1229,58 @@ class ControlsView(
         }
         if (b.text.isEmpty()) return
         text.color = alpha(if (active) st.textPressed else st.text, opacity)
-        text.textSize = st.textSp * scaledDensity * settings.buttonScale.coerceIn(0.75f, 1.50f)
-        val lines = b.text.split('\n')
-        val widest = lines.maxOf { text.measureText(it) }
-        if (widest > r.width() * 0.92f && widest > 0f) text.textSize *= r.width() * 0.92f / widest
+        val base = st.textSp * scaledDensity * settings.buttonScale.coerceIn(0.75f, 1.50f)
+        val minSize = (base * 0.62f).coerceAtLeast(7f * scaledDensity)
+        val maxWidth = r.width() * 0.88f
+        val maxHeight = r.height() * 0.90f
+        var size = base
+        var lines: List<String>
+        while (true) {
+            text.textSize = size
+            lines = wrapText(b.text, maxWidth, size <= minSize)
+            val h = (text.descent() - text.ascent()) * lines.size
+            if (lines.maxOf { text.measureText(it) } <= maxWidth && h <= maxHeight || size <= 4f * scaledDensity) break
+            size = if (size > minSize) maxOf(minSize, size * 0.92f) else size * 0.92f
+        }
+        text.textSize = size
         val lineHeight = text.descent() - text.ascent()
         var baseline = r.centerY() - lineHeight * (lines.size - 1) / 2f - (text.descent() + text.ascent()) / 2f
         for (line in lines) {
             canvas.drawText(line, r.centerX(), baseline, text)
             baseline += lineHeight
         }
+    }
+
+    private fun wrapText(value: String, maxWidth: Float, wrap: Boolean): List<String> {
+        val out = ArrayList<String>()
+        for (raw in value.split('\n')) {
+            if (!wrap || text.measureText(raw) <= maxWidth) {
+                out += raw
+                continue
+            }
+            var line = ""
+            for (word in raw.split(' ')) {
+                var rest = word
+                val candidate = if (line.isEmpty()) rest else "$line $rest"
+                if (text.measureText(candidate) <= maxWidth) {
+                    line = candidate
+                    continue
+                }
+                if (line.isNotEmpty()) {
+                    out += line
+                    line = ""
+                }
+                while (text.measureText(rest) > maxWidth && rest.length > 1) {
+                    var n = rest.length - 1
+                    while (n > 1 && text.measureText(rest, 0, n) > maxWidth) n--
+                    out += rest.substring(0, n)
+                    rest = rest.substring(n)
+                }
+                line = rest
+            }
+            if (line.isNotEmpty()) out += line
+        }
+        return out.ifEmpty { listOf("") }
     }
 
     private fun drawCursor(canvas: Canvas) {

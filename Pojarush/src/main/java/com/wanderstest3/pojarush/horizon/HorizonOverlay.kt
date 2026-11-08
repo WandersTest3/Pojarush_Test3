@@ -206,6 +206,9 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                         panel = Panel.NONE
                         toggleKeyboard()
                     }
+                    QuickChip(stringResource(R.string.overlay_close_game)) {
+                        activity.finishAndRemoveTask()
+                    }
                     QuickChip(stringResource(R.string.overlay_hide_controls), hiddenOn) {
                         settings.controlsHidden = !settings.controlsHidden
                         hiddenOn = settings.controlsHidden
