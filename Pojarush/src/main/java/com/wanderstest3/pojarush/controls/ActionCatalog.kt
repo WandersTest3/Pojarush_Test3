@@ -53,6 +53,7 @@ object ActionCatalog {
         context.getString(R.string.action_keyboard) to Action.Keyboard,
         context.getString(R.string.action_menu) to Action.Menu,
         context.getString(R.string.action_toggle_mouse) to Action.ToggleMouse,
+        context.getString(R.string.action_hide_controls) to Action.HideControls,
     ) + keyNames.map { (name, code) -> name to Action.Key(code) }
 
     fun label(context: Context, action: Action): String = when (action) {

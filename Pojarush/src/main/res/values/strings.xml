@@ -95,6 +95,10 @@
     <string name="editor_text">Text</string>
     <string name="editor_width">Width</string>
     <string name="editor_height">Height</string>
+    <string name="editor_distortion_height">Set height to %d dp to avoid distortion</string>
+    <string name="editor_distortion_width">Set width to %d dp to avoid distortion</string>
+    <string name="editor_actions_special">Special actions</string>
+    <string name="editor_actions_keys">Keyboard</string>
     <string name="editor_size">Size</string>
     <string name="editor_mode">Mode</string>
     <string name="editor_mode_hold">Hold</string>
@@ -119,6 +123,7 @@
     <string name="action_keyboard">Phone keyboard</string>
     <string name="action_menu">Quick menu</string>
     <string name="action_toggle_mouse">Toggle virtual mouse</string>
+    <string name="action_hide_controls">Hide controls</string>
     <string name="action_layer">Layer</string>
     <string name="mouse_cursor_image">Custom cursor</string>
     <string name="mouse_cursor_none">Using the default arrow. PNG, JPG, WebP and animated GIF work.</string>

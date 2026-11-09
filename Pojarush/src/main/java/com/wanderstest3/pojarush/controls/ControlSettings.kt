@@ -206,7 +206,7 @@ object ControlLayouts {
         return "file:${target.name}"
     }
 
-    fun cursorDir(): File = File(Paths.publicRoot, "cursor")
+    fun cursorDir(): File = File(Paths.publicRoot, "cursor_image")
 
     fun importCursor(context: Context, uri: Uri): File = importMedia(context, uri, cursorDir(), "cursor")
 

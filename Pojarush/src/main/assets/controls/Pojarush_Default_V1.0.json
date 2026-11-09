@@ -53,15 +53,13 @@
       "id": "37f97e88-efe1-4052-a2d6-55f82d0f8be6",
       "text": "■",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.9340000152587891,
+      "x": 0.9340459108352661,
       "y": 1,
       "width": {
-        "fraction": 0.30000001192092896,
-        "ofWidth": false
+        "dp": 130
       },
       "height": {
-        "fraction": 0.23000000417232513,
-        "ofWidth": false
+        "dp": 90
       },
       "visibility": "IN_GAME",
       "press": [
@@ -85,8 +83,8 @@
         "radiusDp": 10,
         "textSp": 12,
         "radiusInPx": false,
-        "image": "jump",
-        "imagePressed": "jump_pressed"
+        "image": "long_jump",
+        "imagePressed": "long_jump_pressed"
       }
     },
     {
@@ -171,8 +169,8 @@
       "id": "cb02a199-990a-4a3b-9cad-aadcfa5ae046",
       "text": "F3",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0,
-      "y": 0.06730769574642181,
+      "x": 0.025454547256231308,
+      "y": 0,
       "width": {
         "dp": 40
       },
@@ -200,15 +198,17 @@
         "strokeDp": 1,
         "radiusDp": 10,
         "textSp": 12,
-        "radiusInPx": false
+        "radiusInPx": false,
+        "image": "F3",
+        "imagePressed": "F3_prassed"
       }
     },
     {
       "id": "68d941b2-ff89-4914-bfea-cb95942ccab5",
       "text": "💬chat",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.057851240038871765,
-      "y": 0.17499999701976776,
+      "x": 0.08478546887636185,
+      "y": 0.10769230872392654,
       "width": {
         "dp": 40
       },
@@ -248,8 +248,8 @@
       "id": "44bdf6fc-0aaf-450a-8ea8-a1ff1a7f94e3",
       "text": "⚙️f5",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0,
-      "y": 0.17569230496883392,
+      "x": 0.02545453980565071,
+      "y": 0.10769230872392654,
       "width": {
         "dp": 40
       },
@@ -286,8 +286,8 @@
       "id": "7dc49583-0506-4687-9d74-4b08a417bf60",
       "text": "TAB",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.1735537201166153,
-      "y": 0.06800000369548798,
+      "x": 0.20048794150352478,
+      "y": 0,
       "width": {
         "dp": 40
       },
@@ -315,15 +315,17 @@
         "strokeDp": 1,
         "radiusDp": 10,
         "textSp": 12,
-        "radiusInPx": false
+        "radiusInPx": false,
+        "image": "tab",
+        "imagePressed": "tab_pressed"
       }
     },
     {
       "id": "5b2ebde3-508e-4402-9269-dafb26c721cf",
       "text": "F1",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.11570248007774353,
-      "y": 0.06800000369548798,
+      "x": 0.14263670146465302,
+      "y": 0,
       "width": {
         "dp": 40
       },
@@ -351,7 +353,9 @@
         "strokeDp": 1,
         "radiusDp": 10,
         "textSp": 12,
-        "radiusInPx": false
+        "radiusInPx": false,
+        "image": "f1",
+        "imagePressed": "f1_pressed"
       }
     },
     {
@@ -601,10 +605,10 @@
       "id": "419f58e4-72ac-4a29-b08e-860a684d274c",
       "text": "hit",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 1,
-      "y": 0.6961467862129211,
+      "x": 0.9773946404457092,
+      "y": 0.7189226150512695,
       "width": {
-        "dp": 120
+        "dp": 110
       },
       "height": {
         "dp": 100
@@ -659,8 +663,8 @@
       "penetrable": false,
       "interactive": true,
       "style": {
-        "fill": 0,
-        "fillPressed": -3355444,
+        "fill": 5708159,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -12303292,
@@ -679,12 +683,10 @@
       "x": 1,
       "y": 0.3240000009536743,
       "width": {
-        "fraction": 0.12999999523162842,
-        "ofWidth": false
+        "dp": 55
       },
       "height": {
-        "fraction": 0.10999999940395355,
-        "ofWidth": false
+        "dp": 40
       },
       "visibility": "ALWAYS",
       "press": [
@@ -708,7 +710,9 @@
         "strokeDp": 1,
         "radiusDp": 10,
         "textSp": 12,
-        "radiusInPx": false
+        "radiusInPx": false,
+        "image": "Long_up",
+        "imagePressed": "Long_up_pressed"
       }
     },
     {
@@ -716,14 +720,12 @@
       "text": "↓",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
       "x": 1,
-      "y": 0.4449999928474426,
+      "y": 0.43169230222702026,
       "width": {
-        "fraction": 0.12999999523162842,
-        "ofWidth": false
+        "dp": 55
       },
       "height": {
-        "fraction": 0.10999999940395355,
-        "ofWidth": false
+        "dp": 40
       },
       "visibility": "ALWAYS",
       "press": [
@@ -747,22 +749,22 @@
         "strokeDp": 1,
         "radiusDp": 10,
         "textSp": 12,
-        "radiusInPx": false
+        "radiusInPx": false,
+        "image": "Long_down",
+        "imagePressed": "Long_down_pressed"
       }
     },
     {
       "id": "c5110c62-6c40-4536-8750-66abc30b1648",
       "text": "•••",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.7427153587341309,
+      "x": 0.7281680703163147,
       "y": 1,
       "width": {
-        "fraction": 0.05999999865889549,
-        "ofWidth": true
+        "dp": 40
       },
       "height": {
-        "fraction": 0.05999999865889549,
-        "ofWidth": true
+        "dp": 40
       },
       "visibility": "ALWAYS",
       "press": [
@@ -794,8 +796,8 @@
       "id": "810573b7-71b2-4af5-86e8-c38f644d9b57",
       "text": "clona\nblock",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.11570248007774353,
-      "y": 0.17499999701976776,
+      "x": 0.14263670146465302,
+      "y": 0.10769230872392654,
       "width": {
         "dp": 40
       },
@@ -832,8 +834,8 @@
       "id": "81d028e0-8d22-4ac9-9b38-a520b5472f9e",
       "text": "Screen shot",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.057851243764162064,
-      "y": 0.06800000369548798,
+      "x": 0.08478545397520065,
+      "y": 0,
       "width": {
         "dp": 40
       },
@@ -861,7 +863,9 @@
         "strokeDp": 1,
         "radiusDp": 10,
         "textSp": 12,
-        "radiusInPx": false
+        "radiusInPx": false,
+        "image": "screenshot",
+        "imagePressed": "screenshot_prassed"
       }
     }
   ],

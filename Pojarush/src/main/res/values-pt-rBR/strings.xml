@@ -118,6 +118,11 @@
     <string name="action_keyboard">Teclado do celular</string>
     <string name="action_menu">Menu rápido</string>
     <string name="action_toggle_mouse">Alternar mouse virtual</string>
+    <string name="action_hide_controls">Ocultar controles</string>
+    <string name="editor_distortion_height">Mude a altura para %d dp para não distorcer o ícone</string>
+    <string name="editor_distortion_width">Mude a largura para %d dp para não distorcer o ícone</string>
+    <string name="editor_actions_special">Ações especiais</string>
+    <string name="editor_actions_keys">Teclado</string>
     <string name="action_layer">Camada</string>
     <string name="mouse_cursor_image">Cursor personalizado</string>
     <string name="mouse_cursor_none">Usando a seta padrão. Funciona com PNG, JPG, WebP e GIF animado.</string>

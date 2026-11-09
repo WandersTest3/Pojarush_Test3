@@ -368,8 +368,11 @@ class ControlsView(
         if (on) releaseAll() else pause()
         captured = on
         syncPointerCapture()
-        if (on) resumeIfPossible()
-        if (!on) {
+        if (on) {
+            cursorX = if (width > 0) width / 2f else -1f
+            cursorY = if (height > 0) height / 2f else -1f
+            resumeIfPossible()
+        } else {
             if (width > 0) {
                 cursorX = width / 2f
                 cursorY = height / 2f
@@ -452,11 +455,12 @@ class ControlsView(
         val hadInput = heldKeys.isNotEmpty() || heldMouse.any { it > 0 }
         heldKeys.keys.toList().forEach { host.sendKey(it, false) }
         heldKeys.clear()
-        for (b in 0..2) if (heldMouse[b] > 0) mouse(b, false)
+        for (b in 0..2) { if (heldMouse[b] > 0) mouse(b, false) }
         heldMouse.fill(0)
         scrollRepeats.values.forEach(uiHandler::removeCallbacks)
         scrollRepeats.clear()
         if (hadInput || captured) HorizonBridge.command("release")
+        for (b in 0..2) mouse(b, false)
         invalidate()
     }
 
@@ -626,11 +630,14 @@ class ControlsView(
         }
     }
 
+    var onHideControls: (() -> Unit)? = null
+
     private fun instant(a: Action) {
         when (a) {
             Action.Keyboard -> host.toggleKeyboard()
             Action.Menu -> host.toggleMenu()
             Action.ToggleMouse -> setVirtualMouse(!virtualMouse)
+            Action.HideControls -> onHideControls?.invoke()
             is Action.Text -> host.sendText(a.text)
             is Action.Layer -> {
                 for (id in a.ids) {
@@ -1126,8 +1133,8 @@ class ControlsView(
     override fun onDraw(canvas: Canvas) {
         val opacity = if (editMode) settings.opacity.coerceAtLeast(0.60f) else settings.opacity
         if ((settings.controlsHidden || physicalInput) && !editMode) {
-            drawMenuHandle(canvas)
-            if (!captured && virtualMouse && !physicalMouse) drawCursor(canvas)
+            drawMenuHandle(canvas, hidden = settings.controlsHidden)
+            if (!captured && virtualMouse) drawCursor(canvas)
             return
         }
         layout.sticks.forEachIndexed { i, s ->
@@ -1188,11 +1195,12 @@ class ControlsView(
             guideY?.let { canvas.drawLine(0f, it, width.toFloat(), it, stroke) }
         }
         drawMenuHandle(canvas)
-        if (!editMode && !captured && virtualMouse && !physicalMouse) drawCursor(canvas)
+        if (!editMode && !captured && virtualMouse) drawCursor(canvas)
     }
 
-    private fun drawMenuHandle(canvas: Canvas) {
+    private fun drawMenuHandle(canvas: Canvas, hidden: Boolean = false) {
         if (!showHandle) return
+        if (hidden) return
         val a = settings.menuOpacity
         val r = menuRect.width().coerceAtMost(menuRect.height()) * settings.menuRadius
         val icon = menuDrawable ?: appIcon
@@ -1205,11 +1213,6 @@ class ControlsView(
             canvas.clipPath(menuPath)
             icon.draw(canvas)
             canvas.restore()
-            val border = 2f * density
-            stroke.color = alpha(settings.menuColor, a.coerceAtLeast(0.35f))
-            stroke.strokeWidth = border
-            val inset = border / 2f
-            canvas.drawRoundRect(menuRect.left + inset, menuRect.top + inset, menuRect.right - inset, menuRect.bottom - inset, (r - inset).coerceAtLeast(0f), (r - inset).coerceAtLeast(0f), stroke)
             return
         }
         fill.color = alpha(settings.menuColor, a)

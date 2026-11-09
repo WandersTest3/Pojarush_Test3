@@ -60,15 +60,18 @@ fun LayoutSettings(settings: ControlSettings, onEdit: (() -> Unit)?, onChange: (
         selected = id
         onChange(Change.LAYOUT)
     }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        runCatching { ControlLayouts.import(context, uri) }
-            .onSuccess {
-                version++
-                choose(it.id)
-                Toast.makeText(context, imported.replace("%s", it.name), Toast.LENGTH_SHORT).show()
-            }
-            .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        var last: com.wanderstest3.pojarush.controls.ControlLayouts.Entry? = null
+        uris.forEach { uri ->
+            runCatching { last = ControlLayouts.import(context, uri) }
+                .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+        }
+        last?.let {
+            version++
+            choose(it.id)
+            Toast.makeText(context, imported.replace("%s", it.name), Toast.LENGTH_SHORT).show()
+        }
     }
     var renaming by remember { mutableStateOf<Pair<String, String>?>(null) }
     renaming?.let { (id, name) ->
@@ -149,15 +152,18 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     var icon by remember { mutableStateOf(settings.menuIcon) }
     var color by remember { mutableIntStateOf(settings.menuColor) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        runCatching { ControlLayouts.importMenuIcon(context, uri) }
-            .onSuccess {
-                settings.menuIcon = it.absolutePath
-                icon = it.absolutePath
-                onChange(Change.MENU_BUTTON)
-            }
-            .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        var last: java.io.File? = null
+        uris.forEach { uri ->
+            runCatching { last = ControlLayouts.importMenuIcon(context, uri) }
+                .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+        }
+        last?.let {
+            settings.menuIcon = it.absolutePath
+            icon = it.absolutePath
+            onChange(Change.MENU_BUTTON)
+        }
     }
     PojarushCard {
         CardTitle(stringResource(R.string.menu_button_title))
@@ -199,40 +205,65 @@ fun MouseSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     val context = LocalContext.current
     var image by remember { mutableStateOf(settings.cursorImage) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        runCatching { ControlLayouts.importCursor(context, uri) }
-            .onSuccess {
-                settings.cursorImage = it.absolutePath
-                image = it.absolutePath
-                onChange(Change.MOUSE)
-            }
-            .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        var last: java.io.File? = null
+        uris.forEach { uri ->
+            runCatching { last = ControlLayouts.importCursor(context, uri) }
+                .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+        }
+        last?.let {
+            settings.cursorImage = it.absolutePath
+            image = it.absolutePath
+            onChange(Change.MOUSE)
+        }
     }
     PojarushCard {
         CardTitle(stringResource(R.string.nav_mouse))
         SettingSwitch(stringResource(R.string.mouse_virtual), settings.virtualMouse, stringResource(R.string.mouse_virtual_desc)) { settings.virtualMouse = it; onChange(Change.MOUSE) }
         SettingSlider(stringResource(R.string.mouse_speed), settings.mouseSpeed, 0.25f..3.00f, 0.05f, { "${fmt(it)}x" }) { settings.mouseSpeed = it; onChange(Change.MOUSE) }
         SettingSlider(stringResource(R.string.mouse_size), settings.cursorSize, 0.25f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.cursorSize = it; onChange(Change.MOUSE) }
-        SettingSwitch(stringResource(R.string.mouse_tap_click), settings.tapToClick) { settings.tapToClick = it; onChange(Change.MOUSE) }
         SettingSwitch(stringResource(R.string.mouse_screen_touch), settings.screenTouch, stringResource(R.string.mouse_screen_touch_desc)) { settings.screenTouch = it; onChange(Change.MOUSE) }
     }
     PojarushCard {
         CardTitle(stringResource(R.string.mouse_cursor_image))
-        Hint(
-            if (image.isEmpty()) stringResource(R.string.mouse_cursor_none)
-            else stringResource(R.string.mouse_cursor_current, File(image).name)
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { picker.launch(arrayOf("image/*")) }) { Text(stringResource(R.string.mouse_cursor_choose)) }
+        var cursorVersion by remember { mutableIntStateOf(0) }
+        val cursorFiles = remember(cursorVersion) {
+            val dir = ControlLayouts.cursorDir()
+            val exts = setOf("png", "jpg", "jpeg", "webp", "gif")
+            dir.listFiles { f -> f.isFile && f.extension.lowercase() in exts }
+                ?.sortedBy { it.name.lowercase() }.orEmpty()
+        }
+        if (cursorFiles.isEmpty()) {
+            Hint(stringResource(R.string.mouse_cursor_none))
+        } else {
+            cursorFiles.forEach { f ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                        .clickable {
+                            settings.cursorImage = f.absolutePath
+                            image = f.absolutePath
+                            onChange(Change.MOUSE)
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = image == f.absolutePath, onClick = {
+                        settings.cursorImage = f.absolutePath
+                        image = f.absolutePath
+                        onChange(Change.MOUSE)
+                    })
+                    Text(f.name, modifier = Modifier.weight(1f).basicMarquee(), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                }
+            }
             if (image.isNotEmpty()) {
-                OutlinedButton(onClick = {
+                TextButton(onClick = {
                     settings.cursorImage = ""
                     image = ""
                     onChange(Change.MOUSE)
                 }) { Text(stringResource(R.string.mouse_cursor_default)) }
             }
         }
+        OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }) { Text(stringResource(R.string.mouse_cursor_choose)) }
         SettingSwitch(stringResource(R.string.mouse_cursor_center), settings.cursorCenter) { settings.cursorCenter = it; onChange(Change.MOUSE) }
     }
 }
@@ -393,7 +424,6 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             }
             Hint(stringResource(R.string.graphics_stretch))
         }
-        Hint(stringResource(R.string.graphics_recommended))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(1100 to 720, 1600 to 1080).forEach { (w, h) ->
                 FilterChip(

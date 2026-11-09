@@ -55,7 +55,7 @@ private fun Thumb(file: File, selected: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
-            Image(bitmap, contentDescription = file.nameWithoutExtension, modifier = Modifier.size(34.dp), contentScale = ContentScale.FillBounds, filterQuality = FilterQuality.None)
+            Image(bitmap, contentDescription = file.nameWithoutExtension, modifier = Modifier.size(34.dp), contentScale = ContentScale.Fit, filterQuality = FilterQuality.None)
         }
     }
 }
@@ -66,15 +66,20 @@ fun HudImagePicker(label: String, value: String, onChange: (String) -> Unit) {
     val version = HudState.version
     val files = remember(version) { HudImages.list() }
     val failed = stringResource(R.string.controls_import_failed, "%s")
-    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
         val before = HudImages.list().toSet()
-        runCatching { HudImages.import(context, uri) }
-            .onSuccess {
-                HudState.version++
-                (HudImages.list() - before).firstOrNull()?.let { f -> onChange(f.nameWithoutExtension) }
-            }
-            .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+        var total = 0
+        var lastError: String? = null
+        uris.forEach { uri ->
+            runCatching { total += HudImages.import(context, uri) }
+                .onFailure { lastError = it.message.orEmpty() }
+        }
+        if (total > 0) {
+            HudState.version++
+            (HudImages.list() - before).firstOrNull()?.let { f -> onChange(f.nameWithoutExtension) }
+        }
+        lastError?.let { Toast.makeText(context, failed.replace("%s", it), Toast.LENGTH_LONG).show() }
     }
     Text(label, style = MaterialTheme.typography.bodyMedium)
     Hint(if (value.isEmpty()) stringResource(R.string.hud_image_none) else value)
@@ -84,7 +89,7 @@ fun HudImagePicker(label: String, value: String, onChange: (String) -> Unit) {
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { gallery.launch(arrayOf("image/*")) }) { Text(stringResource(R.string.hud_image_gallery)) }
+        OutlinedButton(onClick = { gallery.launch(arrayOf("image/*", "application/zip")) }) { Text(stringResource(R.string.hud_image_gallery)) }
         if (value.isNotEmpty()) OutlinedButton(onClick = { onChange("") }) { Text(stringResource(R.string.wallpaper_remove)) }
     }
 }
@@ -96,21 +101,26 @@ fun HudImagesSettings() {
     val count = remember(version) { HudImages.list().size }
     val failed = stringResource(R.string.controls_import_failed, "%s")
     val done = stringResource(R.string.hud_imported, "%s")
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        runCatching { HudImages.import(context, uri) }
-            .onSuccess {
-                HudState.version++
-                Toast.makeText(context, done.replace("%s", it.toString()), Toast.LENGTH_SHORT).show()
-            }
-            .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        var total = 0
+        var lastError: String? = null
+        uris.forEach { uri ->
+            runCatching { total += HudImages.import(context, uri) }
+                .onFailure { lastError = it.message.orEmpty() }
+        }
+        if (total > 0) {
+            HudState.version++
+            Toast.makeText(context, done.replace("%s", total.toString()), Toast.LENGTH_SHORT).show()
+        }
+        lastError?.let { Toast.makeText(context, failed.replace("%s", it), Toast.LENGTH_LONG).show() }
     }
     PojarushCard {
         CardTitle(stringResource(R.string.hud_title))
         Hint(stringResource(R.string.hud_desc))
         Hint(stringResource(R.string.hud_count, count))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { picker.launch(arrayOf("application/zip", "image/*")) }) { Text(stringResource(R.string.hud_import)) }
+            Button(onClick = { picker.launch(arrayOf("image/*", "application/zip")) }) { Text(stringResource(R.string.hud_import)) }
             OutlinedButton(onClick = { FolderOpener.open(context, HudImages.dir()) }) { Text(stringResource(R.string.open_folder)) }
         }
         Hint(stringResource(R.string.mods_folder, HudImages.dir().absolutePath))

@@ -94,6 +94,11 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     }
 
     init {
+        controls.onHideControls = {
+            settings.controlsHidden = !settings.controlsHidden
+            hiddenOn = settings.controlsHidden
+            controls.invalidate()
+        }
         addView(textInput, LayoutParams(1, 1))
         addView(controls, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(ComposeView(context).apply { setContent { PojarushTheme { OverlayUi() } } }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))

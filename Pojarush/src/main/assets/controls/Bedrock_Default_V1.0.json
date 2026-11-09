@@ -136,7 +136,7 @@
       "text": "⚔",
       "layer": "play",
       "x": 0.979312539100647,
-      "y": 0.6523702144622803,
+      "y": 0.6839728951454163,
       "width": {
         "dp": 95
       },
@@ -174,7 +174,7 @@
       "text": "✋",
       "layer": "play",
       "x": 0.8352202773094177,
-      "y": 0.6730360984802246,
+      "y": 0.7027601003646851,
       "width": {
         "dp": 75
       },
@@ -211,13 +211,13 @@
       "id": "jump",
       "text": "⤒",
       "layer": "play",
-      "x": 0.9217085242271423,
+      "x": 0.911494255065918,
       "y": 1,
       "width": {
         "dp": 110
       },
       "height": {
-        "dp": 110
+        "dp": 100
       },
       "visibility": "IN_GAME",
       "press": [
@@ -288,7 +288,7 @@
       "text": "Clona block",
       "layer": "play",
       "x": 0,
-      "y": 0.20322494208812714,
+      "y": 0.25296440720558167,
       "width": {
         "dp": 50
       },
@@ -400,7 +400,7 @@
       "text": "🔎",
       "layer": "play",
       "x": 0,
-      "y": 0.3669465482234955,
+      "y": 0.42038214206695557,
       "width": {
         "dp": 75
       },
@@ -431,6 +431,122 @@
         "radiusInPx": false,
         "image": "zoom",
         "imagePressed": "zoom_prassed"
+      }
+    },
+    {
+      "id": "833cea53-128d-432c-aea3-b031db15ea72",
+      "text": "Up",
+      "layer": "play",
+      "x": 1,
+      "y": 0.3323688805103302,
+      "width": {
+        "dp": 55
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "scroll",
+          "lines": 1,
+          "repeat": false
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": -1772676737,
+        "fillPressed": -262727297,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -1426063361,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 15,
+        "radiusInPx": false,
+        "image": "up",
+        "imagePressed": "up_pressed"
+      }
+    },
+    {
+      "id": "472b5881-3ec2-495e-82c5-5ba1f5b92ba8",
+      "text": "Down",
+      "layer": "play",
+      "x": 1,
+      "y": 0.44006118178367615,
+      "width": {
+        "dp": 55
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "scroll",
+          "lines": -1,
+          "repeat": false
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": -1772676737,
+        "fillPressed": -262727297,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -1426063361,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 15,
+        "radiusInPx": false,
+        "image": "down",
+        "imagePressed": "down_pressed"
+      }
+    },
+    {
+      "id": "a7793acb-bade-4e7a-8210-cbcdda941401",
+      "text": "F3",
+      "layer": "play",
+      "x": 0.025309916585683823,
+      "y": 0,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "IN_GAME",
+      "press": [
+        {
+          "t": "key",
+          "code": 133
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 1851201919,
+        "fillPressed": -346613377,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -1426063361,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 15,
+        "radiusInPx": false,
+        "image": "F3",
+        "imagePressed": "F3_prassed"
       }
     }
   ],

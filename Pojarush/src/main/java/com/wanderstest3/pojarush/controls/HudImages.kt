@@ -22,7 +22,7 @@ object HudImages {
 
     private val IMAGE = setOf("png", "jpg", "jpeg", "webp", "gif")
 
-    fun dir(): File = File(Paths.publicRoot, "hud").apply { mkdirs() }
+    fun dir(): File = File(Paths.publicRoot, "hud_image").apply { mkdirs() }
 
     fun list(): List<File> = dir().listFiles { f -> f.isFile && f.extension.lowercase() in IMAGE }
         ?.sortedBy { it.name.lowercase() }.orEmpty()

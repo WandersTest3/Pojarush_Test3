@@ -41,7 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.input.pointer.pointerInput
@@ -166,7 +166,7 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                 .padding(top = 6.dp)
                 .offset { androidx.compose.ui.unit.IntOffset(panelX.toInt(), panelY.toInt()) }
                 .pointerInput(Unit) {
-                    detectDragGesturesAfterLongPress { change, drag ->
+                    detectDragGestures { change, drag ->
                         change.consume()
                         panelX += drag.x
                         panelY += drag.y
@@ -246,7 +246,13 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { onLeft = !onLeft }) { Text("⇆") }
                     Box(modifier = Modifier.weight(1f))
-                    TextButton(onClick = { controls.select(null) }) { Text("✕") }
+                    Box(
+                        modifier = Modifier
+                            .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(6.dp))
+                    ) {
+                        TextButton(onClick = { controls.select(null) }) { Text("✕") }
+                    }
                 }
                 when (current) {
                     is Selection.Button -> controls.layout.buttons.getOrNull(current.index)?.let { b ->
@@ -307,6 +313,7 @@ private fun ButtonEditor(
         }
     }
     var menuOpen by remember { mutableStateOf(false) }
+    var kbOpen by remember { mutableStateOf(false) }
 
     OutlinedTextField(
         value = text,
@@ -318,15 +325,79 @@ private fun ButtonEditor(
     )
     val prefs = remember { com.wanderstest3.pojarush.controls.ControlSettings(context) }
     var mirror by remember { mutableStateOf(prefs.mirrorSize) }
-    SettingNumber(stringResource(R.string.editor_width), dpOf(b.width), 8f..400f, 1f, "dp") { v ->
+    val w = dpOf(b.width)
+    val h = dpOf(b.height)
+    val imageRes = remember(b.style?.image) {
+        b.style?.image?.takeIf { it.isNotEmpty() }?.let { ref ->
+            com.wanderstest3.pojarush.controls.HudImages.decode(ref)?.let { it.width to it.height }
+        }
+    }
+    SettingNumber(stringResource(R.string.editor_width), w, 8f..400f, 1f, "dp") { v ->
         onChange { if (mirror) it.copy(width = Size(v), height = Size(v)) else it.copy(width = Size(v)) }
     }
-    SettingNumber(stringResource(R.string.editor_height), dpOf(b.height), 8f..400f, 1f, "dp") { v ->
+    imageRes?.let { (iw, ih) ->
+        val ideal = if (ih > 0) w / iw * ih else w
+        if (kotlin.math.abs(ideal - h) > 0.5f) {
+            Text(
+                stringResource(R.string.editor_distortion_height, ideal.toInt()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+    }
+    SettingNumber(stringResource(R.string.editor_height), h, 8f..400f, 1f, "dp") { v ->
         onChange { if (mirror) it.copy(width = Size(v), height = Size(v)) else it.copy(height = Size(v)) }
+    }
+    imageRes?.let { (iw, ih) ->
+        val ideal = if (iw > 0) h / ih * iw else h
+        if (kotlin.math.abs(ideal - w) > 0.5f) {
+            Text(
+                stringResource(R.string.editor_distortion_width, ideal.toInt()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
     }
     SettingSwitch(stringResource(R.string.editor_mirror_size), mirror, stringResource(R.string.editor_mirror_size_desc)) {
         mirror = it
         prefs.mirrorSize = it
+    }
+    val screenW = remember { context.resources.displayMetrics.widthPixels }
+    val screenH = remember { context.resources.displayMetrics.heightPixels }
+    val density = remember { context.resources.displayMetrics.density }
+    var xText by remember(b.id) { mutableStateOf(kotlin.math.round(b.x * screenW / density).toString()) }
+    var yText by remember(b.id) { mutableStateOf(kotlin.math.round(b.y * screenH / density).toString()) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = xText,
+            onValueChange = { t ->
+                xText = t.filter { c -> c.isDigit() }.take(5)
+                xText.toFloatOrNull()?.let { px ->
+                    val fx = (px * density / screenW).coerceIn(0f, 1f)
+                    onChange { it.copy(x = fx) }
+                }
+            },
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            label = { Text("X (dp)") },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next)
+        )
+        OutlinedTextField(
+            value = yText,
+            onValueChange = { t ->
+                yText = t.filter { c -> c.isDigit() }.take(5)
+                yText.toFloatOrNull()?.let { py ->
+                    val fy = (py * density / screenH).coerceIn(0f, 1f)
+                    onChange { it.copy(y = fy) }
+                }
+            },
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            label = { Text("Y (dp)") },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done)
+        )
     }
     Text(stringResource(R.string.editor_mode), style = MaterialTheme.typography.bodyMedium)
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -339,15 +410,11 @@ private fun ButtonEditor(
         all.forEachIndexed { i, a ->
             AssistChip(onClick = { onChange(withActions(all.filterIndexed { j, _ -> j != i }, mode)) }, label = { Text("${ActionCatalog.label(context, a)}  ×") })
         }
-        Box {
-            AssistChip(onClick = { menuOpen = true }, label = { Text(stringResource(R.string.editor_add_action)) })
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }, modifier = Modifier.heightIn(max = 320.dp)) {
-                ActionCatalog.all(context).forEach { (label, action) ->
-                    DropdownMenuItem(text = { Text(label) }, onClick = {
-                        menuOpen = false
-                        if (action !in all) onChange(withActions(all + action, mode))
-                    })
-                }
+        AssistChip(onClick = { kbOpen = true }, label = { Text(stringResource(R.string.editor_add_action)) })
+        if (kbOpen) {
+            ActionPickerDialog(context, all) { action ->
+                kbOpen = false
+                if (action != null && action !in all) onChange(withActions(all + action, mode))
             }
         }
     }
@@ -395,6 +462,70 @@ private fun StickEditor(
     SettingSwitch(stringResource(R.string.editor_sprint_lock), s.canLock) { v -> onChange { it.copy(canLock = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     SettingSwitch(stringResource(R.string.editor_auto_run), s.autoRun, stringResource(R.string.editor_auto_run_desc)) { v -> onChange { it.copy(autoRun = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     OutlinedButton(onClick = onDelete) { Text(stringResource(R.string.editor_delete), color = MaterialTheme.colorScheme.error) }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ActionPickerDialog(context: android.content.Context, existing: List<Action>, onPick: (Action?) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onPick(null) },
+        title = { Text(stringResource(R.string.editor_add_action)) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val special = listOf(
+                    context.getString(R.string.action_mouse_left) to Action.Mouse(0),
+                    context.getString(R.string.action_mouse_right) to Action.Mouse(1),
+                    context.getString(R.string.action_mouse_middle) to Action.Mouse(2),
+                    context.getString(R.string.action_scroll_up) to Action.Scroll(1f, false),
+                    context.getString(R.string.action_scroll_down) to Action.Scroll(-1f, false),
+                    context.getString(R.string.action_keyboard) to Action.Keyboard,
+                    context.getString(R.string.action_menu) to Action.Menu,
+                    context.getString(R.string.action_toggle_mouse) to Action.ToggleMouse,
+                    context.getString(R.string.action_hide_controls) to Action.HideControls,
+                )
+                Text(stringResource(R.string.editor_actions_special), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    special.forEach { (label, action) ->
+                        val used = action in existing
+                        AssistChip(
+                            onClick = { if (!used) onPick(action) },
+                            label = { Text(label) },
+                            enabled = !used
+                        )
+                    }
+                }
+                val keyRows = listOf(
+                    listOf("Esc","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12"),
+                    listOf("`","1","2","3","4","5","6","7","8","9","0","-","=","Backspace"),
+                    listOf("Tab","Q","W","E","R","T","Y","U","I","O","P","[","]","\\"),
+                    listOf("Caps Lock","A","S","D","F","G","H","J","K","L",";","'","Enter"),
+                    listOf("Left Shift","Z","X","C","V","B","N","M",",",".","/","Right Shift"),
+                    listOf("Left Ctrl","Left Alt","Space","Right Alt","Right Ctrl"),
+                    listOf("Insert","Home","Page Up","Delete","End","Page Down"),
+                    listOf("↑","↓","←","→"),
+                )
+                val allByName = ActionCatalog.all(context).associate { (name, action) -> name to action }
+                Text(stringResource(R.string.editor_actions_keys), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                keyRows.forEach { row ->
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        row.forEach { key ->
+                            val action = allByName[key]
+                            if (action != null) {
+                                val used = action in existing
+                                AssistChip(
+                                    onClick = { if (!used) onPick(action) },
+                                    label = { Text(key, style = MaterialTheme.typography.bodySmall) },
+                                    enabled = !used
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = { onPick(null) }) { Text(stringResource(R.string.cancel)) } }
+    )
 }
 
 private val BACKGROUND_SWATCHES = listOf(

@@ -13,6 +13,7 @@ sealed interface Action {
     data object Keyboard : Action
     data object Menu : Action
     data object ToggleMouse : Action
+    data object HideControls : Action
     data class Text(val text: String) : Action
     data class Layer(val ids: List<String>, val mode: Int) : Action
 
@@ -828,6 +829,7 @@ private object PojarushFormat {
         Action.Keyboard -> JSONObject().put("t", "keyboard")
         Action.Menu -> JSONObject().put("t", "menu")
         Action.ToggleMouse -> JSONObject().put("t", "toggle_mouse")
+        Action.HideControls -> JSONObject().put("t", "hide_controls")
         is Action.Text -> JSONObject().put("t", "text").put("text", a.text)
         is Action.Layer -> JSONObject().put("t", "layer").put("ids", JSONArray(a.ids)).put("mode", a.mode)
     }
@@ -839,6 +841,7 @@ private object PojarushFormat {
         "keyboard" -> Action.Keyboard
         "menu" -> Action.Menu
         "toggle_mouse" -> Action.ToggleMouse
+        "hide_controls" -> Action.HideControls
         "text" -> Action.Text(o.optString("text"))
         "layer" -> Action.Layer(o.optJSONArray("ids").strings(), o.optInt("mode"))
         else -> null
