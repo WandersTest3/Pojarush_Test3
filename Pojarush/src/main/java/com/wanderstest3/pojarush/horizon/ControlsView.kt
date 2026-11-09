@@ -90,6 +90,7 @@ class ControlsView(
     var physicalInput = false
         private set
     private var pointerCaptured = false
+    private val capturedButtonsDown = BooleanArray(3)
     private val inputManager = context.getSystemService(Context.INPUT_SERVICE) as InputManager
     private val deviceListener = object : InputManager.InputDeviceListener {
         override fun onInputDeviceAdded(deviceId: Int) = scanDevices()
@@ -103,7 +104,9 @@ class ControlsView(
         for (id in InputDevice.getDeviceIds()) {
             val d = InputDevice.getDevice(id) ?: continue
             if (d.isVirtual) continue
-            if (d.sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE) mouse = true
+            val isMouseClass = d.sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE
+            val isTouchscreen = d.sources and InputDevice.SOURCE_TOUCHSCREEN == InputDevice.SOURCE_TOUCHSCREEN
+            if (isMouseClass && !isTouchscreen) mouse = true
             if (d.sources and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD &&
                 d.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC &&
                 d.hasKeys(KeyEvent.KEYCODE_A)[0]
@@ -155,18 +158,36 @@ class ControlsView(
     override fun onPointerCaptureChange(hasCapture: Boolean) {
         super.onPointerCaptureChange(hasCapture)
         pointerCaptured = hasCapture
+        if (!hasCapture) {
+            for (b in capturedButtonsDown.indices) {
+                if (capturedButtonsDown[b]) {
+                    capturedButtonsDown[b] = false
+                    mouse(b, false)
+                }
+            }
+        }
     }
 
     override fun onCapturedPointerEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
             MotionEvent.ACTION_MOVE -> look(e.x * PHYSICAL_LOOK, e.y * PHYSICAL_LOOK)
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP,
             MotionEvent.ACTION_BUTTON_PRESS, MotionEvent.ACTION_BUTTON_RELEASE -> {
+                val down = e.actionMasked == MotionEvent.ACTION_DOWN || e.actionMasked == MotionEvent.ACTION_BUTTON_PRESS
                 val button = when (e.actionButton) {
                     MotionEvent.BUTTON_SECONDARY -> 1
                     MotionEvent.BUTTON_TERTIARY -> 2
+                    0 -> when {
+                        e.buttonState and MotionEvent.BUTTON_SECONDARY != 0 -> 1
+                        e.buttonState and MotionEvent.BUTTON_TERTIARY != 0 -> 2
+                        else -> 0
+                    }
                     else -> 0
                 }
-                mouse(button, e.actionMasked == MotionEvent.ACTION_BUTTON_PRESS)
+                if (capturedButtonsDown[button] != down) {
+                    capturedButtonsDown[button] = down
+                    mouse(button, down)
+                }
             }
             MotionEvent.ACTION_SCROLL -> {
                 val lines = e.getAxisValue(MotionEvent.AXIS_VSCROLL)

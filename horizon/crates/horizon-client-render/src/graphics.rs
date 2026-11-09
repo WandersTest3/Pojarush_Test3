@@ -327,10 +327,10 @@ pub fn hdr_offered() -> bool {
 /// Apple's: they share the CPU's memory bandwidth, and past it far terrain
 /// costs them more frame time than it is worth.
 pub const INTEGRATED_LOD_DISTANCE: u32 = 128;
-/// The farthest LOD Distance, in chunks: 65536 chunks, about a million blocks.
-pub const MAX_LOD_DISTANCE: u32 = 1_000_000;
+/// The farthest LOD Distance, in chunks.
+pub const MAX_LOD_DISTANCE: u32 = 512;
 /// LOD Distance's choices, in chunks.
-pub const LOD_STEPS: [u32; 16] = [0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1_000_000];
+pub const LOD_STEPS: [u32; 6] = [0, 32, 64, 128, 256, 512];
 /// Whether `INTEGRATED_LOD_DISTANCE` applies to this adapter. Apple's GPUs
 /// are integrated too, with memory and bandwidth enough for every distance.
 pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
@@ -746,7 +746,7 @@ mod tests {
         );
         let m4 = adapter("Apple M4 Pro", wgpu::DeviceType::IntegratedGpu);
         let discrete = adapter("NVIDIA GeForce RTX 4070", wgpu::DeviceType::DiscreteGpu);
-        for (distance, capped) in [(0, 0), (64, 64), (128, 128), (256, 128), (1024, 128)] {
+        for (distance, capped) in [(0, 0), (64, 64), (128, 128), (256, 128), (512, 128)] {
             let g = Graphics {
                 lod_distance: distance,
                 ..Graphics::default()
@@ -767,12 +767,12 @@ mod tests {
     #[test]
     fn lod_distance_is_opt_in_and_bounded() {
         assert_eq!(Graphics::default().lod_distance, 0);
-        for distance in [0, 64, 128, 256, 512, 1024] {
+        for distance in [0, 32, 64, 128, 256, 512] {
             let g = Graphics::parse(&format!("lodDistance:{distance}\n"));
             assert_eq!(g.lod_distance, distance);
             assert_eq!(Graphics::parse(&g.serialize()), g);
         }
-        assert_eq!(Graphics::parse("lodDistance:10000\n").lod_distance, 10000);
+        assert_eq!(Graphics::parse("lodDistance:1000\n").lod_distance, MAX_LOD_DISTANCE);
         assert_eq!(Graphics::parse("lodDistance:9000000\n").lod_distance, MAX_LOD_DISTANCE);
         assert_eq!(Graphics::parse("lodDistance:-1\n").lod_distance, 0);
         assert_eq!(Graphics::parse("lodDistance:invalid\n").lod_distance, 0);

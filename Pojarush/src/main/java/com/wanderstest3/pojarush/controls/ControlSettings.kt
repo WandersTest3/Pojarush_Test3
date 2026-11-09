@@ -120,6 +120,9 @@ class ControlSettings(context: Context) {
     var wallpaperDim: Float
         get() = prefs.getFloat("wallpaper_dim", 0.45f).coerceIn(0f, 0.90f)
         set(v) = prefs.edit().putFloat("wallpaper_dim", v.coerceIn(0f, 0.90f)).apply()
+    var wallpaperVolume: Float
+        get() = prefs.getFloat("wallpaper_volume", 0f).coerceIn(0f, 1f)
+        set(v) = prefs.edit().putFloat("wallpaper_volume", v.coerceIn(0f, 1f)).apply()
     var keepAlive: Boolean
         get() = prefs.getBoolean("keep_alive", true)
         set(v) = prefs.edit().putBoolean("keep_alive", v).apply()

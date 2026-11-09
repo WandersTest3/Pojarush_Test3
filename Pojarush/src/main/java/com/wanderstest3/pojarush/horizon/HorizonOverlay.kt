@@ -79,7 +79,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     private val textInput = EditText(context).apply {
         alpha = 0f
         isFocusableInTouchMode = true
-        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
         imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_ACTION_SEND
         setText(sentinel)
     }

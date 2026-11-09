@@ -219,6 +219,7 @@
     <string name="wallpaper_choose">Escolher imagem ou vídeo</string>
     <string name="wallpaper_remove">Remover</string>
     <string name="wallpaper_dim">Escurecer</string>
+    <string name="wallpaper_volume">Volume do vídeo</string>
     <string name="wallpaper_hint">Imagens (PNG, JPG, WebP, GIF) ou vídeos (MP4, WebM). Os vídeos tocam sempre sem som.</string>
     <string name="extras_title">Extras</string>
     <string name="keep_alive">Manter aberto em segundo plano</string>
@@ -231,7 +232,7 @@
     <string name="minecraft_font_desc">Usa a letra pixelizada ao estilo do Minecraft no launcher.</string>
     <string name="lod_title">Terreno distante (LOD)</string>
     <string name="lod_distance">Distância do LOD (chunks)</string>
-    <string name="lod_desc">Até onde o terreno simplificado é desenhado para lá da distância de renderização normal, de 64 chunks até 1 milhão de chunks. Distâncias maiores gastam mais memória e bateria; aplica-se da próxima vez que o jogo abrir.</string>
+    <string name="lod_desc">Até onde o terreno simplificado é desenhado para lá da distância de renderização normal, de 32 chunks até 512 chunks. Distâncias maiores gastam mais memória e bateria; aplica-se da próxima vez que o jogo abrir.</string>
     <string name="lod_off">Desligado</string>
     <string name="hud_title">Imagens de HUD</string>
     <string name="hud_desc">Imagens para os botões e joysticks dos controlos. Importe um .zip (por exemplo as imagens de UI do Bedrock) ou imagens soltas; a imagem estica para o tamanho do botão. O esquema Bedrock Controls usa nomes como attack, interact, jump, sneak, sprint, perspective, joystick_frame e joystick_knob (com variantes _pressed).</string>

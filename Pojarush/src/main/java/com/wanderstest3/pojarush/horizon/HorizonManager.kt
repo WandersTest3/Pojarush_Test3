@@ -259,7 +259,7 @@ object HorizonManager {
         lines.drop(start + 1).firstOrNull { it.isNotBlank() }?.trim()
     }.getOrNull()
 
-    val LOD_STEPS = listOf(0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1_000_000)
+    val LOD_STEPS = listOf(0, 32, 64, 128, 256, 512)
 
     private fun graphicsLines(): MutableList<String> {
         val file = File(gameDir, "horizon-graphics.txt")

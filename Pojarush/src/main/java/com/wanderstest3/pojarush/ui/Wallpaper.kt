@@ -53,13 +53,15 @@ fun WallpaperBackground() {
     val version = WallpaperState.version
     val path = remember(version) { settings.wallpaper }
     val dim = remember(version) { settings.wallpaperDim }
+    val volume = remember(version) { settings.wallpaperVolume }
     val file = remember(path, version) { File(path).takeIf { path.isNotEmpty() && it.isFile } } ?: return
     val stamp = file.lastModified()
     Box(Modifier.fillMaxSize()) {
         if (ControlLayouts.isVideo(file.name)) {
             androidx.compose.runtime.key(file.absolutePath, stamp) {
                 AndroidView(
-                    factory = { WallpaperVideoView(it, file) },
+                    factory = { WallpaperVideoView(it, file, volume) },
+                    update = { it.setVolume(volume) },
                     modifier = Modifier.fillMaxSize(),
                     onRelease = { it.release() }
                 )
@@ -97,7 +99,7 @@ private fun loadDrawable(context: Context, file: File): Drawable? = runCatching 
 }.getOrNull()
 
 @SuppressLint("ViewConstructor")
-private class WallpaperVideoView(context: Context, private val file: File) : TextureView(context), TextureView.SurfaceTextureListener {
+private class WallpaperVideoView(context: Context, private val file: File, private var volume: Float) : TextureView(context), TextureView.SurfaceTextureListener {
     private var player: MediaPlayer? = null
     private var surface: Surface? = null
     private var videoW = 0
@@ -108,23 +110,28 @@ private class WallpaperVideoView(context: Context, private val file: File) : Tex
         isOpaque = false
     }
 
+    fun setVolume(v: Float) {
+        volume = v
+        runCatching { player?.setVolume(v, v) }
+    }
+
     override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
         val s = Surface(texture)
         surface = s
         player = runCatching {
             MediaPlayer().apply {
-                setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_UNKNOWN).setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build())
+                setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build())
                 setDataSource(file.absolutePath)
                 setSurface(s)
                 isLooping = true
-                setVolume(0f, 0f)
+                setVolume(volume, volume)
                 setOnVideoSizeChangedListener { _, w, h ->
                     videoW = w
                     videoH = h
                     crop()
                 }
                 setOnPreparedListener {
-                    it.setVolume(0f, 0f)
+                    it.setVolume(volume, volume)
                     it.start()
                 }
                 setOnErrorListener { _, _, _ -> true }
@@ -193,12 +200,7 @@ fun LodSettings() {
         CardTitle(stringResource(R.string.lod_title))
         SettingSlider(stringResource(R.string.lod_distance), index.toFloat(), 0f..steps.lastIndex.toFloat(), 1f, { v ->
             val chunks = steps[v.toInt().coerceIn(0, steps.lastIndex)]
-            when {
-                chunks == 0 -> off
-                chunks >= 1_000_000 -> "1M"
-                chunks >= 1024 -> "${chunks / 1024}k"
-                else -> "$chunks"
-            }
+            if (chunks == 0) off else "$chunks"
         }) { v ->
             lod = steps[Math.round(v).coerceIn(0, steps.lastIndex)]
             com.wanderstest3.pojarush.horizon.HorizonManager.setLodDistance(lod)
@@ -251,6 +253,12 @@ fun WallpaperSettings(settings: ControlSettings) {
         if (path.isNotEmpty()) {
             SettingSlider(stringResource(R.string.wallpaper_dim), settings.wallpaperDim, 0f..0.90f, 0.05f, { "${Math.round(it * 100)}%" }) {
                 settings.wallpaperDim = it
+                WallpaperState.version++
+            }
+        }
+        if (path.isNotEmpty() && ControlLayouts.isVideo(File(path).name)) {
+            SettingSlider(stringResource(R.string.wallpaper_volume), settings.wallpaperVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }) {
+                settings.wallpaperVolume = it
                 WallpaperState.version++
             }
         }

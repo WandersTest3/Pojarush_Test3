@@ -54,14 +54,18 @@ Not an official Minecraft product; no Mojang files are included. You must own Mi
 
 - Controles padrão: `Pojarush_Default_V1.0.json` e `Bedrock_Default_V1.0.json`.
 - Mod de zoom removido do app; distribuído separadamente.
-- Pré-carregamento sempre ativo: o jogo abre em segundo plano a 1 FPS e volta sozinho ao sair do jogo; mods importados reiniciam o jogo nos bastidores.
-- Slider de LOD em chunks, até 1 milhão.
+- Pré-carregamento sempre ativo (sem opção para desligar): o jogo abre em segundo plano a 1 FPS e volta sozinho ao sair do jogo; mods importados reiniciam o jogo nos bastidores.
+- Slider de LOD em chunks: 32, 64, 128, 256, 512 (teto reduzido de 1M para 512).
 - Contador de FPS removido do launcher; agora é o mod Pojarush FPS (distribuído à parte).
 - Editor: cor de fundo (com transparente), opacidade por botão, quebra de linha e redução automática da fonte.
 - Botão de fechar o jogo no menu flutuante.
-- Mouse físico: controles e mouse virtual ocultos, captura de ponteiro no jogo, sensibilidade maior.
+- Mouse físico: correção da detecção que deixava o mouse virtual sempre invisível (não confundir mais touchscreen com mouse); clique do mouse físico capturado agora funciona (antes só o scroll funcionava); captura de ponteiro no jogo, sensibilidade maior.
 - Correção ao abrir configurações de um mod.
 - "Mods" renomeado para "Pacotes".
+- Volume do wallpaper em vídeo, ajustável.
+- Correção do teclado mostrando o layout numérico sem corretor no chat/campos de texto do jogo.
+- Possível correção de layout cortado ao desligar/ligar a tela no launcher (density agora recriada corretamente).
+- Tela preta ao compartilhar a tela em alguns aparelhos (relatado em um Samsung): investigado, causa não isolada com segurança; segue em aberto.
 
 ## 1.8.0
 
