@@ -82,23 +82,36 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
     val savedText = stringResource(R.string.editor_saved, "%s")
     val suffix = stringResource(R.string.editor_suffix)
     val defaultName = stringResource(R.string.controls_default_name)
+    var exportButton by remember { mutableStateOf<ControlButton?>(null) }
+    var pickingImport by remember { mutableStateOf(false) }
+    var importing by remember { mutableStateOf<ControlLayout?>(null) }
+    var savedLayout by remember { mutableStateOf<ControlLayout?>(null) }
+    var pendingImport by remember { mutableStateOf<ControlButton?>(null) }
+    val exportedText = stringResource(R.string.editor_exported)
 
     DisposableEffect(controls) {
         controls.onSelectionChanged = { s ->
-            selection = s
-            version++
-            if (s != null) {
-                val w = controls.width.toFloat().coerceAtLeast(1f)
-                val cx = when (s) {
-                    is Selection.Button -> controls.layout.buttons.getOrNull(s.index)?.x ?: 0.5f
-                    is Selection.Stick -> controls.layout.sticks.getOrNull(s.index)?.x ?: 0.5f
+            val imp = importing
+            if (imp != null) {
+                if (s is Selection.Button) pendingImport = imp.buttons.getOrNull(s.index)
+            } else {
+                selection = s
+                version++
+                if (s != null) {
+                    val w = controls.width.toFloat().coerceAtLeast(1f)
+                    val cx = when (s) {
+                        is Selection.Button -> controls.layout.buttons.getOrNull(s.index)?.x ?: 0.5f
+                        is Selection.Stick -> controls.layout.sticks.getOrNull(s.index)?.x ?: 0.5f
+                    }
+                    onLeft = cx > 0.5f || w <= 0f
                 }
-                onLeft = cx > 0.5f || w <= 0f
             }
         }
         controls.onLayoutEdited = {
-            dirty = true
-            version++
+            if (importing == null) {
+                dirty = true
+                version++
+            }
         }
         onDispose {
             controls.onSelectionChanged = null
@@ -159,7 +172,73 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
         }
     }
 
+    fun finishImport(add: ControlButton?) {
+        val base = savedLayout
+        importing = null
+        pendingImport = null
+        savedLayout = null
+        if (base == null) return
+        controls.setLayout(base)
+        controls.select(null)
+        if (add != null) {
+            val (l, layer) = layerId(base)
+            controls.editLayout(l.copy(buttons = l.buttons + add.copy(id = UUID.randomUUID().toString(), layer = layer)), Selection.Button(l.buttons.size))
+        } else {
+            controls.invalidate()
+        }
+    }
+
+    exportButton?.let { btn ->
+        LayoutPickerDialog(
+            stringResource(R.string.editor_export),
+            ControlLayouts.list(context, defaultName).filter { it.removable },
+            { exportButton = null },
+        ) { entry ->
+            val target = ControlLayouts.load(context, entry.id, defaultName)
+            val (tl, layer) = layerId(target)
+            ControlLayouts.saveNamed(tl.copy(buttons = tl.buttons + btn.copy(id = UUID.randomUUID().toString(), layer = layer)), entry.id, target.name)
+            exportButton = null
+            Toast.makeText(context, exportedText, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (pickingImport) {
+        LayoutPickerDialog(
+            stringResource(R.string.editor_import),
+            ControlLayouts.list(context, defaultName),
+            { pickingImport = false },
+        ) { entry ->
+            pickingImport = false
+            savedLayout = controls.layout
+            val other = ControlLayouts.load(context, entry.id, defaultName)
+            importing = other
+            controls.select(null)
+            controls.setLayout(other)
+            controls.invalidate()
+        }
+    }
+
+    pendingImport?.let { b ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null; controls.select(null) },
+            title = { Text(stringResource(R.string.editor_import_confirm)) },
+            text = { ImportPreview(b) },
+            confirmButton = { TextButton(onClick = { finishImport(b) }) { Text(stringResource(R.string.ok)) } },
+            dismissButton = { TextButton(onClick = { pendingImport = null; controls.select(null) }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
+        if (importing != null) {
+            TextButton(
+                onClick = { finishImport(null) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(12.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xDD1E1129)),
+            ) { Text(stringResource(R.string.cancel)) }
+        }
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -198,6 +277,7 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                 )
                 controls.editLayout(l.copy(sticks = l.sticks + s), Selection.Stick(l.sticks.size))
             }) { Text(stringResource(R.string.editor_add_stick)) }
+            TextButton(onClick = { pickingImport = true }) { Text(stringResource(R.string.editor_import)) }
             if (dirty) {
                 Text(stringResource(R.string.editor_modified), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
             }
@@ -229,7 +309,7 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                 }
             )
         }
-        val current = selection
+        val current = selection.takeIf { importing == null }
         if (current != null) {
             Column(
                 modifier = Modifier
@@ -246,6 +326,9 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { onLeft = !onLeft }) { Text("⇆") }
                     Box(modifier = Modifier.weight(1f))
+                    if (current is Selection.Button) {
+                        TextButton(onClick = { exportButton = controls.layout.buttons.getOrNull(current.index) }) { Text(stringResource(R.string.editor_export)) }
+                    }
                     Box(
                         modifier = Modifier
                             .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
@@ -571,5 +654,36 @@ private fun BackgroundColorPicker(style: com.wanderstest3.pojarush.controls.Styl
         SettingSlider(stringResource(R.string.editor_background_alpha), alpha / 255f, 0.05f..1f, 0.05f, { "${(it * 100).toInt()}%" }) { v ->
             onChange(apply(style.fill, (v * 255).toInt().coerceIn(1, 255)))
         }
+    }
+}
+
+@Composable
+private fun LayoutPickerDialog(title: String, entries: List<ControlLayouts.Entry>, onDismiss: () -> Unit, onPick: (ControlLayouts.Entry) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(modifier = Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                entries.forEach { e ->
+                    TextButton(onClick = { onPick(e) }, modifier = Modifier.fillMaxWidth()) { Text(e.name) }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+@Composable
+private fun ImportPreview(b: ControlButton) {
+    val st = b.style
+    Box(
+        modifier = Modifier
+            .size(80.dp)
+            .clip(RoundedCornerShape(minOf(st?.radiusDp ?: 8f, 40f).dp))
+            .background(Color(st?.fill ?: 0x66FFFFFF)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(b.text, color = Color(st?.text ?: 0xFFFFFFFF.toInt()))
     }
 }

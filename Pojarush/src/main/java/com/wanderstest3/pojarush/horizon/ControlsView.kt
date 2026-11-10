@@ -773,6 +773,7 @@ class ControlsView(
         const val PHYSICAL_LOOK = 1.3f
     }
 
+    private var lastSelectTapTime = 0L
     private var lastHoverX = Float.NaN
     private var lastHoverY = Float.NaN
 
@@ -787,17 +788,34 @@ class ControlsView(
         }
         if (editMode) {
             val b = buttonAt(x, y)
-            val target: Selection? = if (b >= 0) Selection.Button(b) else stickAt(x, y).takeIf { it >= 0 }?.let { Selection.Stick(it) }
-            select(target)
+            val hit: Selection? = if (b >= 0) Selection.Button(b) else stickAt(x, y).takeIf { it >= 0 }?.let { Selection.Stick(it) }
+            val current = selection
+            if (hit != null && hit == current && time - lastSelectTapTime < 300) {
+                lastSelectTapTime = 0L
+                select(null)
+                roles[id] = Role.Ignore
+                return true
+            }
+            if (hit != null) lastSelectTapTime = time
+            val target = hit ?: current
             if (target == null) {
                 roles[id] = Role.Ignore
                 return true
             }
-            val (ox, oy) = when (target) {
-                is Selection.Button -> x - buttonRects[target.index].left to y - buttonRects[target.index].top
-                is Selection.Stick -> x - (stickCenters[target.index][0] - stickCenters[target.index][2]) to y - (stickCenters[target.index][1] - stickCenters[target.index][2])
+            if (hit != null) select(hit)
+            val (ox, oy) = if (hit != null) {
+                when (target) {
+                    is Selection.Button -> x - buttonRects[target.index].left to y - buttonRects[target.index].top
+                    is Selection.Stick -> x - (stickCenters[target.index][0] - stickCenters[target.index][2]) to y - (stickCenters[target.index][1] - stickCenters[target.index][2])
+                }
+            } else {
+                when (target) {
+                    is Selection.Button -> buttonRects[target.index].width() / 2f to buttonRects[target.index].height() / 2f
+                    is Selection.Stick -> stickCenters[target.index][2] to stickCenters[target.index][2]
+                }
             }
             roles[id] = Role.Drag(target, ox, oy)
+            if (hit == null) moveTo(target, x - ox, y - oy)
             return true
         }
         val b = buttonAt(x, y)

@@ -277,4 +277,9 @@
     <string name="editor_background">Background color</string>
     <string name="editor_transparent">Transparent</string>
     <string name="editor_background_alpha">Background opacity</string>
+    <string name="editor_export">Export</string>
+    <string name="editor_import">Import</string>
+    <string name="editor_exported">Button exported</string>
+    <string name="editor_import_confirm">Are you sure this is the button?</string>
+    <string name="ok">OK</string>
 </resources>

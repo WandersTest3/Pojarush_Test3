@@ -276,4 +276,9 @@
     <string name="editor_background">Cor do fundo</string>
     <string name="editor_transparent">Transparente</string>
     <string name="editor_background_alpha">Opacidade do fundo</string>
+    <string name="editor_export">Exportar</string>
+    <string name="editor_import">Importar</string>
+    <string name="editor_exported">Botão exportado</string>
+    <string name="editor_import_confirm">Certeza de que é esse o botão?</string>
+    <string name="ok">OK</string>
 </resources>
