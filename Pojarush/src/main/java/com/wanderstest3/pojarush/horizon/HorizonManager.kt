@@ -574,11 +574,34 @@ object HorizonManager {
         prefs.edit().remove(key).apply()
     }
 
+    private fun toggleDir(dir: File, enabled: Boolean) {
+        val disabled = File(dir.parent, ".${dir.name}.disabled")
+        if (!enabled) {
+            if (dir.exists()) dir.renameTo(disabled)
+        } else {
+            if (disabled.exists()) disabled.renameTo(dir)
+        }
+    }
+
+    private fun toggleFile(file: File, enabled: Boolean) {
+        val disabled = File(file.parent, ".${file.name}.disabled")
+        if (!enabled) {
+            if (file.exists()) file.renameTo(disabled)
+        } else {
+            if (disabled.exists()) disabled.renameTo(file)
+        }
+    }
+
     fun launchIntent(context: Context, profile: Profile?): Intent {
         ensureFolders()
         removeLegacyBundledMods(context)
         disableBuiltInCounter()
         privateRoot.mkdirs()
+        val cs = com.wanderstest3.pojarush.controls.ControlSettings(context)
+        toggleDir(modsDir, cs.modsEnabled)
+        toggleDir(nativeModsDir, cs.modsEnabled)
+        toggleFile(modsFile, cs.modsEnabled)
+        toggleDir(shaderPacksDir, cs.shadersEnabled)
         val args = arrayListOf(
             "--resources", resources.absolutePath,
             "--game-dir", gameDir.absolutePath,

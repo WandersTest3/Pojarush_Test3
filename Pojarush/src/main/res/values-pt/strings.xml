@@ -281,4 +281,6 @@
     <string name="editor_exported">Botão exportado</string>
     <string name="editor_import_confirm">Certeza de que é esse o botão?</string>
     <string name="ok">OK</string>
+    <string name="mods_enabled">Carregar mods ao iniciar</string>
+    <string name="shaders_enabled">Carregar shaders ao iniciar</string>
 </resources>

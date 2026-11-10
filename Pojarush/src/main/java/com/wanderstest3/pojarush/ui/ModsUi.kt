@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.wanderstest3.pojarush.R
 import com.wanderstest3.pojarush.horizon.GameFiles
 import com.wanderstest3.pojarush.horizon.HorizonManager
+import com.wanderstest3.pojarush.controls.ControlSettings
 import com.wanderstest3.pojarush.horizon.PackKind
 
 @Composable
@@ -37,6 +38,9 @@ fun ModsPage() {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var browse by rememberSaveable { mutableStateOf(false) }
     var version by remember { mutableIntStateOf(0) }
+    val settings = remember { ControlSettings(context) }
+    var modsEnabled by remember { mutableStateOf(settings.modsEnabled) }
+    var shadersEnabled by remember { mutableStateOf(settings.shadersEnabled) }
     val kind = PackKind.entries[tab]
     val entries = remember(tab, version) {
         HorizonManager.ensureFolders()
@@ -58,6 +62,14 @@ fun ModsPage() {
     }
     PojarushCard {
         CardTitle(stringResource(R.string.nav_mods))
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.mods_enabled), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            SettingSwitchInline(modsEnabled) { modsEnabled = it; settings.modsEnabled = it }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.shaders_enabled), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            SettingSwitchInline(shadersEnabled) { shadersEnabled = it; settings.shadersEnabled = it }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(R.string.mods_tab_mods, R.string.mods_tab_resource, R.string.mods_tab_shaders).forEachIndexed { i, label ->
                 FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label), maxLines = 1, modifier = Modifier.basicMarquee()) })

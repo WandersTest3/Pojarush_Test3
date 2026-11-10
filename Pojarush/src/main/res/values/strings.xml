@@ -282,4 +282,6 @@
     <string name="editor_exported">Button exported</string>
     <string name="editor_import_confirm">Are you sure this is the button?</string>
     <string name="ok">OK</string>
+    <string name="mods_enabled">Load mods on launch</string>
+    <string name="shaders_enabled">Load shaders on launch</string>
 </resources>

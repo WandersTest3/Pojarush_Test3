@@ -126,6 +126,12 @@ class ControlSettings(context: Context) {
     var keepAlive: Boolean
         get() = prefs.getBoolean("keep_alive", true)
         set(v) = prefs.edit().putBoolean("keep_alive", v).apply()
+    var modsEnabled: Boolean
+        get() = prefs.getBoolean("mods_enabled", true)
+        set(v) = prefs.edit().putBoolean("mods_enabled", v).apply()
+    var shadersEnabled: Boolean
+        get() = prefs.getBoolean("shaders_enabled", true)
+        set(v) = prefs.edit().putBoolean("shaders_enabled", v).apply()
 
     fun renderSize(viewWidth: Int, viewHeight: Int): Pair<Int, Int> =
         if (fixedResolution) fixedWidth.coerceIn(64, 7680) to fixedHeight.coerceIn(64, 4320)

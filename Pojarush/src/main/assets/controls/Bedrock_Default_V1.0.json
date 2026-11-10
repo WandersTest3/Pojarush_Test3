@@ -1,6 +1,6 @@
 {
   "pojarush": 1,
-  "name": "Bedrock Default V1.0",
+  "name": "Bedrock Default V1.0 (editado)",
   "layers": [
     {
       "id": "play",
@@ -249,7 +249,7 @@
       "id": "sneak",
       "text": "⇩",
       "layer": "play",
-      "x": 0.24930621683597565,
+      "x": 0.2597731053829193,
       "y": 1,
       "width": {
         "dp": 50
@@ -325,7 +325,7 @@
       "id": "inventory",
       "text": "•••",
       "layer": "play",
-      "x": 0.7350903153419495,
+      "x": 0.7333925366401672,
       "y": 1,
       "width": {
         "dp": 40
@@ -468,8 +468,8 @@
         "radiusDp": 10,
         "textSp": 15,
         "radiusInPx": false,
-        "image": "up",
-        "imagePressed": "up_pressed"
+        "image": "long_up",
+        "imagePressed": "long_up_pressed"
       }
     },
     {
@@ -507,8 +507,8 @@
         "radiusDp": 10,
         "textSp": 15,
         "radiusInPx": false,
-        "image": "down",
-        "imagePressed": "down_pressed"
+        "image": "long_down",
+        "imagePressed": "long_down_pressed"
       }
     },
     {
@@ -632,7 +632,7 @@
           "code": 113
         }
       ],
-      "canLock": true,
+      "canLock": false,
       "lockThreshold": 0.25,
       "deadZone": 0.15000000596046448,
       "doubleTap": [],
