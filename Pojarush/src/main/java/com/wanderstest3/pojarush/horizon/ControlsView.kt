@@ -803,19 +803,11 @@ class ControlsView(
                 return true
             }
             if (hit != null) select(hit)
-            val (ox, oy) = if (hit != null) {
-                when (target) {
-                    is Selection.Button -> x - buttonRects[target.index].left to y - buttonRects[target.index].top
-                    is Selection.Stick -> x - (stickCenters[target.index][0] - stickCenters[target.index][2]) to y - (stickCenters[target.index][1] - stickCenters[target.index][2])
-                }
-            } else {
-                when (target) {
-                    is Selection.Button -> buttonRects[target.index].width() / 2f to buttonRects[target.index].height() / 2f
-                    is Selection.Stick -> stickCenters[target.index][2] to stickCenters[target.index][2]
-                }
+            val (ox, oy) = when (target) {
+                is Selection.Button -> x - buttonRects[target.index].left to y - buttonRects[target.index].top
+                is Selection.Stick -> x - (stickCenters[target.index][0] - stickCenters[target.index][2]) to y - (stickCenters[target.index][1] - stickCenters[target.index][2])
             }
             roles[id] = Role.Drag(target, ox, oy)
-            if (hit == null) moveTo(target, x - ox, y - oy)
             return true
         }
         val b = buttonAt(x, y)

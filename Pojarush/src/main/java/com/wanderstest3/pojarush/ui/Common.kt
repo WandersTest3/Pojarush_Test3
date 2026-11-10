@@ -55,7 +55,7 @@ val PojarushColors = darkColorScheme(
 )
 
 object UiPrefs {
-    var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.80f)
+    var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.60f)
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
 
     fun load(context: android.content.Context) {

@@ -206,7 +206,6 @@
     <string name="menu_button_size">Tamanho</string>
     <string name="menu_button_opacity">Opacidade</string>
     <string name="menu_button_radius">Arredondamento</string>
-    <string name="menu_button_color">Cor da borda</string>
     <string name="menu_button_icon_none">Ícone: Pojarush_Test3 (padrão)</string>
     <string name="menu_button_icon_choose">Escolher imagem</string>
     <string name="menu_button_hint">Arraste o botão flutuante no jogo para mudar de lugar.</string>

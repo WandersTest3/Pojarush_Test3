@@ -207,7 +207,6 @@
     <string name="menu_button_size">Size</string>
     <string name="menu_button_opacity">Opacity</string>
     <string name="menu_button_radius">Roundness</string>
-    <string name="menu_button_color">Border color</string>
     <string name="menu_button_icon_none">Icon: Pojarush_Test3 (default)</string>
     <string name="menu_button_icon_choose">Choose image</string>
     <string name="menu_button_hint">Drag the floating button in game to move it.</string>

@@ -28,13 +28,13 @@ class ControlSettings(context: Context) {
         get() = prefs.getBoolean("tap_to_use", true)
         set(v) = prefs.edit().putBoolean("tap_to_use", v).apply()
     var vibrate: Boolean
-        get() = prefs.getBoolean("vibrate", true)
+        get() = prefs.getBoolean("vibrate", false)
         set(v) = prefs.edit().putBoolean("vibrate", v).apply()
     var hotbarTouch: Boolean
         get() = prefs.getBoolean("hotbar_touch", true)
         set(v) = prefs.edit().putBoolean("hotbar_touch", v).apply()
     var virtualMouse: Boolean
-        get() = prefs.getBoolean("virtual_mouse", false)
+        get() = prefs.getBoolean("virtual_mouse", true)
         set(v) = prefs.edit().putBoolean("virtual_mouse", v).apply()
     var mouseSpeed: Float
         get() = prefs.getFloat("mouse_speed", 1.75f)
@@ -82,19 +82,19 @@ class ControlSettings(context: Context) {
         get() = prefs.getBoolean("screen_touch", true)
         set(v) = prefs.edit().putBoolean("screen_touch", v).apply()
     var bedrockDrop: Boolean
-        get() = prefs.getBoolean("bedrock_drop", false)
+        get() = prefs.getBoolean("bedrock_drop", true)
         set(v) = prefs.edit().putBoolean("bedrock_drop", v).apply()
     var bedrockDropMs: Int
-        get() = prefs.getInt("bedrock_drop_ms", 250).coerceIn(50, 1000)
+        get() = prefs.getInt("bedrock_drop_ms", 200).coerceIn(50, 600)
         set(v) = prefs.edit().putInt("bedrock_drop_ms", v.coerceIn(50, 1000)).apply()
     var hotbarSwap: Boolean
         get() = prefs.getBoolean("hotbar_swap", true)
         set(v) = prefs.edit().putBoolean("hotbar_swap", v).apply()
     var menuSize: Float
-        get() = prefs.getFloat("menu_size", 23f).coerceIn(20f, 80f)
+        get() = prefs.getFloat("menu_size", 30f).coerceIn(20f, 80f)
         set(v) = prefs.edit().putFloat("menu_size", v.coerceIn(20f, 80f)).apply()
     var menuOpacity: Float
-        get() = prefs.getFloat("menu_opacity", 0.60f).coerceIn(0.05f, 1.00f)
+        get() = prefs.getFloat("menu_opacity", 0.50f).coerceIn(0.05f, 1.00f)
         set(v) = prefs.edit().putFloat("menu_opacity", v.coerceIn(0.05f, 1.00f)).apply()
     var menuRadius: Float
         get() = prefs.getFloat("menu_radius", 0.50f).coerceIn(0f, 0.50f)
@@ -106,7 +106,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getString("menu_icon", "").orEmpty()
         set(v) = prefs.edit().putString("menu_icon", v).apply()
     var menuBackground: Float
-        get() = prefs.getFloat("menu_background", 0.55f).coerceIn(0f, 1.00f)
+        get() = prefs.getFloat("menu_background", 0.60f).coerceIn(0f, 1.00f)
         set(v) = prefs.edit().putFloat("menu_background", v.coerceIn(0f, 1.00f)).apply()
     var minecraftFont: Boolean
         get() = prefs.getBoolean("minecraft_font", true)
@@ -118,7 +118,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getString("wallpaper", "").orEmpty()
         set(v) = prefs.edit().putString("wallpaper", v).apply()
     var wallpaperDim: Float
-        get() = prefs.getFloat("wallpaper_dim", 0.45f).coerceIn(0f, 0.90f)
+        get() = prefs.getFloat("wallpaper_dim", 0.25f).coerceIn(0f, 0.90f)
         set(v) = prefs.edit().putFloat("wallpaper_dim", v.coerceIn(0f, 0.90f)).apply()
     var wallpaperVolume: Float
         get() = prefs.getFloat("wallpaper_volume", 0f).coerceIn(0f, 1f)

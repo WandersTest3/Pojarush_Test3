@@ -131,7 +131,7 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             onChange(Change.CONTROLS)
         }
         if (drop) {
-            SettingSlider(stringResource(R.string.controls_bedrock_drop_interval), settings.bedrockDropMs.toFloat(), 50f..1000f, 50f, { "${it.toInt()} ms" }) {
+            SettingSlider(stringResource(R.string.controls_bedrock_drop_interval), settings.bedrockDropMs.toFloat(), 50f..600f, 50f, { "${it.toInt()} ms" }) {
                 settings.bedrockDropMs = it.toInt()
                 onChange(Change.CONTROLS)
             }
@@ -140,17 +140,10 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     }
 }
 
-private val MENU_COLORS = listOf(
-    0xFF57197F, 0xFF9C27B0, 0xFFE91E63, 0xFFB71C1C, 0xFFFF5722, 0xFFE65100, 0xFFFFC107, 0xFFFFEB3B,
-    0xFF8BC34A, 0xFF1B5E20, 0xFF009688, 0xFF00BCD4, 0xFF03A9F4, 0xFF0D47A1, 0xFF3F51B5, 0xFF795548,
-    0xFF9E9E9E, 0xFF1E1E1E, 0xFF000000, 0xFFFFFFFF,
-).map { it.toInt() }
-
 @Composable
 fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     val context = LocalContext.current
     var icon by remember { mutableStateOf(settings.menuIcon) }
-    var color by remember { mutableIntStateOf(settings.menuColor) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
@@ -170,21 +163,6 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         SettingSlider(stringResource(R.string.menu_button_size), settings.menuSize, 20f..80f, 2f, { "${it.toInt()} dp" }) { settings.menuSize = it; onChange(Change.MENU_BUTTON) }
         SettingSlider(stringResource(R.string.menu_button_opacity), settings.menuOpacity, 0.05f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.menuOpacity = it; onChange(Change.MENU_BUTTON) }
         SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
-        Text(stringResource(R.string.menu_button_color), style = MaterialTheme.typography.bodyMedium)
-        Row(modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MENU_COLORS.forEach { c ->
-                androidx.compose.foundation.layout.Box(
-                    modifier = Modifier.size(32.dp).clip(RoundedCornerShape(50))
-                        .background(androidx.compose.ui.graphics.Color(c))
-                        .border(if (color == c) 3.dp else 1.dp, if (color == c) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Gray, RoundedCornerShape(50))
-                        .clickable {
-                            color = c
-                            settings.menuColor = c
-                            onChange(Change.MENU_BUTTON)
-                        }
-                )
-            }
-        }
         Hint(if (icon.isEmpty()) stringResource(R.string.menu_button_icon_none) else stringResource(R.string.mouse_cursor_current, File(icon).name))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { picker.launch(arrayOf("image/*")) }) { Text(stringResource(R.string.menu_button_icon_choose)) }
