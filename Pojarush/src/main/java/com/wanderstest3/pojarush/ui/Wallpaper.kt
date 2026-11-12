@@ -265,3 +265,81 @@ fun WallpaperSettings(settings: ControlSettings) {
         Hint(stringResource(R.string.wallpaper_hint))
     }
 }
+
+@Composable
+fun OnboardingWallpaperStep(onFinished: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val settings = remember { com.wanderstest3.pojarush.controls.ControlSettings(context) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var downloading by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var progress by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var error by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+
+    fun skip() {
+        settings.wallpaperOnboardingDone = true
+        onFinished()
+    }
+
+    fun download(url: String, label: String) {
+        downloading = label
+        error = null
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val dir = java.io.File(com.wanderstest3.pojarush.horizon.Paths.publicRoot, "wallpaper")
+                dir.mkdirs()
+                val name = url.substringAfterLast('/')
+                val dest = java.io.File(dir, name)
+                val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                conn.connect()
+                val total = conn.contentLengthLong
+                conn.inputStream.use { inp ->
+                    dest.outputStream().use { out ->
+                        val buf = ByteArray(65536)
+                        var read = 0L
+                        var n: Int
+                        while (inp.read(buf).also { n = it } != -1) {
+                            out.write(buf, 0, n)
+                            read += n
+                            if (total > 0) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { progress = read.toFloat() / total }
+                        }
+                    }
+                }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    settings.wallpaper = dest.absolutePath
+                    WallpaperState.version++
+                    settings.wallpaperOnboardingDone = true
+                    onFinished()
+                }
+            }.onFailure { e ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    downloading = null
+                    error = e.message
+                }
+            }
+        }
+    }
+
+    com.wanderstest3.pojarush.ui.PojarushCard {
+        com.wanderstest3.pojarush.ui.CardTitle(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_title))
+        com.wanderstest3.pojarush.ui.Hint(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_body))
+        val dl = downloading
+        if (dl != null) {
+            androidx.compose.material3.Text(dl, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+            if (progress > 0f) androidx.compose.material3.LinearProgressIndicator(progress = { progress }, modifier = androidx.compose.ui.Modifier.fillMaxWidth())
+            else androidx.compose.material3.LinearProgressIndicator(modifier = androidx.compose.ui.Modifier.fillMaxWidth())
+        } else {
+            error?.let { com.wanderstest3.pojarush.ui.Hint(it) }
+            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.Button(onClick = {
+                    download("https://github.com/WandersTest3/Pojarush_Test3/releases/download/Pojarush-Wallpaper/BlackHole-Pojarush-Wallpaper-4K.mp4", "Black Hole 4K (107 MB)...")
+                }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_4k)) }
+                androidx.compose.material3.Button(onClick = {
+                    download("https://github.com/WandersTest3/Pojarush_Test3/releases/download/Pojarush-Wallpaper/BlackHole-Pojarush-Wallpaper-FullHD.mp4", "Black Hole Full HD (33 MB)...")
+                }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_fhd)) }
+            }
+            androidx.compose.material3.OutlinedButton(onClick = ::skip) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_skip))
+            }
+        }
+    }
+}

@@ -79,6 +79,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wanderstest3.pojarush.controls.ControlSettings
+import com.wanderstest3.pojarush.ui.WallpaperState
+import com.wanderstest3.pojarush.ui.OnboardingWallpaperStep
 import com.wanderstest3.pojarush.horizon.HorizonManager
 import com.wanderstest3.pojarush.ui.AccountsCard
 import com.wanderstest3.pojarush.ui.GraphicsApiSettings
@@ -164,9 +166,11 @@ private fun PojarushScreen() {
 
     val profile by Accounts.profile.collectAsStateWithLifecycle()
     val hasStorage = remember(storageVersion) { Paths.hasStorageAccess(context) }
+    val settings = remember { ControlSettings(context) }
     var onboardingDone by rememberSaveable { mutableStateOf(false) }
     val prepared = remember(storageVersion, resumes) { HorizonManager.isPrepared() }
-    val needsOnboarding = !onboardingDone && (!hasStorage || profile == null || !prepared)
+    val wallpaperDone = remember(resumes) { settings.wallpaperOnboardingDone }
+    val needsOnboarding = !onboardingDone && (!hasStorage || profile == null || !prepared || !wallpaperDone)
 
     if (needsOnboarding) {
         OnboardingFlow(
@@ -174,6 +178,7 @@ private fun PojarushScreen() {
             storageVersion = storageVersion,
             profile = profile,
             prepared = prepared,
+            wallpaperDone = wallpaperDone,
             onFinished = { onboardingDone = true }
         )
         return
@@ -298,15 +303,17 @@ private fun OnboardingFlow(
     storageVersion: Int,
     profile: Profile?,
     prepared: Boolean,
+    wallpaperDone: Boolean,
     onFinished: () -> Unit,
 ) {
     val context = LocalContext.current
     val state by HorizonManager.state.collectAsStateWithLifecycle()
     val downloadStarted = state !is HorizonManager.State.Idle || prepared
-    val step = when {
+    val effectiveStep = when {
         !hasStorage -> 0
         profile == null -> 1
-        else -> 2
+        !prepared -> 2
+        else -> 3
     }
     Box(
         modifier = Modifier.fillMaxSize().background(com.wanderstest3.pojarush.ui.pojarushBackgroundBrush()).padding(24.dp),
@@ -327,22 +334,23 @@ private fun OnboardingFlow(
                 fontWeight = FontWeight.Bold
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                repeat(3) { i ->
+                repeat(4) { i ->
                     Box(
                         modifier = Modifier.size(8.dp).clip(RoundedCornerShape(50))
-                            .background(if (i <= step) com.wanderstest3.pojarush.ui.Purple else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (i <= effectiveStep) com.wanderstest3.pojarush.ui.Purple else MaterialTheme.colorScheme.surfaceVariant)
                     )
                 }
             }
-            when (step) {
+            when (effectiveStep) {
                 0 -> OnboardingStorageStep()
                 1 -> OnboardingAccountStep()
-                else -> OnboardingDownloadStep(
+                2 -> OnboardingDownloadStep(
                     downloadStarted = downloadStarted,
                     state = state,
                     onStart = { HorizonManager.prepare(context.applicationContext, true) },
-                    onContinue = onFinished
+                    onContinue = { /* avança automaticamente quando prepared muda */ }
                 )
+                else -> OnboardingWallpaperStep(onFinished = onFinished)
             }
         }
     }

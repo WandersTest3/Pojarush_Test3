@@ -126,6 +126,9 @@ class ControlSettings(context: Context) {
     var keepAlive: Boolean
         get() = prefs.getBoolean("keep_alive", true)
         set(v) = prefs.edit().putBoolean("keep_alive", v).apply()
+    var wallpaperOnboardingDone: Boolean
+        get() = prefs.getBoolean("wallpaper_onboarding_done", false)
+        set(v) = prefs.edit().putBoolean("wallpaper_onboarding_done", v).apply()
     var modsEnabled: Boolean
         get() = prefs.getBoolean("mods_enabled", true)
         set(v) = prefs.edit().putBoolean("mods_enabled", v).apply()

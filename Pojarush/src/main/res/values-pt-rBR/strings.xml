@@ -282,4 +282,9 @@
     <string name="ok">OK</string>
     <string name="mods_enabled">Carregar mods ao iniciar</string>
     <string name="shaders_enabled">Carregar shaders ao iniciar</string>
+    <string name="onboarding_wallpaper_title">Papel de parede Black Hole</string>
+    <string name="onboarding_wallpaper_body">Baixe o papel de parede oficial Black Hole — um vídeo em loop de 28 segundos em 4K 60 FPS — ou escolha depois nas Configurações.</string>
+    <string name="onboarding_wallpaper_4k">4K · 107 MB · 60 FPS</string>
+    <string name="onboarding_wallpaper_fhd">Full HD · 33 MB</string>
+    <string name="onboarding_wallpaper_skip">Pular</string>
 </resources>

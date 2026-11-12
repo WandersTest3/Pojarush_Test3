@@ -283,4 +283,9 @@
     <string name="ok">OK</string>
     <string name="mods_enabled">Load mods on launch</string>
     <string name="shaders_enabled">Load shaders on launch</string>
+    <string name="onboarding_wallpaper_title">Black Hole Wallpaper</string>
+    <string name="onboarding_wallpaper_body">Download the official Black Hole wallpaper — a 28-second 4K 60 FPS video loop — or choose later in Settings.</string>
+    <string name="onboarding_wallpaper_4k">4K · 107 MB · 60 FPS</string>
+    <string name="onboarding_wallpaper_fhd">Full HD · 33 MB</string>
+    <string name="onboarding_wallpaper_skip">Skip</string>
 </resources>
