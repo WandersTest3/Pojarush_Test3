@@ -127,11 +127,15 @@ class ControlsView(
         if (want && !pointerCaptured) {
             isFocusable = true
             isFocusableInTouchMode = true
-            requestFocus()
-            requestPointerCapture()
-            pointerCaptured = true
+            if (!isFocused) requestFocus()
+            if (hasPointerCapture()) {
+                pointerCaptured = true
+            } else {
+                requestPointerCapture()
+                pointerCaptured = true
+            }
         } else if (!want && pointerCaptured) {
-            releasePointerCapture()
+            if (hasPointerCapture()) releasePointerCapture()
             pointerCaptured = false
         }
     }
