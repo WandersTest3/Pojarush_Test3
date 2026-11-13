@@ -380,7 +380,8 @@ interface render {
     /// The game's frame counter, recomputed twice a second.
     frame-stats: func() -> frame-rate;
     record zoom {
-        /// The field of view is divided by it: 1 is none, at most 10.
+        /// The field of view is divided by it: 1 is none, from 0.25 (a wider
+        /// view, never past 140 degrees) to 50. A smooth zoom stops at 10.
         factor: f32,
         /// Ease in and out through the game's field-of-view easing, as the
         /// spyglass does, instead of at once.

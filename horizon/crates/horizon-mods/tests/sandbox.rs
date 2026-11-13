@@ -689,13 +689,15 @@ fn render_zoom_is_clamped_and_the_strongest_counts() {
     };
     assert!(mods.zoom().is_none());
     assert_eq!(zoom(&mut mods, "4 1 0.25"), Some((4.0, true, 0.25)));
-    // Over 10 and a turn under 0.05 are clamped.
-    assert_eq!(zoom(&mut mods, "50 0 0"), Some((10.0, false, 0.05)));
+    // Over 50 and a turn under 0.05 are clamped.
+    assert_eq!(zoom(&mut mods, "80 0 0"), Some((50.0, false, 0.05)));
     // A NaN turn keeps the player's sensitivity.
     assert_eq!(zoom(&mut mods, "2 0 x"), Some((2.0, false, 1.0)));
-    // 1, under 1 and NaN end the zoom.
+    // Under 1 widens the view, down to 0.25.
+    assert_eq!(zoom(&mut mods, "0.5 0 1"), Some((0.5, false, 1.0)));
+    assert_eq!(zoom(&mut mods, "0.1 0 1"), Some((0.25, false, 1.0)));
+    // 1 and NaN end the zoom.
     assert_eq!(zoom(&mut mods, "1 0 1"), None);
-    assert_eq!(zoom(&mut mods, "0.5 0 1"), None);
     assert_eq!(zoom(&mut mods, "x 0 1"), None);
 }
 

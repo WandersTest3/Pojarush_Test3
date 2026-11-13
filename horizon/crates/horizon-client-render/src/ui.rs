@@ -329,17 +329,15 @@ pub fn centered_text(
             true,
         );
     } else {
-        // Clip by characters (vanilla scrolls; we show the part that fits).
-        let mut shown = Text::empty();
-        let mut used = 0.0;
-        for (i, (c, s)) in text.chars().enumerate() {
-            used += atlas.font.advance(c, s);
-            if used > w - 2.0 {
-                break;
-            }
-            shown.push(text.slice(i, i + 1));
-        }
-        batch.text_styled(atlas, &shown, x + 1.0, y, color, true);
+        let overflow = width - w;
+        let period = (f64::from(overflow) * 0.5).max(3.0);
+        let seconds = crate::hud_overlays::now_ms() as f64 / 1000.0;
+        let phase = (std::f64::consts::TAU * seconds / period).cos();
+        let pos = (std::f64::consts::FRAC_PI_2 * phase).sin() / 2.0 + 0.5;
+        let offset = (f64::from(overflow) * pos) as i32 as f32;
+        let start = batch.vertices.len();
+        batch.text_styled(atlas, &text, x - offset, y, color, true);
+        batch.clip_since(start, x, y - 2.0, x + w, y + 11.0);
     }
 }
 /// Button (AbstractButton): nine-slice sprite plus the centred label.

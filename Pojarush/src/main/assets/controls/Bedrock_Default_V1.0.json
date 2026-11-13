@@ -15,48 +15,10 @@
   ],
   "buttons": [
     {
-      "id": "perspective",
-      "text": "F5",
-      "layer": "play",
-      "x": 0.44600555300712585,
-      "y": 0,
-      "width": {
-        "dp": 40
-      },
-      "height": {
-        "dp": 40
-      },
-      "visibility": "IN_GAME",
-      "press": [],
-      "tap": [
-        {
-          "t": "key",
-          "code": 135
-        }
-      ],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -14803426,
-        "strokeDp": 2,
-        "radiusDp": 2,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "perspective",
-        "imagePressed": "perspective_pressed"
-      }
-    },
-    {
       "id": "chat",
       "text": "T",
       "layer": "play",
-      "x": 0.5617080330848694,
+      "x": 0.5606061220169067,
       "y": 0,
       "width": {
         "dp": 40
@@ -80,8 +42,8 @@
       "penetrable": false,
       "interactive": true,
       "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
+        "fill": 4210752,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -14803426,
@@ -90,159 +52,8 @@
         "textSp": 15,
         "radiusInPx": false,
         "image": "Chat_button",
-        "imagePressed": "chat_button_prass"
-      }
-    },
-    {
-      "id": "pause",
-      "text": "II",
-      "layer": "always",
-      "x": 1,
-      "y": 0,
-      "width": {
-        "dp": 45
-      },
-      "height": {
-        "dp": 45
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "key",
-          "code": 111
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -14803426,
-        "strokeDp": 2,
-        "radiusDp": 2,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "Pause_button",
-        "imagePressed": "pause_button "
-      }
-    },
-    {
-      "id": "attack",
-      "text": "⚔",
-      "layer": "play",
-      "x": 0.979312539100647,
-      "y": 0.6839728951454163,
-      "width": {
-        "dp": 95
-      },
-      "height": {
-        "dp": 95
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "mouse",
-          "button": 0
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": true,
-      "interactive": true,
-      "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -14803426,
-        "strokeDp": 2,
-        "radiusDp": 2,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "attack",
-        "imagePressed": "attack_pressed"
-      }
-    },
-    {
-      "id": "interact",
-      "text": "✋",
-      "layer": "play",
-      "x": 0.8352202773094177,
-      "y": 0.7027601003646851,
-      "width": {
-        "dp": 75
-      },
-      "height": {
-        "dp": 75
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "mouse",
-          "button": 1
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": true,
-      "interactive": true,
-      "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -14803426,
-        "strokeDp": 2,
-        "radiusDp": 2,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "interact",
-        "imagePressed": "interact_pressed"
-      }
-    },
-    {
-      "id": "jump",
-      "text": "⤒",
-      "layer": "play",
-      "x": 0.911494255065918,
-      "y": 1,
-      "width": {
-        "dp": 110
-      },
-      "height": {
-        "dp": 100
-      },
-      "visibility": "IN_GAME",
-      "press": [
-        {
-          "t": "key",
-          "code": 62
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": true,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -14803426,
-        "strokeDp": 2,
-        "radiusDp": 2,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "jump",
-        "imagePressed": "jump_pressed"
+        "imagePressed": "chat_button_prass",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -270,8 +81,8 @@
       "penetrable": false,
       "interactive": true,
       "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
+        "fill": 4210752,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -14803426,
@@ -280,7 +91,8 @@
         "textSp": 15,
         "radiusInPx": false,
         "image": "sneak",
-        "imagePressed": "sneak_pressed"
+        "imagePressed": "sneak_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -308,8 +120,8 @@
       "penetrable": false,
       "interactive": true,
       "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
+        "fill": 4210752,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -14803426,
@@ -318,52 +130,15 @@
         "textSp": 15,
         "radiusInPx": false,
         "image": "pick_block",
-        "imagePressed": "pick_block_pressed"
-      }
-    },
-    {
-      "id": "inventory",
-      "text": "•••",
-      "layer": "play",
-      "x": 0.7333925366401672,
-      "y": 1,
-      "width": {
-        "dp": 40
-      },
-      "height": {
-        "dp": 40
-      },
-      "visibility": "ALWAYS",
-      "press": [],
-      "tap": [
-        {
-          "t": "key",
-          "code": 33
-        }
-      ],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -14803426,
-        "strokeDp": 2,
-        "radiusDp": 2,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "inv",
-        "imagePressed": "inv_prassed"
+        "imagePressed": "pick_block_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
       "id": "8ba240e0-ee34-4919-8b09-76509c019b10",
       "text": "Menu",
       "layer": "play",
-      "x": 0.5038567781448364,
+      "x": 0.5027548670768738,
       "y": 0,
       "width": {
         "dp": 40
@@ -383,8 +158,8 @@
       "penetrable": false,
       "interactive": true,
       "style": {
-        "fill": 1851201919,
-        "fillPressed": -346613377,
+        "fill": 5708159,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -1426063361,
@@ -392,7 +167,8 @@
         "radiusDp": 10,
         "textSp": 15,
         "radiusInPx": false,
-        "image": "Menu_button"
+        "image": "Menu_button",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -420,8 +196,8 @@
       "penetrable": true,
       "interactive": true,
       "style": {
-        "fill": -1774174144,
-        "fillPressed": -931628936,
+        "fill": 4210752,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -14803426,
@@ -430,85 +206,8 @@
         "textSp": 15,
         "radiusInPx": false,
         "image": "zoom",
-        "imagePressed": "zoom_prassed"
-      }
-    },
-    {
-      "id": "833cea53-128d-432c-aea3-b031db15ea72",
-      "text": "Up",
-      "layer": "play",
-      "x": 1,
-      "y": 0.3323688805103302,
-      "width": {
-        "dp": 55
-      },
-      "height": {
-        "dp": 40
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "scroll",
-          "lines": 1,
-          "repeat": false
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": -1772676737,
-        "fillPressed": -262727297,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -1426063361,
-        "strokeDp": 1,
-        "radiusDp": 10,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "long_up",
-        "imagePressed": "long_up_pressed"
-      }
-    },
-    {
-      "id": "472b5881-3ec2-495e-82c5-5ba1f5b92ba8",
-      "text": "Down",
-      "layer": "play",
-      "x": 1,
-      "y": 0.44006118178367615,
-      "width": {
-        "dp": 55
-      },
-      "height": {
-        "dp": 40
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "scroll",
-          "lines": -1,
-          "repeat": false
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": -1772676737,
-        "fillPressed": -262727297,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -1426063361,
-        "strokeDp": 1,
-        "radiusDp": 10,
-        "textSp": 15,
-        "radiusInPx": false,
-        "image": "long_down",
-        "imagePressed": "long_down_pressed"
+        "imagePressed": "zoom_prassed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -536,8 +235,8 @@
       "penetrable": false,
       "interactive": true,
       "style": {
-        "fill": 1851201919,
-        "fillPressed": -346613377,
+        "fill": 5708159,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -1426063361,
@@ -546,7 +245,566 @@
         "textSp": 15,
         "radiusInPx": false,
         "image": "F3",
-        "imagePressed": "F3_prassed"
+        "imagePressed": "F3_prassed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "beb9087a-f8d1-4528-b855-495fe3445b2f",
+      "text": "💬chat",
+      "layer": "play",
+      "x": 0.08423460274934769,
+      "y": 0,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "key",
+          "code": 48
+        },
+        {
+          "t": "keyboard"
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "Chat_button",
+        "imagePressed": "chat_button_prass",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "1a549c7a-5f05-495b-9fc6-0222ff196f4a",
+      "text": "F1",
+      "layer": "play",
+      "x": 0.20048794150352478,
+      "y": 0,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "IN_GAME",
+      "press": [
+        {
+          "t": "key",
+          "code": 131
+        },
+        {
+          "t": "hide_controls"
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "f1",
+        "imagePressed": "f1_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "d37285ca-a25a-4551-9ea1-18477faa3360",
+      "text": "TAB",
+      "layer": "play",
+      "x": 0.14208583533763885,
+      "y": 0.0010504620149731636,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "key",
+          "code": 61
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 5708159,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "tab",
+        "imagePressed": "tab_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "608bb789-a183-46da-8535-ed2a6a1ba18d",
+      "text": "⚙️f5",
+      "layer": "play",
+      "x": 0.4449036121368408,
+      "y": 0,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "IN_GAME",
+      "press": [
+        {
+          "t": "key",
+          "code": 135
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "perspective",
+        "imagePressed": "perspective_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "5cf9ffe1-8c7b-4949-89c6-f170b2c1006b",
+      "text": "Screen shot",
+      "layer": "play",
+      "x": 0.08423460274934769,
+      "y": 0.10769230872392654,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "IN_GAME",
+      "press": [
+        {
+          "t": "key",
+          "code": 132
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "screenshot",
+        "imagePressed": "screenshot_prassed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "26f29110-0bf3-451b-91c6-7172286c5aa3",
+      "text": "■",
+      "layer": "play",
+      "x": 0.9340459108352661,
+      "y": 1,
+      "width": {
+        "dp": 130
+      },
+      "height": {
+        "dp": 90
+      },
+      "visibility": "IN_GAME",
+      "press": [
+        {
+          "t": "key",
+          "code": 62
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "long_jump",
+        "imagePressed": "long_jump_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "66b9173f-5bd7-4953-8ca5-b8ab35e57986",
+      "text": "hit",
+      "layer": "play",
+      "x": 0.9773946404457092,
+      "y": 0.7189226150512695,
+      "width": {
+        "dp": 110
+      },
+      "height": {
+        "dp": 100
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "mouse",
+          "button": 0
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": true,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "attack",
+        "imagePressed": "attack_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "f1c3b836-630f-45de-8998-a2731736b235",
+      "text": "↑",
+      "layer": "play",
+      "x": 1,
+      "y": 0.3240000009536743,
+      "width": {
+        "dp": 55
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "scroll",
+          "lines": 1,
+          "repeat": false
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "Long_up",
+        "imagePressed": "Long_up_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "7f308192-bb54-4e12-9e17-08b32e42f474",
+      "text": "↓",
+      "layer": "play",
+      "x": 1,
+      "y": 0.43169230222702026,
+      "width": {
+        "dp": 55
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "scroll",
+          "lines": -1,
+          "repeat": false
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "Long_down",
+        "imagePressed": "Long_down_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "132ce8ff-fb83-442f-b565-418ab0b0109a",
+      "text": "⏸️",
+      "layer": "play",
+      "x": 1,
+      "y": 0,
+      "width": {
+        "dp": 50
+      },
+      "height": {
+        "dp": 50
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "key",
+          "code": 111
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "Pause_button",
+        "imagePressed": "pause_button ",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "70e8dc3b-4ab6-4a93-b41b-6d6bf4f3039a",
+      "text": "•••",
+      "layer": "play",
+      "x": 0.7333925366401672,
+      "y": 1,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [],
+      "tap": [
+        {
+          "t": "key",
+          "code": 33
+        }
+      ],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 4210752,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -14803426,
+        "strokeDp": 2,
+        "radiusDp": 2,
+        "textSp": 15,
+        "radiusInPx": false,
+        "image": "inv",
+        "imagePressed": "inv_prassed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "db6716ec-bc03-448e-b1dc-cc5995303146",
+      "text": "hit",
+      "layer": "play",
+      "x": 0.17399999499320984,
+      "y": 0.6712092757225037,
+      "width": {
+        "fraction": 0.14000000059604645,
+        "ofWidth": false
+      },
+      "height": {
+        "fraction": 0.14000000059604645,
+        "ofWidth": false
+      },
+      "visibility": "IN_MENU",
+      "press": [
+        {
+          "t": "mouse",
+          "button": 0
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": true,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "attack",
+        "imagePressed": "attack_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "3e718a31-cbf4-458a-9147-7e46f1d8348b",
+      "text": "place",
+      "layer": "play",
+      "x": 0,
+      "y": 0.6679999828338623,
+      "width": {
+        "fraction": 0.14000000059604645,
+        "ofWidth": false
+      },
+      "height": {
+        "fraction": 0.14000000059604645,
+        "ofWidth": false
+      },
+      "visibility": "IN_MENU",
+      "press": [
+        {
+          "t": "mouse",
+          "button": 1
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": true,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "interact",
+        "imagePressed": "interact_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "c82a3ea8-4e98-4ebf-a527-0b95cdde8da9",
+      "text": "place",
+      "layer": "play",
+      "x": 0.8124549984931946,
+      "y": 0.7364016771316528,
+      "width": {
+        "dp": 70
+      },
+      "height": {
+        "dp": 70
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "mouse",
+          "button": 1
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": true,
+      "interactive": true,
+      "style": {
+        "fill": 5708159,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "interact",
+        "imagePressed": "interact_pressed",
+        "opacity": 0.5000000596046448
       }
     }
   ],
@@ -554,10 +812,10 @@
     {
       "id": "move",
       "layer": "play",
-      "x": 0.04022988677024841,
-      "y": 0.9347715377807617,
+      "x": 0.060564588755369186,
+      "y": 0.9357797503471375,
       "size": {
-        "dp": 110
+        "dp": 100
       },
       "visibility": "IN_GAME",
       "directions": {

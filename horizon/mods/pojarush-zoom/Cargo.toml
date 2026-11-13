@@ -1,10 +1,10 @@
 [package]
 name = "pojarush_zoom"
-version = "2.1.0"
+version = "2.2.0"
 edition = "2024"
 license-file = "LICENSE.txt"
 publish = false
-description = "Pojarush test mod: press C to zoom."
+description = "Pojarush zoom: C zooms, the wheel zooms further in or out."
 
 [lib]
 crate-type = ["cdylib"]

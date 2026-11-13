@@ -11,6 +11,7 @@ object HorizonBridge {
     @JvmStatic external fun nativeIsCaptured(): Boolean
     @JvmStatic external fun nativeIsReady(): Boolean
     @JvmStatic external fun nativeSetMuted(muted: Boolean)
+    @JvmStatic external fun nativeIsTyping(): Boolean
 
     fun command(line: String) = runCatching { nativeCommand(line) }
     fun look(dx: Float, dy: Float) = runCatching { nativeLook(dx, dy) }
@@ -21,5 +22,6 @@ object HorizonBridge {
     fun hotbarSlot(x: Float, y: Float): Int = runCatching { nativeHotbarSlot(x, y) }.getOrDefault(-1)
     fun isCaptured(): Boolean = runCatching { nativeIsCaptured() }.getOrDefault(false)
     fun setMuted(muted: Boolean) { runCatching { nativeSetMuted(muted) } }
+    fun isTyping(): Boolean = runCatching { nativeIsTyping() }.getOrDefault(false)
     fun isReady(): Boolean = runCatching { nativeIsReady() }.getOrDefault(false)
 }

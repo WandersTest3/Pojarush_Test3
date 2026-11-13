@@ -176,7 +176,7 @@
     <string name="mods_tab_shaders">Shaders</string>
     <string name="mods_desc_mods">Horizon mods (.hmod): content mods and code mods (WebAssembly, like Compass Enhanced; 64-bit devices only). Fabric and NeoForge .jar files do not run in Horizon.</string>
     <string name="mods_desc_resource">Java Edition resource packs (.zip with pack.mcmeta).</string>
-    <string name="mods_desc_shaders">Horizon\'s own shader packs (.hshader) run. Classic OptiFine/Iris .zip packs are listed but not rendered yet: Horizon has no GLSL pipeline for them.</string>
+    <string name="mods_desc_shaders">Horizon shader packs (.hshader) are the recommended format. Classic OptiFine/Iris .zip packs run in an experimental way and heavy ones can show visual glitches.</string>
     <string name="mods_empty">Nothing installed.</string>
     <string name="mods_import">Import file</string>
     <string name="mods_folder">Folder: %1$s</string>
@@ -237,7 +237,7 @@
     <string name="minecraft_font_desc">Uses the Minecraft-style pixel font in the launcher.</string>
     <string name="lod_title">Far terrain (LOD)</string>
     <string name="lod_distance">LOD distance (chunks)</string>
-    <string name="lod_desc">How far simplified terrain is drawn past the normal render distance, from 32 chunks up to 512 chunks. Long distances use more memory and battery; it is applied the next time the game starts.</string>
+    <string name="lod_desc">How far simplified terrain is drawn past the normal render distance, from 32 chunks up to 512,000 chunks. Long distances use more memory and battery; it is applied the next time the game starts.</string>
     <string name="lod_off">Off</string>
     <string name="hud_title">HUD images</string>
     <string name="hud_desc">Images for control buttons and joysticks. Import a .zip (for example the Bedrock UI images) or single images; an image stretches to the button\'s size. The Bedrock Controls layout uses names such as attack, interact, jump, sneak, sprint, perspective, joystick_frame and joystick_knob (with _pressed variants).</string>
@@ -289,4 +289,9 @@
     <string name="onboarding_wallpaper_fhd">Full HD · 33 MB</string>
     <string name="onboarding_wallpaper_skip">Skip</string>
     <string name="overlay_send_key">Send key</string>
+    <string name="custom_font">Your own font</string>
+    <string name="custom_font_choose">Choose font (.ttf, .otf)</string>
+    <string name="custom_font_default">Use default font</string>
+    <string name="custom_font_desc">Fonts are saved in the Pojarush \"font\" folder and replace the launcher font.</string>
+    <string name="wallpaper_official">Official Black Hole wallpaper</string>
 </resources>

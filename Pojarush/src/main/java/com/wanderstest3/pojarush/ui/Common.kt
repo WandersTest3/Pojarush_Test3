@@ -57,11 +57,13 @@ val PojarushColors = darkColorScheme(
 object UiPrefs {
     var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.60f)
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
+    var customFont by androidx.compose.runtime.mutableStateOf("")
 
     fun load(context: android.content.Context) {
         val s = com.wanderstest3.pojarush.controls.ControlSettings(context)
         menuBackground = s.menuBackground
         minecraftFont = s.minecraftFont
+        customFont = s.customFont
     }
 }
 
@@ -75,9 +77,27 @@ private fun androidx.compose.material3.Typography.withFont(f: androidx.compose.u
     labelLarge = labelLarge.copy(fontFamily = f), labelMedium = labelMedium.copy(fontFamily = f), labelSmall = labelSmall.copy(fontFamily = f),
 )
 
+fun launcherTypeface(context: Context): android.graphics.Typeface? {
+    val settings = com.wanderstest3.pojarush.controls.ControlSettings(context)
+    val file = java.io.File(settings.customFont)
+    if (settings.customFont.isNotEmpty() && file.isFile) android.graphics.Typeface.Builder(file).build()?.let { return it }
+    if (!settings.minecraftFont) return null
+    return runCatching { androidx.core.content.res.ResourcesCompat.getFont(context, com.wanderstest3.pojarush.R.font.minecraft) }.getOrNull()
+}
+
 @Composable
 fun PojarushTheme(content: @Composable () -> Unit) {
-    val typography = if (UiPrefs.minecraftFont) androidx.compose.material3.Typography().withFont(MinecraftFont) else androidx.compose.material3.Typography()
+    val custom = UiPrefs.customFont
+    val family = remember(custom, UiPrefs.minecraftFont) {
+        val file = java.io.File(custom)
+        when {
+            custom.isNotEmpty() && file.isFile && android.graphics.Typeface.Builder(file).build() != null ->
+                androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(file))
+            UiPrefs.minecraftFont -> MinecraftFont
+            else -> null
+        }
+    }
+    val typography = if (family != null) androidx.compose.material3.Typography().withFont(family) else androidx.compose.material3.Typography()
     MaterialTheme(colorScheme = PojarushColors, typography = typography) {
         androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides PojarushColors.onSurface, content = content)
     }

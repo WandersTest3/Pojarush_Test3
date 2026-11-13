@@ -319,8 +319,7 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xEE1E1129))
-                    .padding(10.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -337,6 +336,10 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                         TextButton(onClick = { controls.select(null) }) { Text("✕") }
                     }
                 }
+                Column(
+                    modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                 when (current) {
                     is Selection.Button -> controls.layout.buttons.getOrNull(current.index)?.let { b ->
                         ButtonEditor(b, version, ::dpOf, onChange = { updateButton(current.index, it) }, onDelete = {
@@ -354,6 +357,7 @@ fun ControlEditor(controls: ControlsView, settings: ControlSettings, onExit: () 
                             controls.editLayout(l.copy(sticks = l.sticks.filterIndexed { i, _ -> i != current.index }), null)
                         })
                     }
+                }
                 }
             }
         }
@@ -395,7 +399,6 @@ private fun ButtonEditor(
             Mode.TOGGLE -> cb.copy(press = actions.filterNot(::isHoldable), tap = emptyList(), toggle = actions.filter(::isHoldable))
         }
     }
-    var menuOpen by remember { mutableStateOf(false) }
     var kbOpen by remember { mutableStateOf(false) }
 
     OutlinedTextField(
@@ -514,7 +517,7 @@ private fun ButtonEditor(
     SettingSlider(
         stringResource(R.string.editor_opacity),
         (b.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).opacity,
-        0.05f..1f, 0.05f, { "${(it * 100).toInt()}%" },
+        0.05f..1f, 0.05f, { "${Math.round(it * 100)}%" },
     ) { v ->
         onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(opacity = v)) }
     }
@@ -541,6 +544,13 @@ private fun StickEditor(
     }
     HudImagePicker(stringResource(R.string.hud_stick_knob), s.style?.imagePressed.orEmpty()) { ref ->
         onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(imagePressed = ref)) }
+    }
+    SettingSlider(
+        stringResource(R.string.editor_opacity),
+        (s.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).opacity,
+        0.05f..1f, 0.05f, { "${Math.round(it * 100)}%" },
+    ) { v ->
+        onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(opacity = v)) }
     }
     SettingSwitch(stringResource(R.string.editor_sprint_lock), s.canLock) { v -> onChange { it.copy(canLock = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }
     SettingSwitch(stringResource(R.string.editor_auto_run), s.autoRun, stringResource(R.string.editor_auto_run_desc)) { v -> onChange { it.copy(autoRun = v, lock = if (v && it.lock.isEmpty()) listOf(Action.Key(KeyEvent.KEYCODE_CTRL_LEFT)) else it.lock) } }

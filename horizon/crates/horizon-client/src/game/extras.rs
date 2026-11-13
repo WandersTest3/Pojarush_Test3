@@ -208,8 +208,10 @@ impl Game<'_> {
         if let Some(z) = self.native_zoom_now() {
             return (z.factor, z.smooth, f64::from(z.turn));
         }
+        // A mod zooming out stops where the view would pass 140 degrees.
+        let widest = (self.settings.fov / 140.0).min(1.0);
         self.mod_zoom().map_or((1.0, true, 1.0), |z| {
-            (z.factor, z.smooth, f64::from(z.turn))
+            (z.factor.max(widest), z.smooth, f64::from(z.turn))
         })
     }
     /// The field-of-view modifier target, divided by a smooth zoom.

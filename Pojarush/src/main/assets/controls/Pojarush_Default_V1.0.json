@@ -1,6 +1,6 @@
 {
   "pojarush": 1,
-  "name": "Pojarush Default V1.0",
+  "name": "Pojarush Default V1.1",
   "layers": [
     {
       "id": "abe49027-5dac-4bb9-865a-dea564664654",
@@ -14,7 +14,7 @@
       "text": "hit",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
       "x": 0.17399999499320984,
-      "y": 0.6679999828338623,
+      "y": 0.6712092757225037,
       "width": {
         "fraction": 0.14000000059604645,
         "ofWidth": false
@@ -46,7 +46,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "attack",
-        "imagePressed": "attack_pressed"
+        "imagePressed": "attack_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -84,7 +85,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "long_jump",
-        "imagePressed": "long_jump_pressed"
+        "imagePressed": "long_jump_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -124,7 +126,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "interact",
-        "imagePressed": "interact_pressed"
+        "imagePressed": "interact_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -162,7 +165,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "Pause_button",
-        "imagePressed": "pause_button "
+        "imagePressed": "pause_button ",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -200,14 +204,15 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "F3",
-        "imagePressed": "F3_prassed"
+        "imagePressed": "F3_prassed",
+        "opacity": 0.5000000596046448
       }
     },
     {
       "id": "68d941b2-ff89-4914-bfea-cb95942ccab5",
       "text": "💬chat",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08330577611923218,
+      "x": 0.08423460274934769,
       "y": 0,
       "width": {
         "dp": 40
@@ -241,14 +246,15 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "Chat_button",
-        "imagePressed": "chat_button_prass"
+        "imagePressed": "chat_button_prass",
+        "opacity": 0.5000000596046448
       }
     },
     {
       "id": "44bdf6fc-0aaf-450a-8ea8-a1ff1a7f94e3",
       "text": "⚙️f5",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.02545453980565071,
+      "x": 0.025309916585683823,
       "y": 0.10769230872392654,
       "width": {
         "dp": 40
@@ -279,14 +285,15 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "perspective",
-        "imagePressed": "perspective_pressed"
+        "imagePressed": "perspective_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
       "id": "7dc49583-0506-4687-9d74-4b08a417bf60",
       "text": "TAB",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.20048794150352478,
+      "x": 0.13916562497615814,
       "y": 0,
       "width": {
         "dp": 40
@@ -317,14 +324,15 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "tab",
-        "imagePressed": "tab_pressed"
+        "imagePressed": "tab_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
       "id": "5b2ebde3-508e-4402-9269-dafb26c721cf",
       "text": "F1",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.14263670146465302,
+      "x": 0.20048794150352478,
       "y": 0,
       "width": {
         "dp": 40
@@ -337,6 +345,9 @@
         {
           "t": "key",
           "code": 131
+        },
+        {
+          "t": "hide_controls"
         }
       ],
       "tap": [],
@@ -355,7 +366,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "f1",
-        "imagePressed": "f1_pressed"
+        "imagePressed": "f1_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -381,7 +393,7 @@
       ],
       "tap": [],
       "toggle": [],
-      "swipe": false,
+      "swipe": true,
       "penetrable": false,
       "interactive": true,
       "style": {
@@ -395,51 +407,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "down",
-        "imagePressed": "down_pressed"
-      }
-    },
-    {
-      "id": "a6389eae-9aaf-4fe2-a430-ccf6b3eafd5f",
-      "text": "↑",
-      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08699999749660492,
-      "y": 0.6679999828338623,
-      "width": {
-        "fraction": 0.14000000059604645,
-        "ofWidth": false
-      },
-      "height": {
-        "fraction": 0.14000000059604645,
-        "ofWidth": false
-      },
-      "visibility": "IN_GAME",
-      "press": [
-        {
-          "t": "key",
-          "code": 51
-        },
-        {
-          "t": "key",
-          "code": 113
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": 0,
-        "fillPressed": -3355444,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -12303292,
-        "strokeDp": 1,
-        "radiusDp": 10,
-        "textSp": 12,
-        "radiusInPx": false,
-        "image": "up",
-        "imagePressed": "up_pressed"
+        "imagePressed": "down_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -465,7 +434,7 @@
       ],
       "tap": [],
       "toggle": [],
-      "swipe": false,
+      "swipe": true,
       "penetrable": false,
       "interactive": true,
       "style": {
@@ -479,7 +448,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "left",
-        "imagePressed": "left_pressed"
+        "imagePressed": "left_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -505,7 +475,7 @@
       ],
       "tap": [],
       "toggle": [],
-      "swipe": false,
+      "swipe": true,
       "penetrable": false,
       "interactive": true,
       "style": {
@@ -519,46 +489,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "right",
-        "imagePressed": "right_pressed"
-      }
-    },
-    {
-      "id": "e4416ba3-ef59-47c0-9688-7b45b873c0bf",
-      "text": "zoom",
-      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.17232823371887207,
-      "y": 1,
-      "width": {
-        "dp": 57
-      },
-      "height": {
-        "fraction": 0.14000000059604645,
-        "ofWidth": false
-      },
-      "visibility": "IN_GAME",
-      "press": [
-        {
-          "t": "key",
-          "code": 31
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": 0,
-        "fillPressed": -3355444,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -12303292,
-        "strokeDp": 1,
-        "radiusDp": 10,
-        "textSp": 12,
-        "radiusInPx": false,
-        "image": "zoom",
-        "imagePressed": "zoom_prassed"
+        "imagePressed": "right_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -585,7 +517,7 @@
         }
       ],
       "swipe": false,
-      "penetrable": true,
+      "penetrable": false,
       "interactive": true,
       "style": {
         "fill": 0,
@@ -598,7 +530,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "sneak",
-        "imagePressed": "sneak_pressed"
+        "imagePressed": "sneak_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -626,8 +559,8 @@
       "penetrable": true,
       "interactive": true,
       "style": {
-        "fill": 0,
-        "fillPressed": -3355444,
+        "fill": 5708159,
+        "fillPressed": 1358954495,
         "text": -1,
         "textPressed": -1,
         "stroke": -12303292,
@@ -636,7 +569,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "attack",
-        "imagePressed": "attack_pressed"
+        "imagePressed": "attack_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -673,7 +607,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "Menu_button",
-        "imagePressed": "Menu_button_pressed"
+        "imagePressed": "Menu_button_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -712,7 +647,8 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "Long_up",
-        "imagePressed": "Long_up_pressed"
+        "imagePressed": "Long_up_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
@@ -751,91 +687,16 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "Long_down",
-        "imagePressed": "Long_down_pressed"
-      }
-    },
-    {
-      "id": "c5110c62-6c40-4536-8750-66abc30b1648",
-      "text": "•••",
-      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.7319573760032654,
-      "y": 1,
-      "width": {
-        "dp": 40
-      },
-      "height": {
-        "dp": 40
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "key",
-          "code": 33
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": 0,
-        "fillPressed": -3355444,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -12303292,
-        "strokeDp": 1,
-        "radiusDp": 10,
-        "textSp": 12,
-        "radiusInPx": false,
-        "image": "inv",
-        "imagePressed": "inv_prassed"
-      }
-    },
-    {
-      "id": "810573b7-71b2-4af5-86e8-c38f644d9b57",
-      "text": "clona\nblock",
-      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.14263670146465302,
-      "y": 0.10769230872392654,
-      "width": {
-        "dp": 40
-      },
-      "height": {
-        "dp": 40
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "mouse",
-          "button": 2
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": false,
-      "interactive": true,
-      "style": {
-        "fill": 0,
-        "fillPressed": -3355444,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -12303292,
-        "strokeDp": 1,
-        "radiusDp": 10,
-        "textSp": 12,
-        "radiusInPx": false,
-        "image": "pick_block",
-        "imagePressed": "pick_block_pressed"
+        "imagePressed": "Long_down_pressed",
+        "opacity": 0.5000000596046448
       }
     },
     {
       "id": "81d028e0-8d22-4ac9-9b38-a520b5472f9e",
       "text": "Screen shot",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08478546887636185,
-      "y": 0.10874277353286743,
+      "x": 0.08626512438058853,
+      "y": 0.10769230872392654,
       "width": {
         "dp": 40
       },
@@ -865,7 +726,209 @@
         "textSp": 12,
         "radiusInPx": false,
         "image": "screenshot",
-        "imagePressed": "screenshot_prassed"
+        "imagePressed": "screenshot_prassed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "1c4c0e16-a7e6-4977-be14-7da54f814caa",
+      "text": "place",
+      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
+      "x": 0.8124549984931946,
+      "y": 0.7364016771316528,
+      "width": {
+        "dp": 70
+      },
+      "height": {
+        "dp": 70
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "mouse",
+          "button": 1
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": true,
+      "interactive": true,
+      "style": {
+        "fill": 5708159,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "interact",
+        "imagePressed": "interact_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "90afb6fd-a0ef-4a17-9ba4-8ac9f22da547",
+      "text": "Clona block",
+      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
+      "x": 0,
+      "y": 0.25296440720558167,
+      "width": {
+        "dp": 50
+      },
+      "height": {
+        "dp": 50
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "mouse",
+          "button": 2
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 4210752,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -14803426,
+        "strokeDp": 2,
+        "radiusDp": 2,
+        "textSp": 15,
+        "radiusInPx": false,
+        "image": "pick_block",
+        "imagePressed": "pick_block_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "cb25412e-c5f1-4882-84f6-a7197313ea90",
+      "text": "🔎",
+      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
+      "x": 0,
+      "y": 0.42038214206695557,
+      "width": {
+        "dp": 75
+      },
+      "height": {
+        "dp": 75
+      },
+      "visibility": "IN_GAME",
+      "press": [
+        {
+          "t": "key",
+          "code": 31
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": true,
+      "interactive": true,
+      "style": {
+        "fill": 4210752,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -14803426,
+        "strokeDp": 2,
+        "radiusDp": 2,
+        "textSp": 15,
+        "radiusInPx": false,
+        "image": "zoom",
+        "imagePressed": "zoom_prassed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "6b0c6de7-3d89-47c9-bf13-b97c4cadddec",
+      "text": "↑",
+      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
+      "x": 0.08851831406354904,
+      "y": 0.6679999828338623,
+      "width": {
+        "fraction": 0.14000000059604645,
+        "ofWidth": false
+      },
+      "height": {
+        "fraction": 0.14000000059604645,
+        "ofWidth": false
+      },
+      "visibility": "IN_GAME",
+      "press": [
+        {
+          "t": "key",
+          "code": 51
+        },
+        {
+          "t": "key",
+          "code": 113
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": true,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 0,
+        "fillPressed": -3355444,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "up",
+        "imagePressed": "up_pressed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "351d380e-0915-4a20-bcbd-f37fa074cbc7",
+      "text": "•••",
+      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
+      "x": 0.7333925366401672,
+      "y": 1,
+      "width": {
+        "dp": 40
+      },
+      "height": {
+        "dp": 40
+      },
+      "visibility": "ALWAYS",
+      "press": [],
+      "tap": [
+        {
+          "t": "key",
+          "code": 33
+        }
+      ],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": false,
+      "interactive": true,
+      "style": {
+        "fill": 4210752,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -14803426,
+        "strokeDp": 2,
+        "radiusDp": 2,
+        "textSp": 15,
+        "radiusInPx": false,
+        "image": "inv",
+        "imagePressed": "inv_prassed",
+        "opacity": 0.5000000596046448
       }
     }
   ],

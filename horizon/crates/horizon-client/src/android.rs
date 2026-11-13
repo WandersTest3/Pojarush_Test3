@@ -24,6 +24,12 @@ static INPUT: Mutex<VecDeque<Input>> = Mutex::new(VecDeque::new());
 static CAPTURED: AtomicBool = AtomicBool::new(false);
 static READY: AtomicBool = AtomicBool::new(false);
 static MUTED: AtomicBool = AtomicBool::new(false);
+static TYPING: AtomicBool = AtomicBool::new(false);
+
+/// Whether a text field of the game has keyboard focus: the overlay's buttons stop typing.
+pub(crate) fn set_typing(on: bool) {
+    TYPING.store(on, Ordering::Relaxed);
+}
 
 pub(crate) fn muted() -> bool {
     MUTED.load(Ordering::Relaxed)
@@ -294,4 +300,18 @@ pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nati
     muted: jboolean,
 ) {
     MUTED.store(muted != 0, Ordering::Relaxed);
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeIsTyping<
+    'local,
+>(
+    _env: JNIEnv<'local>,
+    _class: JClass<'local>,
+) -> jboolean {
+    if TYPING.load(Ordering::Relaxed) {
+        JNI_TRUE
+    } else {
+        JNI_FALSE
+    }
 }

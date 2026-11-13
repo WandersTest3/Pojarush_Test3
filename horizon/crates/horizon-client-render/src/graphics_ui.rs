@@ -401,6 +401,7 @@ impl H {
             H::Preset => labelled("Preset", g.preset.label()),
             H::LodDistance => match g.lod_distance {
                 0 => labelled("LOD Distance", "Off"),
+                n if n >= 1024 => labelled("LOD Distance", format!("{}k chunks", n / 1000)),
                 n => labelled("LOD Distance", format!("{n} chunks")),
             },
             H::FarDetail => labelled("Far Detail", g.far_detail.label()),
@@ -465,7 +466,6 @@ impl H {
                 "Performance Overlay",
                 match g.overlay {
                     Overlay::Off => "Off",
-                    Overlay::Counter => "FPS Counter",
                     Overlay::Fps => "FPS",
                     Overlay::Graph => "FPS and Graph",
                 },
@@ -557,7 +557,7 @@ impl H {
             }
             H::Overlay => {
                 g.overlay = step(
-                    &[Overlay::Off, Overlay::Counter, Overlay::Fps, Overlay::Graph],
+                    &[Overlay::Off, Overlay::Fps, Overlay::Graph],
                     g.overlay,
                     back,
                 )
@@ -1264,11 +1264,11 @@ mod tests {
             assert_eq!(s.render_distance, near);
         }
         item.cycle(&mut s, true, [854, 480]);
-        assert_eq!(s.horizon.lod_distance, 512);
-        assert_eq!(item.label(&s).plain(), "LOD Distance: 512 chunks");
+        assert_eq!(s.horizon.lod_distance, 512_000);
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 512k chunks");
         item.cycle(&mut s, true, [854, 480]);
-        assert_eq!(item.label(&s).plain(), "LOD Distance: 256 chunks");
-        item.set_slider(&mut s, 2.0 / 5.0);
+        assert_eq!(item.label(&s).plain(), "LOD Distance: 262k chunks");
+        item.set_slider(&mut s, 2.0 / 15.0);
         assert_eq!(s.horizon.lod_distance, 64);
         assert_eq!(item.label(&s).plain(), "LOD Distance: 64 chunks");
         assert_eq!(

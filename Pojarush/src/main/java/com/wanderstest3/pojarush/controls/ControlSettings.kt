@@ -13,7 +13,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getString("layout", DefaultLayout.ID) ?: DefaultLayout.ID
         set(v) = prefs.edit().putString("layout", v).apply()
     var opacity: Float
-        get() = prefs.getFloat("opacity", 0.80f)
+        get() = prefs.getFloat("opacity", 1.00f)
         set(v) = prefs.edit().putFloat("opacity", v).apply()
     var buttonScale: Float
         get() = prefs.getFloat("button_scale", 1.00f)
@@ -111,6 +111,9 @@ class ControlSettings(context: Context) {
     var minecraftFont: Boolean
         get() = prefs.getBoolean("minecraft_font", true)
         set(v) = prefs.edit().putBoolean("minecraft_font", v).apply()
+    var customFont: String
+        get() = prefs.getString("custom_font", "").orEmpty()
+        set(v) = prefs.edit().putString("custom_font", v).apply()
     var mirrorSize: Boolean
         get() = prefs.getBoolean("mirror_size", false)
         set(v) = prefs.edit().putBoolean("mirror_size", v).apply()
@@ -225,6 +228,34 @@ object ControlLayouts {
     fun importMenuIcon(context: Context, uri: Uri): File = importMedia(context, uri, menuIconDir(), "icon")
 
     fun importWallpaper(context: Context, uri: Uri): File = importMedia(context, uri, wallpaperDir(), "wallpaper")
+
+    fun fontDir(): File = File(Paths.publicRoot, "font")
+
+    fun importFont(context: Context, uri: Uri): File {
+        val dir = fontDir().apply { mkdirs() }
+        val picked = runCatching {
+            context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment?.substringAfterLast('/') ?: "font.ttf"
+        val ext = picked.substringAfterLast('.', "").lowercase()
+        if (ext != "ttf" && ext != "otf") throw IllegalArgumentException("Only .ttf and .otf fonts are supported")
+        val base = safeName(picked.substringBeforeLast('.'))
+        val temp = File(dir, ".font-${System.currentTimeMillis()}.part")
+        context.contentResolver.openInputStream(uri)?.use { input -> temp.outputStream().use { input.copyTo(it) } }
+            ?: throw IllegalArgumentException("Empty file")
+        if (android.graphics.Typeface.Builder(temp).build() == null) {
+            temp.delete()
+            throw IllegalArgumentException("This file is not a valid font")
+        }
+        val file = File(dir, "$base.$ext")
+        if (file.exists()) file.delete()
+        if (!temp.renameTo(file)) {
+            temp.copyTo(file, overwrite = true)
+            temp.delete()
+        }
+        return file
+    }
 
     fun isVideo(path: String): Boolean = path.substringAfterLast('.', "").lowercase() in VIDEO
 

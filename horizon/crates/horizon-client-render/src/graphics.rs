@@ -208,8 +208,6 @@ pub enum Pacing {
 pub enum Overlay {
     #[default]
     Off,
-    /// Vanilla-style: only the frame rate, in the game's font on a dark box.
-    Counter,
     /// Frames per second and frame time.
     Fps,
     /// The numbers and a graph of recent frame times.
@@ -328,9 +326,11 @@ pub fn hdr_offered() -> bool {
 /// costs them more frame time than it is worth.
 pub const INTEGRATED_LOD_DISTANCE: u32 = 128;
 /// The farthest LOD Distance, in chunks.
-pub const MAX_LOD_DISTANCE: u32 = 512;
+pub const MAX_LOD_DISTANCE: u32 = 512_000;
 /// LOD Distance's choices, in chunks.
-pub const LOD_STEPS: [u32; 6] = [0, 32, 64, 128, 256, 512];
+pub const LOD_STEPS: [u32; 16] = [
+    0, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 512_000,
+];
 /// Whether `INTEGRATED_LOD_DISTANCE` applies to this adapter. Apple's GPUs
 /// are integrated too, with memory and bandwidth enough for every distance.
 pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
@@ -519,7 +519,6 @@ impl Graphics {
                 "pickedShaderPack" => g.shader_pack = value.to_owned(),
                 "overlay" => {
                     g.overlay = match value {
-                        "counter" => Overlay::Counter,
                         "fps" => Overlay::Fps,
                         "graph" => Overlay::Graph,
                         _ => Overlay::Off,
@@ -552,7 +551,6 @@ impl Graphics {
             self.workers,
             match self.overlay {
                 Overlay::Off => "off",
-                Overlay::Counter => "counter",
                 Overlay::Fps => "fps",
                 Overlay::Graph => "graph",
             },
@@ -772,7 +770,7 @@ mod tests {
             assert_eq!(g.lod_distance, distance);
             assert_eq!(Graphics::parse(&g.serialize()), g);
         }
-        assert_eq!(Graphics::parse("lodDistance:1000\n").lod_distance, MAX_LOD_DISTANCE);
+        assert_eq!(Graphics::parse("lodDistance:1000\n").lod_distance, 1000);
         assert_eq!(Graphics::parse("lodDistance:9000000\n").lod_distance, MAX_LOD_DISTANCE);
         assert_eq!(Graphics::parse("lodDistance:-1\n").lod_distance, 0);
         assert_eq!(Graphics::parse("lodDistance:invalid\n").lod_distance, 0);

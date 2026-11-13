@@ -74,11 +74,12 @@ lto = false
 codegen-units = 16
 incremental = true
 
-# Pojarush_Test3's Android library (crates/horizon-android): optimized, quick to link on a small
-# build machine, symbols stripped to keep the APK small.
+# Pojarush_Test3's Android library (crates/horizon-android): thin LTO across crates for a
+# smaller and faster library, symbols stripped. Panics still unwind: crash reports and the
+# shader pack compiler's containment depend on it.
 [profile.android]
 inherits = "release"
-lto = false
-codegen-units = 16
+lto = "thin"
+codegen-units = 4
 debug = false
 strip = true

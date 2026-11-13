@@ -175,7 +175,7 @@
     <string name="mods_tab_shaders">Shaders</string>
     <string name="mods_desc_mods">Mods do Horizon (.hmod): mods de conteúdo e mods de código (WebAssembly, como o Compass Enhanced; só em aparelhos 64 bits). Arquivos .jar de Fabric e NeoForge não rodam no Horizon.</string>
     <string name="mods_desc_resource">Resource packs do Java Edition (.zip com pack.mcmeta).</string>
-    <string name="mods_desc_shaders">Shader packs próprios do Horizon (.hshader) funcionam. Packs clássicos OptiFine/Iris .zip são listados mas ainda não são renderizados: o Horizon não tem pipeline GLSL para eles.</string>
+    <string name="mods_desc_shaders">Shader packs próprios do Horizon (.hshader) são o formato recomendado. Packs clássicos OptiFine/Iris .zip rodam de forma experimental e os mais pesados podem ter falhas visuais.</string>
     <string name="mods_empty">Nada instalado.</string>
     <string name="mods_import">Importar arquivo</string>
     <string name="mods_folder">Pasta: %1$s</string>
@@ -236,7 +236,7 @@
     <string name="minecraft_font_desc">Usa a fonte pixelada no estilo do Minecraft no launcher.</string>
     <string name="lod_title">Terreno distante (LOD)</string>
     <string name="lod_distance">Distância do LOD (chunks)</string>
-    <string name="lod_desc">Até onde o terreno simplificado é desenhado além da distância de renderização normal, de 32 chunks até 512 chunks. Distâncias maiores usam mais memória e bateria; vale a partir da próxima vez que o jogo abrir.</string>
+    <string name="lod_desc">Até onde o terreno simplificado é desenhado além da distância de renderização normal, de 32 chunks até 512 mil chunks. Distâncias maiores usam mais memória e bateria; vale a partir da próxima vez que o jogo abrir.</string>
     <string name="lod_off">Desligado</string>
     <string name="hud_title">Imagens de HUD</string>
     <string name="hud_desc">Imagens para os botões e joysticks dos controles. Importe um .zip (por exemplo as imagens de UI do Bedrock) ou imagens soltas; a imagem estica para o tamanho do botão. O layout Bedrock Controls usa nomes como attack, interact, jump, sneak, sprint, perspective, joystick_frame e joystick_knob (com variantes _pressed).</string>
@@ -288,4 +288,9 @@
     <string name="onboarding_wallpaper_fhd">Full HD · 33 MB</string>
     <string name="onboarding_wallpaper_skip">Pular</string>
     <string name="overlay_send_key">Enviar tecla</string>
+    <string name="custom_font">Sua própria fonte</string>
+    <string name="custom_font_choose">Escolher fonte (.ttf, .otf)</string>
+    <string name="custom_font_default">Usar fonte padrão</string>
+    <string name="custom_font_desc">As fontes ficam na pasta \"font\" do Pojarush e substituem a fonte do launcher.</string>
+    <string name="wallpaper_official">Wallpaper oficial Black Hole</string>
 </resources>

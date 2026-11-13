@@ -14,7 +14,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.core.content.res.ResourcesCompat
 import com.wanderstest3.pojarush.EditorBackgroundView
 import com.wanderstest3.pojarush.R
 
@@ -30,7 +29,7 @@ class LoadingCover(context: Context) : FrameLayout(context) {
         setBackgroundColor(Color.BLACK)
         addView(EditorBackgroundView(context), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         val dp = resources.displayMetrics.density
-        val font = runCatching { ResourcesCompat.getFont(context, R.font.minecraft) }.getOrNull()
+        val font = runCatching { com.wanderstest3.pojarush.ui.launcherTypeface(context) }.getOrNull()
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL

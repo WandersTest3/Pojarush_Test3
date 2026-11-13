@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -177,7 +178,29 @@ private class WallpaperVideoView(context: Context, private val file: File, priva
 
 @Composable
 fun InterfaceSettings(settings: ControlSettings) {
+    val context = LocalContext.current
     var font by remember { mutableStateOf(settings.minecraftFont) }
+    var custom by remember { mutableStateOf(settings.customFont) }
+    var fontVersion by remember { mutableIntStateOf(0) }
+    val failed = stringResource(R.string.controls_import_failed, "%s")
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        var last: File? = null
+        uris.forEach { uri ->
+            runCatching { last = ControlLayouts.importFont(context, uri) }
+                .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+        }
+        last?.let {
+            settings.customFont = it.absolutePath
+            custom = it.absolutePath
+            UiPrefs.customFont = it.absolutePath
+            fontVersion++
+        }
+    }
+    fun choose(path: String) {
+        settings.customFont = path
+        custom = path
+        UiPrefs.customFont = path
+    }
     PojarushCard {
         CardTitle(stringResource(R.string.interface_title))
         SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) {
@@ -189,6 +212,32 @@ fun InterfaceSettings(settings: ControlSettings) {
             font = it
             UiPrefs.minecraftFont = it
         }
+        Text(stringResource(R.string.custom_font), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        val fonts = remember(fontVersion) {
+            ControlLayouts.fontDir().listFiles { f -> f.isFile && f.extension.lowercase() in setOf("ttf", "otf") }
+                ?.sortedBy { it.name.lowercase() }.orEmpty()
+        }
+        fonts.forEach { f ->
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { choose(f.absolutePath) },
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.RadioButton(selected = custom == f.absolutePath, onClick = { choose(f.absolutePath) })
+                Text(f.name, modifier = Modifier.weight(1f), maxLines = 1)
+                androidx.compose.material3.TextButton(onClick = {
+                    if (custom == f.absolutePath) choose("")
+                    f.delete()
+                    fontVersion++
+                }) { Text("✕") }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { picker.launch(arrayOf("font/*", "application/x-font-ttf", "application/x-font-otf", "application/vnd.ms-opentype", "application/octet-stream")) }) {
+                Text(stringResource(R.string.custom_font_choose))
+            }
+            if (custom.isNotEmpty()) OutlinedButton(onClick = { choose("") }) { Text(stringResource(R.string.custom_font_default)) }
+        }
+        Hint(stringResource(R.string.custom_font_desc))
     }
 }
 
@@ -286,49 +335,59 @@ fun WallpaperSettings(settings: ControlSettings) {
             }
         }
         Hint(stringResource(R.string.wallpaper_hint))
+        Text(stringResource(R.string.wallpaper_official), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        OfficialWallpaperDownload(settings) {
+            path = settings.wallpaper
+            galleryVersion++
+        }
     }
 }
 
 @Composable
-fun OnboardingWallpaperStep(onFinished: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val settings = remember { com.wanderstest3.pojarush.controls.ControlSettings(context) }
+fun OfficialWallpaperDownload(settings: ControlSettings, onDownloaded: () -> Unit) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    var downloading by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var downloading by remember { mutableStateOf<String?>(null) }
     var progress by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
-    var error by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
-
-    fun skip() {
-        settings.wallpaperOnboardingDone = true
-        onFinished()
-    }
+    var error by remember { mutableStateOf<String?>(null) }
 
     fun download(url: String, label: String) {
         downloading = label
+        progress = 0f
         error = null
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val result = runCatching {
-                val dir = java.io.File(com.wanderstest3.pojarush.Paths.publicRoot, "wallpaper")
+                val dir = ControlLayouts.wallpaperDir()
                 dir.mkdirs()
-                val name = url.substringAfterLast('/')
-                val dest = java.io.File(dir, name)
+                val dest = File(dir, url.substringAfterLast('/'))
+                val part = File(dir, ".${dest.name}.part")
                 val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 20_000
+                conn.readTimeout = 30_000
                 conn.connect()
+                if (conn.responseCode !in 200..299) throw java.io.IOException("HTTP ${conn.responseCode}")
                 val total = conn.contentLengthLong
                 conn.inputStream.use { inp ->
-                    dest.outputStream().use { out ->
+                    part.outputStream().use { out ->
                         val buf = ByteArray(65536)
                         var read = 0L
+                        var shown = 0L
                         var n: Int
                         while (inp.read(buf).also { n = it } != -1) {
                             out.write(buf, 0, n)
                             read += n
-                            if (total > 0) {
+                            if (total > 0 && read - shown > 262_144) {
+                                shown = read
                                 val p = read.toFloat() / total
                                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { progress = p }
                             }
                         }
                     }
+                }
+                if (total > 0 && part.length() != total) throw java.io.IOException("Incomplete download")
+                if (dest.exists()) dest.delete()
+                if (!part.renameTo(dest)) {
+                    part.copyTo(dest, overwrite = true)
+                    part.delete()
                 }
                 dest
             }
@@ -336,8 +395,8 @@ fun OnboardingWallpaperStep(onFinished: () -> Unit) {
                 result.onSuccess { dest ->
                     settings.wallpaper = dest.absolutePath
                     WallpaperState.version++
-                    settings.wallpaperOnboardingDone = true
-                    onFinished()
+                    downloading = null
+                    onDownloaded()
                 }.onFailure { e ->
                     downloading = null
                     error = e.message
@@ -346,27 +405,38 @@ fun OnboardingWallpaperStep(onFinished: () -> Unit) {
         }
     }
 
-    com.wanderstest3.pojarush.ui.PojarushCard {
-        com.wanderstest3.pojarush.ui.CardTitle(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_title))
-        com.wanderstest3.pojarush.ui.Hint(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_body))
-        val dl = downloading
-        if (dl != null) {
-            androidx.compose.material3.Text(dl, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
-            if (progress > 0f) androidx.compose.material3.LinearProgressIndicator(progress = { progress }, modifier = androidx.compose.ui.Modifier.fillMaxWidth())
-            else androidx.compose.material3.LinearProgressIndicator(modifier = androidx.compose.ui.Modifier.fillMaxWidth())
-        } else {
-            error?.let { com.wanderstest3.pojarush.ui.Hint(it) }
-            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.Button(onClick = {
-                    download("https://github.com/WandersTest3/Pojarush_Test3/releases/download/Pojarush-Wallpaper/BlackHole-Pojarush-Wallpaper-4K.mp4", "Black Hole 4K (107 MB)...")
-                }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_4k)) }
-                androidx.compose.material3.Button(onClick = {
-                    download("https://github.com/WandersTest3/Pojarush_Test3/releases/download/Pojarush-Wallpaper/BlackHole-Pojarush-Wallpaper-FullHD.mp4", "Black Hole Full HD (33 MB)...")
-                }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_fhd)) }
-            }
-            androidx.compose.material3.OutlinedButton(onClick = ::skip) {
-                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.wanderstest3.pojarush.R.string.onboarding_wallpaper_skip))
-            }
+    val dl = downloading
+    if (dl != null) {
+        Text(dl, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+        if (progress > 0f) androidx.compose.material3.LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+        else androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    } else {
+        error?.let { Hint(it) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                download("https://github.com/WandersTest3/Pojarush_Test3/releases/download/Pojarush-Wallpaper/BlackHole-Pojarush-Wallpaper-4K.mp4", "Black Hole 4K (107 MB)...")
+            }) { Text(stringResource(R.string.onboarding_wallpaper_4k)) }
+            Button(onClick = {
+                download("https://github.com/WandersTest3/Pojarush_Test3/releases/download/Pojarush-Wallpaper/BlackHole-Pojarush-Wallpaper-FullHD.mp4", "Black Hole Full HD (33 MB)...")
+            }) { Text(stringResource(R.string.onboarding_wallpaper_fhd)) }
         }
+    }
+}
+
+@Composable
+fun OnboardingWallpaperStep(onFinished: () -> Unit) {
+    val context = LocalContext.current
+    val settings = remember { ControlSettings(context) }
+    PojarushCard {
+        CardTitle(stringResource(R.string.onboarding_wallpaper_title))
+        Hint(stringResource(R.string.onboarding_wallpaper_body))
+        OfficialWallpaperDownload(settings) {
+            settings.wallpaperOnboardingDone = true
+            onFinished()
+        }
+        OutlinedButton(onClick = {
+            settings.wallpaperOnboardingDone = true
+            onFinished()
+        }) { Text(stringResource(R.string.onboarding_wallpaper_skip)) }
     }
 }

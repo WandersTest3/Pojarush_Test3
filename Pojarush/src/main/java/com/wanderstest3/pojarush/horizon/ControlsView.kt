@@ -269,7 +269,9 @@ class ControlsView(
         class Handle(val startX: Float, val startY: Float, val offX: Float, val offY: Float) : Role() {
             var moved = false
         }
-        class Drag(val target: Selection, val offX: Float, val offY: Float) : Role()
+        class Drag(val target: Selection, val offX: Float, val offY: Float, val startX: Float, val startY: Float, val below: Selection?) : Role() {
+            var moved = false
+        }
         class Hotbar(val slot: Int) : Role() {
             var repeat: Runnable? = null
         }
@@ -558,8 +560,14 @@ class ControlsView(
         }
     }
 
+    var typing = false
+    private val charMap: android.view.KeyCharacterMap = android.view.KeyCharacterMap.load(android.view.KeyCharacterMap.VIRTUAL_KEYBOARD)
+
+    private fun types(code: Int): Boolean = charMap.get(code, 0) >= 32
+
     private fun key(code: Int, down: Boolean) {
         val count = heldKeys[code] ?: 0
+        if (down && count == 0 && typing && !captured && types(code)) return
         if (down) {
             heldKeys[code] = count + 1
             if (count == 0) host.sendKey(code, true)
@@ -663,6 +671,20 @@ class ControlsView(
             if ((editMode || b.interactive) && shown(b.layer, b.visibility) && buttonRects[i].contains(x, y)) return i
         }
         return -1
+    }
+
+    private fun selectionsAt(x: Float, y: Float): List<Selection> {
+        val out = ArrayList<Selection>()
+        for (i in layout.buttons.indices.reversed()) {
+            val b = layout.buttons[i]
+            if (shown(b.layer, b.visibility) && buttonRects[i].contains(x, y)) out += Selection.Button(i)
+        }
+        for (i in layout.sticks.indices.reversed()) {
+            val s = layout.sticks[i]
+            val c = stickCenters[i]
+            if (shown(s.layer, s.visibility) && hypot(x - c[0], y - c[1]) <= c[2] * 1.15f) out += Selection.Stick(i)
+        }
+        return out
     }
 
     private fun stickAt(x: Float, y: Float): Int {
@@ -791,27 +813,37 @@ class ControlsView(
             return true
         }
         if (editMode) {
-            val b = buttonAt(x, y)
-            val hit: Selection? = if (b >= 0) Selection.Button(b) else stickAt(x, y).takeIf { it >= 0 }?.let { Selection.Stick(it) }
+            val hits = selectionsAt(x, y)
             val current = selection
-            if (hit != null && hit == current && time - lastSelectTapTime < 300) {
+            val onCurrent = current != null && current in hits
+            if (onCurrent && time - lastSelectTapTime < 300) {
                 lastSelectTapTime = 0L
                 select(null)
                 roles[id] = Role.Ignore
                 return true
             }
-            if (hit != null) lastSelectTapTime = time
-            val target = hit ?: current
+            val target = when {
+                onCurrent -> current
+                hits.isNotEmpty() -> hits[0]
+                else -> current
+            }
             if (target == null) {
                 roles[id] = Role.Ignore
                 return true
             }
-            if (hit != null) select(hit)
+            var below: Selection? = null
+            if (onCurrent && hits.size > 1) below = hits[(hits.indexOf(current) + 1) % hits.size]
+            if (target != current) {
+                select(target)
+                lastSelectTapTime = time
+            } else if (onCurrent && below == null) {
+                lastSelectTapTime = time
+            }
             val (ox, oy) = when (target) {
                 is Selection.Button -> x - buttonRects[target.index].left to y - buttonRects[target.index].top
                 is Selection.Stick -> x - (stickCenters[target.index][0] - stickCenters[target.index][2]) to y - (stickCenters[target.index][1] - stickCenters[target.index][2])
             }
-            roles[id] = Role.Drag(target, ox, oy)
+            roles[id] = Role.Drag(target, ox, oy, x, y, below)
             return true
         }
         val b = buttonAt(x, y)
@@ -968,14 +1000,17 @@ class ControlsView(
                     invalidate()
                 }
             }
-            is Role.Drag -> moveTo(role.target, x - role.offX, y - role.offY)
+            is Role.Drag -> {
+                if (!role.moved && hypot(x - role.startX, y - role.startY) > 6f * density) role.moved = true
+                if (role.moved) moveTo(role.target, x - role.offX, y - role.offY)
+            }
             is Role.Btn -> {
                 val current = layout.buttons[role.index]
                 if (current.penetrable && captured) look(x - role.lastX, y - role.lastY)
                 role.lastX = x
                 role.lastY = y
                 val target = buttonAt(x, y)
-                if (target >= 0 && target != role.index && (current.swipe || layout.buttons[target].swipe)) {
+                if (target >= 0 && target != role.index && current.swipe && layout.buttons[target].swipe) {
                     releaseButton(role.index, false)
                     role.index = target
                     pressButton(target)
@@ -1048,6 +1083,10 @@ class ControlsView(
             is Role.Drag -> {
                 guideX = null
                 guideY = null
+                if (!cancel && !role.moved && role.below != null && selection == role.target) {
+                    lastSelectTapTime = 0L
+                    select(role.below)
+                }
                 invalidate()
             }
             is Role.Btn -> releaseButton(role.index, !cancel)
@@ -1145,7 +1184,7 @@ class ControlsView(
         Color.argb((Color.alpha(color) * extra).toInt().coerceIn(0, 255), Color.red(color), Color.green(color), Color.blue(color))
 
     override fun onDraw(canvas: Canvas) {
-        val opacity = if (editMode) settings.opacity.coerceAtLeast(0.60f) else settings.opacity
+        val baseOpacity = if (editMode) settings.opacity.coerceAtLeast(0.60f) else settings.opacity
         if ((settings.controlsHidden || physicalInput) && !editMode) {
             drawMenuHandle(canvas, hidden = settings.controlsHidden)
             if (!captured && virtualMouse) drawCursor(canvas)
@@ -1154,6 +1193,7 @@ class ControlsView(
         layout.sticks.forEachIndexed { i, s ->
             if (!shown(s.layer, s.visibility)) return@forEachIndexed
             val st = s.style ?: defaultStyle
+            val opacity = baseOpacity * st.opacity
             val c = stickCenters[i]
             val active = stickHeld[i].isNotEmpty() || stickLocked[i]
             val frame = image(st.image)
@@ -1194,7 +1234,7 @@ class ControlsView(
         }
         layout.buttons.forEachIndexed { i, b ->
             if (!shown(b.layer, b.visibility)) return@forEachIndexed
-            drawButton(canvas, b, buttonRects[i], pressed[i] > 0 || toggled[i], opacity)
+            drawButton(canvas, b, buttonRects[i], pressed[i] > 0 || toggled[i], baseOpacity)
             if (editMode && selection == Selection.Button(i)) {
                 stroke.color = Color.YELLOW
                 stroke.strokeWidth = 2.5f * density

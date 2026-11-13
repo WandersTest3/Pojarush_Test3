@@ -123,7 +123,7 @@ object HorizonManager {
         com.wanderstest3.pojarush.KeepAliveService.start(app, com.wanderstest3.pojarush.PrepareKeepAliveService::class.java)
         job = scope.launch {
             runCatching {
-                if (!isSupported()) throw IOException("This device cannot run Pojarush_Test3's Horizon libraries (arm64-v8a only).")
+                if (!isSupported()) throw IOException("This APK has no Horizon libraries for this device. Install the Pojarush APK that matches it (arm64-v8a or armeabi-v7a).")
                 installBundle(context)
                 val javaHome = findJava(context)
                 downloadGame(withSounds)
@@ -259,7 +259,7 @@ object HorizonManager {
         lines.drop(start + 1).firstOrNull { it.isNotBlank() }?.trim()
     }.getOrNull()
 
-    val LOD_STEPS = listOf(0, 32, 64, 128, 256, 512)
+    val LOD_STEPS = listOf(0, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 512000)
 
     private fun graphicsLines(): MutableList<String> {
         val file = File(gameDir, "horizon-graphics.txt")

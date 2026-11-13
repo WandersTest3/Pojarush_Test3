@@ -1165,7 +1165,7 @@ impl Mods {
         self.entries
             .iter()
             .filter_map(|e| e.run.as_ref()?.store.data().zoom)
-            .max_by(|a, b| a.factor.total_cmp(&b.factor))
+            .max_by(|a, b| a.factor.ln().abs().total_cmp(&b.factor.ln().abs()))
     }
     /// The minimap the first running mod shows (capability `render`).
     pub fn minimap(&self) -> Option<ModMinimap> {
@@ -1727,7 +1727,8 @@ const SHAPES: usize = 1024;
 const SHAKE_SECONDS: f32 = 10.0;
 /// `render.set-zoom`'s limits: `Camera.tickFov` keeps the modifier at 0.1
 /// or more, and turning never stops.
-const ZOOM_MAX: f32 = 10.0;
+const ZOOM_MAX: f32 = 50.0;
+const ZOOM_MIN: f32 = 0.25;
 const TURN_MIN: f32 = 0.05;
 /// `set-minimap`'s side in GUI pixels and its blocks per map pixel.
 const MINIMAP_SIZE: (f32, f32) = (16.0, 256.0);
@@ -1803,9 +1804,12 @@ impl render::Host for State {
             .ceil()
     }
     fn set_zoom(&mut self, zoom: ModZoom) {
-        let finite = |v: f32, lo: f32, hi: f32| if v.is_finite() { v.clamp(lo, hi) } else { lo };
-        let factor = finite(zoom.factor, 1.0, ZOOM_MAX);
-        self.zoom = (factor > 1.0).then(|| ModZoom {
+        let factor = if zoom.factor.is_finite() {
+            zoom.factor.clamp(ZOOM_MIN, ZOOM_MAX)
+        } else {
+            1.0
+        };
+        self.zoom = (factor != 1.0).then(|| ModZoom {
             factor,
             smooth: zoom.smooth,
             turn: if zoom.turn.is_finite() {

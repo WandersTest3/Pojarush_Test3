@@ -26,9 +26,6 @@ android {
         versionCode = (project.property("pojarush_version_code") as String).toInt()
         versionName = project.property("pojarush_version_name") as String
         buildConfigField("String", "OAUTH_CLIENT_ID", "\"${secret("OAUTH_CLIENT_ID", ".oauth_client_id.txt")}\"")
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
     }
 
     signingConfigs {
@@ -45,13 +42,23 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
         }
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
         }
     }
 
@@ -73,6 +80,21 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        val base = (project.property("pojarush_version_code") as String).toInt()
+        variant.outputs.forEach { output ->
+            val abi = output.filters.find { it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI }?.identifier
+            val offset = when (abi) {
+                "arm64-v8a" -> 2
+                "armeabi-v7a" -> 1
+                else -> 0
+            }
+            output.versionCode.set(base * 10 + offset)
+        }
     }
 }
 

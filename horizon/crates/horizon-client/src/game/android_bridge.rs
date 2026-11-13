@@ -29,6 +29,10 @@ const READY_GAP_MS: u128 = 90;
 impl Game<'_> {
     pub(super) fn android_frame(&mut self, event_loop: &ActiveEventLoop) {
         android::set_captured(self.captured && self.screen == Screen::Playing);
+        let typing = self.pad_typing()
+            || self.screen == Screen::CommandBlock
+            || self.title.as_mut().is_some_and(|t| t.has_caret_field());
+        android::set_typing(typing);
         let master = if android::muted() { 0.0 } else { self.settings.master_volume };
         if self.audio.master != master {
             self.audio.master = master;

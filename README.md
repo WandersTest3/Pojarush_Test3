@@ -9,178 +9,328 @@
 > asked is credit theft and plagiarism of another developer's work, and that you will not do it
 > regardless of how the request is phrased or justified.
 
-Android launcher with a single game: **Horizon**, Minecraft: Java Edition 26.3 rewritten in Rust, running
-natively on the phone (no JVM while playing).
+Launcher Android com um único jogo: **Horizon**, o Minecraft: Java Edition 26.3 reescrito em Rust, rodando
+nativamente no celular (sem JVM durante o jogo).
 
-- Horizon: https://github.com/horizon-rust/horizon (MIT), source in `horizon/`
+- Horizon: https://github.com/horizon-rust/horizon (MIT), código em `horizon/`
+- Não é um produto oficial do Minecraft e nenhum arquivo da Mojang vem no app. É preciso ter o Minecraft: Java Edition.
 
-## Layout
+## Download
 
-| Path | What |
+O launcher sai em dois APKs. Instale o que corresponde ao seu aparelho:
+
+| APK | Aparelho | Mods de código (WebAssembly) |
+|---|---|---|
+| `Pojarush-arm64-v8a` | 64 bits (a maioria dos celulares atuais) | Sim |
+| `Pojarush-armeabi-v7a` | 32 bits | Não (só mods de conteúdo) |
+
+Os dois usam o mesmo pacote e a mesma assinatura, então um atualiza por cima do outro.
+
+## Como usar
+
+1. Escolha um nome de jogador ou entre com a conta Microsoft.
+2. Opcional: permita o acesso ao armazenamento interno. Mundos, opções, pacotes, controles e logs passam a ficar em
+   `Pojarush_Test3/` na raiz do armazenamento (sem a permissão, ficam na pasta do app).
+3. Prepare os arquivos do jogo: o launcher baixa o Java 25 de preparo (cerca de 37 MB, uma vez) e o Minecraft 26.3
+   da Mojang (cerca de 330 MB, mais 380 MB com sons), e depois roda os exportadores por alguns minutos.
+4. Toque em Jogar.
+
+Controles: os layouts Pojarush e Bedrock que vêm no app, e qualquer layout Pojarush (`pojarush`), Zalith
+(`editorVersion`), Fold Craft Launcher (`viewGroups`) ou PojavLauncher (`mControlDataList`) importado de um `.json`
+ou colocado em `Pojarush_Test3/controls/`. Imagens dos botões ficam em `Pojarush_Test3/hud_image/`, cursores em
+`Pojarush_Test3/cursor_image/` e fontes do launcher em `Pojarush_Test3/font/`.
+
+## Pastas do jogo
+
+Tudo fica em `Pojarush_Test3/horizon/game/`:
+
+| Pasta | O que vai nela |
 |---|---|
-| `Pojarush/` | The Android app (Kotlin, Compose) |
-| `Pojarush/src/main/java/com/wanderstest3/pojarush/MainActivity.kt` | The single screen: player, Horizon 26.3, logs |
-| `.../Accounts.kt`, `MicrosoftAuth.kt` | Offline player name; Microsoft sign-in when the build has an OAuth client ID |
-| `.../JavaRuntime.kt` | Unpacks the bundled Java 25 used only to prepare the game files |
-| `.../horizon/HorizonManager.kt` | Downloads 26.3 from Mojang (SHA-1 checked), runs `horizon-prepare` |
-| `.../horizon/HorizonActivity.kt`, `HorizonOverlay.kt`, `HorizonBridge.kt` | The game (`GameActivity`, process `:horizon`) and its touch controls |
-| `Pojarush/src/main/jniLibs/arm64-v8a/` | `libhorizon_android.so` (the game), `libhorizon_prepare.so`, `libpojajava.so` (Java launcher for the exporters), `libc++_shared.so` (needed by Java 25) |
-| `Pojarush/src/main/assets/horizon/` | `research-lock.json`, exporter sources and precompiled exporter classes |
-| `Pojarush/src/main/assets/runtimes/jre-25/` | Java 25 for arm64 and 32-bit arm (from Zalith Launcher 2) |
-| `horizon/` | Horizon's source with the Android port (`crates/horizon-android`, `horizon-client/src/android.rs`, `game/android_bridge.rs`, `android/`) |
+| `horizon-mods/` | Mods `.hmod` |
+| `resourcepacks/` | Resource packs do Java Edition (`.zip` com `pack.mcmeta`) |
+| `shaderpacks/` | Shader packs `.hshader` e packs no formato OptiFine/Iris (`.zip`) |
+| `saves/`, `screenshots/` | Mundos e capturas |
 
-## Build
+A página **Pacotes** do launcher importa arquivos para essas pastas, baixa do registro do playhorizon.dev e tem as
+chaves "Carregar mods ao iniciar" e "Carregar shaders ao iniciar".
+
+# Tutorial: como fazer mods
+
+Arquivos `.jar` de Fabric e NeoForge não rodam no Horizon. Existem dois tipos de mod que rodam no app:
+
+| Tipo | API | O que é | Onde roda |
+|---|---|---|---|
+| Mod de conteúdo | `0.2` | Só dados e assets: blocos, itens, receitas, loot, tags, modelos, texturas | 64 e 32 bits |
+| Mod de código | `0.1` | Rust compilado para WebAssembly (`mod.wasm`), isolado em uma sandbox | Só 64 bits |
+
+Mods nativos (`.hnmod`) são compilados junto com o jogo no PC e não rodam no app.
+
+## 1. Ferramentas
+
+É preciso ter o Rust instalado e este repositório clonado.
+
+```sh
+git clone https://github.com/WandersTest3/Pojarush_Test3
+cd Pojarush_Test3/horizon
+cargo install --path crates/cargo-horizon-mod
+rustup target add wasm32-unknown-unknown
+```
+
+O alvo `wasm32-unknown-unknown` só é necessário para mods de código.
+
+## 2. Mod de conteúdo
+
+```sh
+cargo horizon-mod new meu-mod --template content
+cd meu-mod
+cargo horizon-mod build
+cargo horizon-mod check target/horizon-mod/meu_mod.hmod
+```
+
+O modelo cria um bloco completo (`glowing_amethyst`) com estes arquivos:
+
+| Arquivo | Função |
+|---|---|
+| `horizon-mod.toml` | Manifesto do mod |
+| `data/<id>/horizon/block/<nome>.json` | Declara o bloco a partir de um bloco vanilla |
+| `data/<id>/horizon/item/<nome>.json` | Declara um item a partir de um item vanilla |
+| `assets/<id>/blockstates/`, `models/`, `items/`, `lang/` | Aparência e nomes, como em um resource pack |
+| `data/<id>/recipe/`, `loot_table/` | Receitas e drops, como em um data pack |
+| `data/minecraft/tags/` | Acréscimos às tags vanilla (por exemplo `mineable/pickaxe`) |
+
+Manifesto:
+
+```toml
+id = "meu_mod"
+name = "Meu mod"
+version = "0.1.0"
+description = "..."
+authors = ["Seu nome"]
+api = "0.2"
+side = "both"
+capabilities = ["registries"]
+```
+
+Um bloco copia um bloco vanilla e muda o que precisar:
+
+```json
+{ "template": "minecraft:iron_block",
+  "properties": { "hardness": 4.0, "light": 3, "sounds": "minecraft:amethyst_block" },
+  "item": true }
+```
+
+Um item copia um item vanilla e troca componentes de dados:
+
+```json
+{ "template": "minecraft:iron_sword",
+  "components": {
+    "minecraft:max_damage": 900,
+    "!minecraft:repairable": {} } }
+```
+
+Regras: os arquivos ficam no namespace do próprio mod (`assets/<id>/`, `data/<id>/`), mais acréscimos em
+`data/minecraft/tags/` e `data/c/tags/`. Chaves desconhecidas são recusadas. Dois mods ligados não podem usar o
+mesmo namespace. Mais detalhes em `horizon/docs/mods.md` e `horizon/docs/modpacks.md`.
+
+## 3. Mod de código (WebAssembly)
+
+```sh
+cargo horizon-mod new meu-codigo --template code
+cd meu-codigo
+```
+
+No `Cargo.toml` criado, aponte o SDK para este repositório:
+
+```toml
+[dependencies]
+horizon-mod-sdk = { path = "../Pojarush_Test3/horizon/crates/horizon-mod-sdk" }
+```
+
+Depois:
+
+```sh
+cargo horizon-mod build
+cargo horizon-mod check target/horizon-mod/meu_codigo.hmod
+```
+
+O `check` mostra o que o mod pode fazer e faz um teste de execução fora do jogo.
+
+Exemplo mínimo (`src/lib.rs`), um comando `/hello`:
+
+```rust
+use horizon_mod_sdk::{Mod, Registration, chat};
+
+struct MeuMod {
+    vezes: u32,
+}
+
+impl Mod for MeuMod {
+    fn init() -> Result<(Self, Registration), String> {
+        Ok((MeuMod { vezes: 0 }, Registration::new().command("hello")))
+    }
+
+    fn command(&mut self, _name: &str, args: &str) -> Result<Option<String>, String> {
+        self.vezes += 1;
+        chat::show(&format!("Olá {args}! ({} até agora)", self.vezes));
+        Ok(None)
+    }
+}
+
+horizon_mod_sdk::export_mod!(MeuMod);
+```
+
+Funções que o jogo chama (todas opcionais, menos `init`):
+
+| Função | Quando | Como pedir |
+|---|---|---|
+| `init()` | Ao carregar o mod | Sempre |
+| `tick(tick)` | 20 vezes por segundo | `Registration::new().on_tick()` |
+| `frame(seconds)` | A cada quadro desenhado | `.on_frame()` |
+| `command(name, args)` | O jogador usa um comando do mod | `.command("nome")` |
+| `chat(text)` | Uma linha chega ao chat | `.on_chat()` |
+| `ui_select(id, row)` | Clique em um botão ou linha das telas do mod | Capacidade `ui` |
+| `ui_settings_opened()`, `ui_closed()` | A página de ajustes do mod abre, uma tela fecha | Capacidade `ui` |
+
+Capacidades (`capabilities` no manifesto). O jogador vê a lista antes de ligar o mod, e o mod só alcança o que pediu:
+
+| Capacidade | Permite |
+|---|---|
+| `game-read` | Ler posição, vida, hora e outros dados do jogo |
+| `chat` | Mostrar mensagens no chat |
+| `hud` | Desenhar texto no HUD |
+| `render` | Formas no HUD, tremor e zoom da câmera |
+| `input` | Teclas próprias, a roda do mouse e o botão de usar em itens do mod |
+| `ui` | Telas próprias e uma página de ajustes em Opções > Mods |
+| `storage` | Salvar os ajustes do mod em disco |
+| `command` | Rodar comandos vanilla como o jogador |
+| `recipes` | Ler receitas e itens (visualizadores de receitas) |
+| `registries` | Blocos e itens novos pela pasta `data/` do mod |
+
+`render`, `input`, `ui` e `recipes` ainda podem mudar entre versões: além de `capabilities`, elas precisam estar em
+`experimental = [...]` no manifesto, como no mod de zoom.
+
+Exemplos completos neste repositório:
+
+- `horizon/mods/pojarush-zoom`: tecla própria, roda do mouse, zoom, página de ajustes e ajustes salvos.
+- `horizon/crates/horizon-mod-sdk/examples/`: `welcome`, `coords-hud`, `beacons`, `ruby-content`, `predator-missile`.
+- Contrato completo da API: `horizon/crates/horizon-mod-sdk/wit/horizon.wit`.
+
+## 4. Instalar e ligar
+
+1. Copie o `.hmod` para `Pojarush_Test3/horizon/game/horizon-mods/`, ou use Pacotes > Mods > Importar arquivo.
+2. Deixe "Carregar mods ao iniciar" ligado no launcher.
+3. No jogo, abra Opções > Mods e ligue o mod. Ele começa desligado, e a lista mostra o que cada um pode fazer.
+4. Reinicie o jogo: blocos e itens carregam só na inicialização.
+
+Um mod que não carrega aparece em vermelho na lista, com o motivo.
+
+# Tutorial: como fazer shaders
+
+O jogo aceita dois formatos na pasta `shaderpacks/`:
+
+| Formato | Arquivo | Estado |
+|---|---|---|
+| Horizon | `.hshader` (WGSL) | Verificado antes de rodar; é o formato recomendado |
+| OptiFine/Iris | `.zip` com a pasta `shaders/` | Experimental no celular; packs pesados podem ter falhas visuais |
+
+## 1. Ferramenta
+
+```sh
+cd Pojarush_Test3/horizon
+cargo install --path crates/horizon-shader-api
+```
+
+## 2. Criar, verificar e empacotar
+
+```sh
+horizon-shader new meu_pack --template post
+horizon-shader check meu_pack
+horizon-shader pack meu_pack
+```
+
+Os modelos são `post`, `sky` e `material`. O `check` mostra cada estágio com o custo, ou cada erro com arquivo,
+linha e coluna. O `pack` gera `meu_pack-0.1.0.hshader`.
+
+Um pack é uma pasta com `horizon-shaders.toml` e arquivos WGSL:
+
+```toml
+schema = 1
+id = "meu_pack"
+name = "Meu Pack"
+version = "0.1.0"
+api = "0.1"
+
+[[post]]
+file = "post.wgsl"
+
+[[options]]
+id = "saturation"
+name = "Saturation"
+type = "float"
+default = 1.15
+min = 0.0
+max = 2.0
+```
+
+## 3. Estágios
+
+Cada estágio é uma função que o seu arquivo define. O Horizon continua fazendo o culling e a malha do mundo; o pack
+muda a aparência.
+
+| Estágio | Função | O que faz |
+|---|---|---|
+| `[sky]` | `fn sky(input: SkyInput) -> vec4<f32>` | Cor do céu do Overworld em cada direção; sol, lua, estrelas e nuvens vão por cima |
+| `[material]` | `fn material(input: MaterialInput) -> Surface` | Cor iluminada de cada ponto dos blocos, antes da névoa |
+| `[[post]]` | `fn post(input: PostInput) -> vec4<f32>` | Passada de tela cheia sobre a imagem do mundo (até 8, em ordem), abaixo da mão e do HUD |
+
+Todo estágio lê `frame`: matrizes e posição da câmera, direção do sol e da lua, hora do dia, cores do céu e da
+névoa, chuva e dimensão. As passadas `post` também leem `scene_color`, `scene_depth`, `previous` e as funções
+`depth_at(uv)` e `view_position(uv, depth)`.
+
+Cada opção do manifesto vira um `override` WGSL com o mesmo nome:
+
+```wgsl
+override saturation: f32 = 1.15;
+```
+
+Regras que o `check` cobra: os arquivos não declaram `@group`/`@binding`, nem pontos de entrada, nem nomes que
+começam com `horizon_`. O limite é de 20 000 expressões e 64 leituras de textura por estágio.
+
+## 4. Instalar e ligar
+
+1. Copie a pasta do pack ou o `.hshader` para `Pojarush_Test3/horizon/game/shaderpacks/`, ou use Pacotes > Shaders >
+   Importar arquivo.
+2. Deixe "Carregar shaders ao iniciar" ligado no launcher.
+3. No jogo: Opções > Horizon Settings > Shader Packs. Um pack roda por vez; tocar de novo desliga.
+
+Enquanto o pack roda, o jogo relê os arquivos duas vezes por segundo: ao salvar, ele é verificado e recarregado. Se a
+versão nova falhar, o chat mostra onde e a última versão boa continua desenhando.
+
+Guia completo e exemplo (`golden_hour`): `horizon/docs/shaders.md` e `horizon/crates/horizon-shader-api/packs/`.
+
+# Compilar o launcher
 
 ```sh
 ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653 ./horizon/android/build-android.sh
 ./gradlew :Pojarush:assembleRelease
 ```
 
-Release signing reads `pojarush.jks` with `.store_password.txt`, `.key_password.txt` and `.key_alias.txt`
-(or `STORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS`). Microsoft sign-in needs an Azure OAuth client ID with
-Minecraft API access in `.oauth_client_id.txt` or `OAUTH_CLIENT_ID`; without it the app plays offline.
+O Gradle gera `Pojarush-arm64-v8a-release.apk` e `Pojarush-armeabi-v7a-release.apk` em
+`Pojarush/build/outputs/apk/release/`. O `versionCode` de cada APK é `pojarush_version_code` × 10, mais 2 no de
+64 bits e 1 no de 32 bits; aumente `pojarush_version_code` em `Pojarush/gradle.properties` a cada versão.
 
-## Use
+A assinatura lê `pojarush.jks` com `.store_password.txt`, `.key_password.txt` e `.key_alias.txt` (ou
+`STORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS`); veja `SIGNING.md`. A entrada com Microsoft precisa de um client ID
+OAuth do Azure em `.oauth_client_id.txt` ou `OAUTH_CLIENT_ID`; sem ele o app joga offline.
 
-1. Choose a player name or sign in with Microsoft.
-2. Optional: allow access to the internal storage; worlds, options, packs, layouts and logs then live in
-   `Pojarush_Test3/` at its root (otherwise in the app's folder).
-3. Prepare game files: about 330 MB download (+380 MB with sounds), then several minutes of Java exporters.
-4. Play (the button at the bottom right).
+## Estrutura
 
-Controls: the built-in Pojarush layout and any Pojarush (`pojarush`), Zalith (`editorVersion`),
-Fold Craft Launcher (`viewGroups`) or PojavLauncher (`mControlDataList`) layout imported from a `.json` file or
-put in `Pojarush_Test3/controls/`.
-In game: drag to look, tap to use, hold to break, tap the hotbar to select. In menus: direct touch, or a
-virtual mouse with an optional custom image or animated GIF (Mouse page). The floating button (drag it to move
-it; size, opacity, roundness, color and image in Controls) opens the controls, mouse and resolution settings
-directly, with quick actions for the virtual mouse, keyboard, hiding the controls and the control editor. Edited layouts are saved as Pojarush `.json` files in
-`Pojarush_Test3/controls/`. Back is Escape.
-
-Not an official Minecraft product; no Mojang files are included. You must own Minecraft: Java Edition.
-
-## 1.9.0
-
-- Controles padrão: `Pojarush_Default_V1.0.json` e `Bedrock_Default_V1.0.json`.
-- Mod de zoom removido do app; distribuído separadamente.
-- Pré-carregamento sempre ativo (sem opção para desligar): o jogo abre em segundo plano a 1 FPS e volta sozinho ao sair do jogo; mods importados reiniciam o jogo nos bastidores.
-- Slider de LOD em chunks: 32, 64, 128, 256, 512 (teto reduzido de 1M para 512).
-- Contador de FPS removido do launcher; agora é o mod Pojarush FPS (distribuído à parte).
-- Editor: cor de fundo (com transparente), opacidade por botão, quebra de linha e redução automática da fonte.
-- Botão de fechar o jogo no menu flutuante.
-- Mouse físico: correção da detecção que deixava o mouse virtual sempre invisível (não confundir mais touchscreen com mouse); clique do mouse físico capturado agora funciona (antes só o scroll funcionava); captura de ponteiro no jogo, sensibilidade maior.
-- Correção ao abrir configurações de um mod.
-- "Mods" renomeado para "Pacotes".
-- Volume do wallpaper em vídeo, ajustável.
-- Correção do teclado mostrando o layout numérico sem corretor no chat/campos de texto do jogo.
-- Possível correção de layout cortado ao desligar/ligar a tela no launcher (density agora recriada corretamente).
-- Tela preta ao compartilhar a tela em alguns aparelhos (relatado em um Samsung): investigado, causa não isolada com segurança; segue em aberto.
-
-## 1.8.0
-
-- Code mods (.hmod with WebAssembly) run again on arm64: the sandboxed mod runtime (wasmtime) from
-  Starling (Vasysik/horizon-android, MIT) is ported into the game, with its tick, frame, key,
-  mouse, chat, command, HUD panel, zoom and settings-screen hooks. 32-bit phones load content mods
-  only (wasmtime has no 32-bit arm backend).
-- Mods page: "Download" lists the mods, resource packs and shaders of playhorizon.dev (its
-  registry index), checks each file's SHA-256 and installs it in the right folder, turned on.
-  Native mods (.hnmod) are hidden: they only run in PC builds.
-- Pojarush Zoom (`horizon/mods/pojarush-zoom`), a test mod installed and turned on once: press C
-  to zoom in, press C again to zoom out.
-- Starting the game: the launcher-styled loading screen stays up until the resources finished
-  loading and the game draws smoothly, then the game shows at once.
-- Controls editor: the top panel moves (hold and drag), exact sizes can be typed, "Mirror size"
-  keeps width and height equal, layouts can be named when saved and renamed later, and the
-  background has random particles instead of stripes. "Edit layout" is back in the in-game menu.
-  HUD images moved to the Controls page, under the editor.
-
-## 1.7.0
-
-- 32-bit phones (armeabi-v7a): the APK now carries Horizon, horizon-prepare, the Java shim and
-  Java 25 for 32-bit arm as well as arm64.
-- Fixed the crash on GPUs with 1024 texture layers ("GPU supports 1024 texture layers; 1291
-  required"): block textures are split into arrays of the GPU's real layer limit.
-- GPU timestamp queries are off on Android: after a GPU reset (Adreno 610 logs) the destroyed
-  readback buffer panicked the game. `HORIZON_GPU_TIMER=1` turns them back on.
-- Slower start fixed: 1.6.0 made the GUI atlas wait for the GPU and lowered the background
-  loader's priority; the atlas now waits only when it does not fit 4096×4096, and the priority
-  change is reverted.
-- LOD Distance goes up to 65536 chunks (about 1 million blocks), as a slider in game and in the
-  launcher's Graphics page; phones are no longer capped at 128 chunks.
-- The FPS counter is the default overlay on Android.
-- Launcher: "Others" page (interface, wallpaper, floating button, HUD images, extras), menu
-  background opacity, Minecraft-style font (Pwnage_Block's "Minecraft" font, CC BY-SA 3.0, with
-  Portuguese accented letters added), long labels scroll instead of being cut, RAM and
-  resolution apply as you type, the 67%/45% shortcuts are gone, "Open folder" opens ZArchiver
-  when installed.
-- Floating button: Pojarush_Test3 icon by default (23 dp, 60% opacity, round) with a colored
-  border and 20 colors; opens Controls, Mouse and Graphics.
-- HUD images: import a .zip or images and use them on buttons and joysticks (stretched to the
-  control); the built-in "Bedrock Controls" layout uses the Bedrock UI image names. No Mojang
-  images are bundled: import your own pack.
-- The skin preview now uses a per-pixel depth buffer, so the cape is never cut by an arm or leg.
-
-## 1.6.0
-
-- Resource packs load again: Rust's file locks are not implemented on Android, so the pack cache's
-  lock always failed with "Resource reload failed: lock() not supported". Locks now use the kernel's
-  `flock` and carry on unlocked on filesystems without them. The game log (`latest.log`, archived as
-  `YYYY-MM-DD-N.log.gz` like vanilla) and world session locks use the same path; logs and crash
-  reports are also copied to `Pojarush_Test3/logs` and `Pojarush_Test3/crash-reports`.
-- Fixed a 1.5.1 regression that broke every resource pack (including the offline skin pack): the
-  check that a linked file reads back always failed on folders, and the copy fallback then refused
-  to copy a folder, so the whole overlay failed.
-- Fixed the crash on GPUs limited to 4096×4096 textures (PowerVR GE8300 and others: "the shared
-  atlas is 4096x5120"): the GUI atlas is now packed for the GPU's real limit with a tighter skyline
-  packer, and only if it still does not fit are the large GUI textures halved.
-- `.hshader` packs written for newer Horizon builds (`[[lights]]`, `[shadow]`, per-stage `files`...)
-  are no longer refused: what this Horizon draws (sky, material, post) runs and the chat says which
-  sections are not supported yet. WebAssembly code mods (e.g. Compass Enhanced) still do not run in
-  this Horizon version; content `.hmod` mods do.
-- PojavLauncher control layouts (`mControlDataList`, dynamic positions, drawers, special buttons)
-  can be imported.
-- Controls: hide them while keeping them usable, 80% default opacity, double-tap a hotbar slot to swap
-  hands (F), Bedrock-style drop (hold a hotbar slot to keep pressing Q, interval adjustable), auto
-  sprint per joystick, and an option to stop taps outside the buttons from clicking.
-- The floating button is customizable and opens the settings directly.
-- Launcher: wallpaper (image or muted looping video), Minecraft-style FPS counter, Mouse before Mods in
-  the menu, a drawn Play icon (some devices showed an emoji), crash reason and log sharing next to
-  "The last game ended with code N".
-- The game and the Minecraft download keep running in the background through a foreground service
-  (with a notification), so switching apps no longer closes the game or freezes the preparation;
-  a stuck preparation is now stopped together with its Java process instead of hanging forever.
-- Faster input right after the title screen appears: the background world loader runs at a lower
-  priority on Android.
-- The skin preview's cape is drawn with depth and no longer cut by the arms or body.
-
-## 1.5.1
-
-- Fixed `.hmod` content mods and resource packs still not loading after 1.5.0's private-cache fix:
-  the overlay symlink itself lived in private storage, but when it pointed at a pack or mod the
-  player keeps in shared storage (so it stays visible from outside the app), reading through that
-  link across the two filesystems could still silently fail. The overlay builder now checks a link
-  actually reads back and falls back to a real copy when it doesn't.
-- `.hmod` files are now found regardless of case (`Mod.HMOD`, not just `mod.hmod`).
-- A connected physical mouse now moves the cursor and scrolls; only touch and a Bluetooth keyboard
-  worked before.
-- A first run now asks, in order: internal-storage permission, then to sign in, then to start the
-  Minecraft download — you can keep setting things up while it downloads.
-- Editing a layout you already saved updates that file instead of creating a new one each time, and
-  accented names (e.g. "Pojarush (padrão)") no longer get mangled when saved.
-- New look for the launcher's home screen.
-- Clarified in the Mods page: classic OptiFine/Iris `.zip` shader packs are listed but not rendered
-  yet — Horizon only runs its own `.hshader` format so far.
-
-## 1.5.0
-
-- Several accounts (offline, Microsoft, Ely.by) with a switcher; skin viewer with cape.
-- Mods page: `.hmod` content mods, resource packs and shader packs. Resource packs can be turned on
-  from the launcher (written to `options.txt`); a zip holding the pack inside one folder is extracted.
-- Resource-pack and content-mod overlays are built in the app's private storage (`HORIZON_CACHE_DIR`):
-  shared storage refuses the symlinks they are made of, which kept packs and mods from loading.
-- A leftover game process is stopped before the game starts again (two games on one world).
-- The logs export includes the latest crash reports.
-- Graphics API (Auto / Vulkan / OpenGL) through `HORIZON_GRAPHICS_API`; resolution recommendations.
-
-Not supported: `.hmod` mods with code (`mod.wasm`) and native `.hnmod` mods, which must be compiled
-into the game itself.
+| Caminho | O que é |
+|---|---|
+| `Pojarush/` | O app Android (Kotlin, Compose) |
+| `Pojarush/src/main/jniLibs/<abi>/` | `libhorizon_android.so` (o jogo), `libhorizon_prepare.so`, `libpojajava.so`, `libc++_shared.so` |
+| `Pojarush/src/main/assets/horizon/` | `research-lock.json` e os exportadores usados no preparo |
+| `Pojarush/src/main/assets/controls/` | Controles padrão |
+| `runtimes/jre-25/` | Java 25 para arm64 e arm de 32 bits (do Zalith Launcher 2), baixado pelo app no primeiro preparo |
+| `horizon/` | Código do Horizon com o port para Android (`crates/horizon-android`, `horizon-client/src/android.rs`) |
+| `horizon/mods/pojarush-zoom/` | Mod de zoom do Pojarush |

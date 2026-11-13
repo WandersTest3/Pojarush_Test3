@@ -88,6 +88,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         override fun run() {
             if (panel != Panel.EDITOR) controls.setCaptured(HorizonBridge.isCaptured())
             controls.menuHold = panel != Panel.NONE
+            controls.typing = HorizonBridge.isTyping()
             controls.resumeIfPossible()
             uiHandler.postDelayed(this, 100)
         }
