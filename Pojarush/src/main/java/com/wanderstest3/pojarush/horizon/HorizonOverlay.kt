@@ -64,7 +64,7 @@ import com.wanderstest3.pojarush.ui.ResolutionSettings
 
 @SuppressLint("ViewConstructor")
 class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activity), ControlsHost {
-    private enum class Panel { NONE, SETTINGS, EDITOR }
+    private enum class Panel { NONE, SETTINGS, EDITOR, SEND_KEY }
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private val settings = ControlSettings(activity)
@@ -167,6 +167,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         when (panel) {
             Panel.NONE -> {}
             Panel.SETTINGS -> SettingsPanel()
+            Panel.SEND_KEY -> SendKeyPanel()
             Panel.EDITOR -> ControlEditor(controls, settings) { closeEditor() }
         }
     }
@@ -211,6 +212,9 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                         panel = Panel.NONE
                         toggleKeyboard()
                     }
+                    QuickChip(stringResource(R.string.overlay_send_key)) {
+                        panel = Panel.SEND_KEY
+                    }
                     QuickChip(stringResource(R.string.overlay_close_game)) {
                         activity.finishAndRemoveTask()
                     }
@@ -234,6 +238,34 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                             ResolutionSettings(settings, ::apply)
                             GraphicsApiSettings(settings)
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SendKeyPanel() {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color(0x99000000)).clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { panel = Panel.SETTINGS },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(0.9f).fillMaxHeight(0.85f).clip(RoundedCornerShape(18.dp))
+                    .background(MaterialTheme.colorScheme.background).padding(12.dp)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.overlay_send_key), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { panel = Panel.SETTINGS }) { Text(stringResource(R.string.overlay_close)) }
+                }
+                com.wanderstest3.pojarush.ui.VisualKeyboard(showSpecials = false) { action ->
+                    if (action is com.wanderstest3.pojarush.controls.Action.Key) {
+                        activity.tapKey(action.code)
                     }
                 }
             }

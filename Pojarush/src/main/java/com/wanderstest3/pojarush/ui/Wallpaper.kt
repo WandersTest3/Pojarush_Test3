@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -225,6 +227,7 @@ fun ExtrasSettings(settings: ControlSettings) {
 fun WallpaperSettings(settings: ControlSettings) {
     val context = LocalContext.current
     var path by remember { mutableStateOf(settings.wallpaper) }
+    var galleryVersion by remember { mutableIntStateOf(0) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
@@ -233,17 +236,37 @@ fun WallpaperSettings(settings: ControlSettings) {
                 settings.wallpaper = it.absolutePath
                 path = it.absolutePath
                 WallpaperState.version++
+                galleryVersion++
             }
             .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
     }
     PojarushCard {
         CardTitle(stringResource(R.string.wallpaper_title))
         Hint(if (path.isEmpty()) stringResource(R.string.wallpaper_none) else stringResource(R.string.mouse_cursor_current, File(path).name))
+        val wallpaperFiles = remember(galleryVersion) { ControlLayouts.history(ControlLayouts.wallpaperDir()) }
+        if (wallpaperFiles.isNotEmpty()) {
+            HistoryGallery(
+                files = wallpaperFiles,
+                current = path,
+                onSelect = { f ->
+                    settings.wallpaper = f.absolutePath
+                    path = f.absolutePath
+                    WallpaperState.version++
+                },
+                onDelete = { f ->
+                    ControlLayouts.deleteFromHistory(f, settings.wallpaper) {
+                        settings.wallpaper = ""
+                        path = ""
+                        WallpaperState.version++
+                    }
+                    galleryVersion++
+                },
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { picker.launch(arrayOf("image/*", "video/*")) }) { Text(stringResource(R.string.wallpaper_choose)) }
             if (path.isNotEmpty()) {
                 OutlinedButton(onClick = {
-                    File(path).delete()
                     settings.wallpaper = ""
                     path = ""
                     WallpaperState.version++
@@ -284,8 +307,8 @@ fun OnboardingWallpaperStep(onFinished: () -> Unit) {
         downloading = label
         error = null
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                val dir = java.io.File(com.wanderstest3.pojarush.horizon.Paths.publicRoot, "wallpaper")
+            val result = runCatching {
+                val dir = java.io.File(com.wanderstest3.pojarush.Paths.publicRoot, "wallpaper")
                 dir.mkdirs()
                 val name = url.substringAfterLast('/')
                 val dest = java.io.File(dir, name)
@@ -300,18 +323,22 @@ fun OnboardingWallpaperStep(onFinished: () -> Unit) {
                         while (inp.read(buf).also { n = it } != -1) {
                             out.write(buf, 0, n)
                             read += n
-                            if (total > 0) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { progress = read.toFloat() / total }
+                            if (total > 0) {
+                                val p = read.toFloat() / total
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { progress = p }
+                            }
                         }
                     }
                 }
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                dest
+            }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                result.onSuccess { dest ->
                     settings.wallpaper = dest.absolutePath
                     WallpaperState.version++
                     settings.wallpaperOnboardingDone = true
                     onFinished()
-                }
-            }.onFailure { e ->
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                }.onFailure { e ->
                     downloading = null
                     error = e.message
                 }

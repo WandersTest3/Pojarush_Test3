@@ -287,4 +287,5 @@
     <string name="onboarding_wallpaper_4k">4K · 107 MB · 60 FPS</string>
     <string name="onboarding_wallpaper_fhd">Full HD · 33 MB</string>
     <string name="onboarding_wallpaper_skip">Ignorar</string>
+    <string name="overlay_send_key">Enviar tecla</string>
 </resources>

@@ -547,65 +547,12 @@ private fun StickEditor(
     OutlinedButton(onClick = onDelete) { Text(stringResource(R.string.editor_delete), color = MaterialTheme.colorScheme.error) }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ActionPickerDialog(context: android.content.Context, existing: List<Action>, onPick: (Action?) -> Unit) {
     AlertDialog(
         onDismissRequest = { onPick(null) },
         title = { Text(stringResource(R.string.editor_add_action)) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val special = listOf(
-                    context.getString(R.string.action_mouse_left) to Action.Mouse(0),
-                    context.getString(R.string.action_mouse_right) to Action.Mouse(1),
-                    context.getString(R.string.action_mouse_middle) to Action.Mouse(2),
-                    context.getString(R.string.action_scroll_up) to Action.Scroll(1f, false),
-                    context.getString(R.string.action_scroll_down) to Action.Scroll(-1f, false),
-                    context.getString(R.string.action_keyboard) to Action.Keyboard,
-                    context.getString(R.string.action_menu) to Action.Menu,
-                    context.getString(R.string.action_toggle_mouse) to Action.ToggleMouse,
-                    context.getString(R.string.action_hide_controls) to Action.HideControls,
-                )
-                Text(stringResource(R.string.editor_actions_special), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    special.forEach { (label, action) ->
-                        val used = action in existing
-                        AssistChip(
-                            onClick = { if (!used) onPick(action) },
-                            label = { Text(label) },
-                            enabled = !used
-                        )
-                    }
-                }
-                val keyRows = listOf(
-                    listOf("Esc","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12"),
-                    listOf("`","1","2","3","4","5","6","7","8","9","0","-","=","Backspace"),
-                    listOf("Tab","Q","W","E","R","T","Y","U","I","O","P","[","]","\\"),
-                    listOf("Caps Lock","A","S","D","F","G","H","J","K","L",";","'","Enter"),
-                    listOf("Left Shift","Z","X","C","V","B","N","M",",",".","/","Right Shift"),
-                    listOf("Left Ctrl","Left Alt","Space","Right Alt","Right Ctrl"),
-                    listOf("Insert","Home","Page Up","Delete","End","Page Down"),
-                    listOf("↑","↓","←","→"),
-                )
-                val allByName = ActionCatalog.all(context).associate { (name, action) -> name to action }
-                Text(stringResource(R.string.editor_actions_keys), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                keyRows.forEach { row ->
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        row.forEach { key ->
-                            val action = allByName[key]
-                            if (action != null) {
-                                val used = action in existing
-                                AssistChip(
-                                    onClick = { if (!used) onPick(action) },
-                                    label = { Text(key, style = MaterialTheme.typography.bodySmall) },
-                                    enabled = !used
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
+        text = { VisualKeyboard(disabled = existing.toSet()) { onPick(it) } },
         confirmButton = {},
         dismissButton = { TextButton(onClick = { onPick(null) }) { Text(stringResource(R.string.cancel)) } }
     )

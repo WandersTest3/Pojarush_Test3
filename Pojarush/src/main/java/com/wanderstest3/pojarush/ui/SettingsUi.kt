@@ -144,6 +144,7 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
 fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     val context = LocalContext.current
     var icon by remember { mutableStateOf(settings.menuIcon) }
+    var iconVersion by remember { mutableIntStateOf(0) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
@@ -156,6 +157,7 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             settings.menuIcon = it.absolutePath
             icon = it.absolutePath
             onChange(Change.MENU_BUTTON)
+            iconVersion++
         }
     }
     PojarushCard {
@@ -164,6 +166,26 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         SettingSlider(stringResource(R.string.menu_button_opacity), settings.menuOpacity, 0.05f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.menuOpacity = it; onChange(Change.MENU_BUTTON) }
         SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
         Hint(if (icon.isEmpty()) stringResource(R.string.menu_button_icon_none) else stringResource(R.string.mouse_cursor_current, File(icon).name))
+        val iconFiles = remember(iconVersion) { ControlLayouts.history(ControlLayouts.menuIconDir()) }
+        if (iconFiles.isNotEmpty()) {
+            HistoryGallery(
+                files = iconFiles,
+                current = icon,
+                onSelect = { f ->
+                    settings.menuIcon = f.absolutePath
+                    icon = f.absolutePath
+                    onChange(Change.MENU_BUTTON)
+                },
+                onDelete = { f ->
+                    ControlLayouts.deleteFromHistory(f, settings.menuIcon) {
+                        settings.menuIcon = ""
+                        icon = ""
+                        onChange(Change.MENU_BUTTON)
+                    }
+                    iconVersion++
+                },
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { picker.launch(arrayOf("image/*")) }) { Text(stringResource(R.string.menu_button_icon_choose)) }
             if (icon.isNotEmpty()) {
@@ -182,6 +204,7 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
 fun MouseSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     val context = LocalContext.current
     var image by remember { mutableStateOf(settings.cursorImage) }
+    var cursorVersion by remember { mutableIntStateOf(0) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
@@ -194,6 +217,7 @@ fun MouseSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             settings.cursorImage = it.absolutePath
             image = it.absolutePath
             onChange(Change.MOUSE)
+            cursorVersion++
         }
     }
     PojarushCard {
@@ -205,34 +229,27 @@ fun MouseSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     }
     PojarushCard {
         CardTitle(stringResource(R.string.mouse_cursor_image))
-        var cursorVersion by remember { mutableIntStateOf(0) }
-        val cursorFiles = remember(cursorVersion) {
-            val dir = ControlLayouts.cursorDir()
-            val exts = setOf("png", "jpg", "jpeg", "webp", "gif")
-            dir.listFiles { f -> f.isFile && f.extension.lowercase() in exts }
-                ?.sortedBy { it.name.lowercase() }.orEmpty()
-        }
+        val cursorFiles = remember(cursorVersion) { ControlLayouts.history(ControlLayouts.cursorDir()) }
         if (cursorFiles.isEmpty()) {
             Hint(stringResource(R.string.mouse_cursor_none))
         } else {
-            cursorFiles.forEach { f ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                        .clickable {
-                            settings.cursorImage = f.absolutePath
-                            image = f.absolutePath
-                            onChange(Change.MOUSE)
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(selected = image == f.absolutePath, onClick = {
-                        settings.cursorImage = f.absolutePath
-                        image = f.absolutePath
+            HistoryGallery(
+                files = cursorFiles,
+                current = image,
+                onSelect = { f ->
+                    settings.cursorImage = f.absolutePath
+                    image = f.absolutePath
+                    onChange(Change.MOUSE)
+                },
+                onDelete = { f ->
+                    ControlLayouts.deleteFromHistory(f, settings.cursorImage) {
+                        settings.cursorImage = ""
+                        image = ""
                         onChange(Change.MOUSE)
-                    })
-                    Text(f.name, modifier = Modifier.weight(1f).basicMarquee(), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                }
-            }
+                    }
+                    cursorVersion++
+                },
+            )
             if (image.isNotEmpty()) {
                 TextButton(onClick = {
                     settings.cursorImage = ""

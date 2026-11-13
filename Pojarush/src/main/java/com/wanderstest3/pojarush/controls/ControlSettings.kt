@@ -219,9 +219,12 @@ object ControlLayouts {
 
     fun importCursor(context: Context, uri: Uri): File = importMedia(context, uri, cursorDir(), "cursor")
 
-    fun importMenuIcon(context: Context, uri: Uri): File = importMedia(context, uri, File(Paths.publicRoot, "menu-button"), "icon")
+    fun menuIconDir(): File = File(Paths.publicRoot, "menu-button")
+    fun wallpaperDir(): File = File(Paths.publicRoot, "wallpaper")
 
-    fun importWallpaper(context: Context, uri: Uri): File = importMedia(context, uri, File(Paths.publicRoot, "wallpaper"), "wallpaper")
+    fun importMenuIcon(context: Context, uri: Uri): File = importMedia(context, uri, menuIconDir(), "icon")
+
+    fun importWallpaper(context: Context, uri: Uri): File = importMedia(context, uri, wallpaperDir(), "wallpaper")
 
     fun isVideo(path: String): Boolean = path.substringAfterLast('.', "").lowercase() in VIDEO
 
@@ -243,16 +246,28 @@ object ControlLayouts {
             else -> uri.lastPathSegment?.substringAfterLast('.', "png")?.lowercase()?.take(4) ?: "png"
         }
         dir.mkdirs()
-        val temp = File(dir, ".$base.part")
+        val temp = File(dir, ".$base-${System.currentTimeMillis()}.part")
         context.contentResolver.openInputStream(uri)?.use { input -> temp.outputStream().use { input.copyTo(it) } }
             ?: throw IllegalArgumentException("Empty file")
-        dir.listFiles()?.forEach { if (it != temp) it.delete() }
-        val file = File(dir, "$base.$ext")
+        var file = File(dir, "$base-${System.currentTimeMillis()}.$ext")
+        var n = 1
+        while (file.exists()) { file = File(dir, "$base-${System.currentTimeMillis()}-$n.$ext"); n++ }
         if (!temp.renameTo(file)) {
             temp.copyTo(file, overwrite = true)
             temp.delete()
         }
         return file
+    }
+
+    /// Every previously imported file in [dir] still on disk, newest first — the
+    /// gallery of past choices the user can pick again (mouse cursor, wallpaper,
+    /// floating-menu icon all call this on their own `_image` folder).
+    fun history(dir: File): List<File> =
+        dir.listFiles { f -> f.isFile && !f.name.startsWith(".") }?.sortedByDescending { it.lastModified() } ?: emptyList()
+
+    fun deleteFromHistory(file: File, current: String, onCurrentCleared: () -> Unit) {
+        file.delete()
+        if (file.absolutePath == current) onCurrentCleared()
     }
 
     private fun safeName(name: String) = name.replace(Regex("[^\\p{L}0-9._ ()-]"), "_").trim().take(48).ifEmpty { "Layout" }
