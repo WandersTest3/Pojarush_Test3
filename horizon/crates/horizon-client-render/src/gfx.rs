@@ -46,6 +46,65 @@ pub use entity_batch::{
 };
 pub use view::{View, ViewSet};
 
+pub use pack_post::PackPost;
+
+/// Cloneable GPU state for building `pack_post::PackPost` off the Android UI thread.
+pub struct ShaderPackBuildContext {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    adapter: wgpu::Adapter,
+    screen_format: wgpu::TextureFormat,
+    atlas: Option<(wgpu::TextureView, [u32; 2])>,
+    lightmap: wgpu::TextureView,
+    flat_layout: Option<wgpu::BindGroupLayout>,
+    pack_terrain_flat: bool,
+    celestial: Option<wgpu::TextureView>,
+    clouds: wgpu::BindGroupLayout,
+}
+
+impl ShaderPackBuildContext {
+    pub fn build(self, post: horizon_shaders::Post, block_ids: &[i32]) -> pack_post::PackPost {
+        let instance = wgpu::vertex_attr_array![5=>Float32x4];
+        let vertex = wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<TerrainVertex>() as u64,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &TERRAIN_ATTRIBUTES,
+        };
+        let instances = wgpu::VertexBufferLayout {
+            array_stride: 16,
+            step_mode: wgpu::VertexStepMode::Instance,
+            attributes: &instance,
+        };
+        let buffers = [Some(vertex), Some(instances)];
+        let flat = self.pack_terrain_flat;
+        let world = pack_post::World {
+            atlas: self.atlas.clone(),
+            lightmap: self.lightmap,
+            terrain: self.atlas.as_ref().map(|_| pack_post::Geometry {
+                buffers: if flat { &buffers[..1] } else { &buffers },
+                table: self.flat_layout.as_ref().filter(|_| flat),
+                depth_write: true,
+                atlas: None,
+                ids: None,
+                cull: true,
+            }),
+            block_ids,
+            celestial: self.celestial,
+            clouds: Some(&self.clouds),
+            weather: true,
+            hand: true,
+        };
+        pack_post::PackPost::new(
+            &self.device,
+            &self.queue,
+            &self.adapter,
+            post,
+            self.screen_format,
+            world,
+        )
+    }
+}
+
 /// Window.getAppropriateLineWidth, in framebuffer pixels.
 pub fn outline_width(width: u32) -> f32 {
     2.5f32.max(width as f32 / 1920.0 * 2.5)
@@ -88,9 +147,11 @@ mod pack_atlas;
 pub mod pack_draw;
 mod pack_entities;
 mod pack_hand;
+mod pack_images;
 mod pack_post;
 mod pack_shadow;
 mod pack_sky;
+mod pack_textures;
 mod pack_timing;
 pub mod pack_uniforms;
 mod pack_weather;
@@ -224,6 +285,12 @@ pub struct Frame<'a> {
     pub yaw: f32,
     pub pitch: f32,
     pub fov_degrees: f32,
+    /// The camera entity's eye and view rotation (yaw, pitch): the camera's own except in a
+    /// third-person view.
+    pub eye: DVec3,
+    pub eye_rotation: [f32; 2],
+    /// The camera is the entity's eye: no third-person view.
+    pub first_person: bool,
     /// The `GameRenderer.bobHurt`/`bobView` pose multiplied into the
     /// projection (`crate::camera::bob_matrix`).
     pub bob: Mat4,
@@ -231,6 +298,11 @@ pub struct Frame<'a> {
     /// (`crate::camera::spinning_effect_matrix`), not the hand's.
     pub spin: Mat4,
     pub sky: Sky,
+    /// Block edits and chunk membership that can change the shader pack's shadow map.
+    pub shadow_scene_revision: (u64, u64),
+    /// Opt-in reuse of the shader pack's last shadow map when the key still matches
+    /// (`horizon-graphics.txt` `shadowCache`; off by default).
+    pub shadow_cache: bool,
     /// Render distance in blocks (fog end).
     pub distance: f32,
     /// Full-detail terrain distance in blocks; distant LODs bypass the cave graph.
@@ -3593,11 +3665,45 @@ impl Renderer {
             pack_post::PackPost::new(
                 &self.device,
                 &self.queue,
+                &self.adapter,
                 post,
                 self.config.format.remove_srgb_suffix(),
                 world,
             )
         });
+        self.install_built_shader_pack(dimension, post)
+    }
+
+    /// Captures the cloneable GPU handles needed to build `pack_post::PackPost` on a background
+    /// worker thread on Android so `vkCreateGraphicsPipelines` never stalls `android_main`.
+    pub fn shader_pack_build_context(&self) -> ShaderPackBuildContext {
+        ShaderPackBuildContext {
+            device: self.device.clone(),
+            queue: self.queue.clone(),
+            adapter: self.adapter.clone(),
+            screen_format: self.config.format.remove_srgb_suffix(),
+            atlas: self.pack_atlas.as_ref().map(|a| (a.view.clone(), a.size())),
+            lightmap: self.lightmap_view.clone(),
+            flat_layout: self.flat.as_ref().map(|f| f.draw_layout.clone()),
+            pack_terrain_flat: self.pack_terrain_flat,
+            celestial: self
+                .hud
+                .atlas_texture
+                .as_ref()
+                .map(|t| t.create_view(&Default::default())),
+            clouds: self.cloud_bindings.clone(),
+        }
+    }
+
+    /// Installs a `PackPost` built on a background worker thread.
+    pub fn install_built_shader_pack(
+        &mut self,
+        dimension: i32,
+        post: Option<pack_post::PackPost>,
+    ) -> Option<(Vec<String>, Vec<String>)> {
+        if post.is_none() {
+            self.pack_atlas = None;
+        }
         let report = post.as_ref().map(|p| {
             let programs = p.programs().into_iter().map(str::to_owned).collect();
             (programs, p.notes.clone())
@@ -3607,6 +3713,13 @@ impl Renderer {
             self.native = None;
         }
         report
+    }
+    /// Whether the loaded `shaders/` pack has at least one active pass.
+    pub fn has_active_shader_pack(&self) -> bool {
+        self.pack_post
+            .as_ref()
+            .and_then(|(_, p)| p.as_ref())
+            .is_some_and(pack_post::PackPost::has_any_pass)
     }
     /// Drops the running shader pack, of either kind.
     pub fn drop_shader_packs(&mut self) {
@@ -3643,8 +3756,24 @@ impl Renderer {
     /// What a shader pack's gbuffers programs read from Horizon's geometry: the sky's, and
     /// terrain's in the pack's block atlas (made here when missing; none when it does not fit).
     pub fn pack_inputs(&mut self) -> horizon_shaders::GameInputs {
+        let terrain = self.pack_terrain_inputs();
+        // A geometry stage reads flat draws' vertices itself, through their index buffer.
+        let terrain_geometry = terrain
+            .clone()
+            .filter(|_| self.pack_terrain_flat)
+            .map(|mut inputs| {
+                inputs.declarations.push_str(
+                    "layout(set = 5, binding = 0) readonly buffer HzIndices { uint hz_indices[]; };\n",
+                );
+                horizon_shaders::GeometryInputs {
+                    inputs,
+                    pull: pack_atlas::PULL.to_owned(),
+                    index: "hz_indices[@]".to_owned(),
+                }
+            });
         horizon_shaders::GameInputs {
-            terrain: self.pack_terrain_inputs(),
+            terrain,
+            terrain_geometry,
             sky: Some(pack_sky::inputs()),
             celestial: Some(pack_sky::celestial_inputs()),
             entities: Some(pack_entities::inputs()),
@@ -3708,6 +3837,21 @@ impl Renderer {
             .map(pack_timing::PassTiming::medians)
             .unwrap_or_default()
     }
+    pub fn define_pack_macros(&self, macros: &mut horizon_shaders::Macros) {
+        if self.device.features().contains(wgpu::Features::SUBGROUP) {
+            for ext in [
+                "basic",
+                "vote",
+                "arithmetic",
+                "ballot",
+                "shuffle",
+                "shuffle_relative",
+            ] {
+                macros.define(format!("MC_GL_KHR_shader_subgroup_{ext}"), "");
+            }
+        }
+    }
+
     /// The dimension the shader pack was last set for.
     pub fn shader_pack_dimension(&self) -> Option<i32> {
         self.pack_post.as_ref().map(|p| p.0)
@@ -4150,14 +4294,27 @@ impl Renderer {
                 planes: frustum(v.cull),
             };
             crate::spans::time("shadow visibility", || {
-                self.sections.visible(
-                    camera,
-                    radius,
-                    &light,
-                    |_| true,
-                    |_, _| false,
-                    &mut shadow_visible,
-                )
+                // Within the unculled distance every section, then those in the light's box.
+                if let Some(d) = v.unculled {
+                    let all = Frustum {
+                        planes: [glam::Vec4::W; 6],
+                    };
+                    let near = radius.min((d / 16.0).ceil() as i32);
+                    self.sections.visible(
+                        camera,
+                        near,
+                        &all,
+                        |_| true,
+                        |_, _| false,
+                        &mut shadow_visible,
+                    );
+                }
+                let mut boxed = Vec::new();
+                self.sections
+                    .visible(camera, radius, &light, |_| true, |_, _| false, &mut boxed);
+                let seen: std::collections::HashSet<_> =
+                    shadow_visible.iter().map(|s| s.key).collect();
+                shadow_visible.extend(boxed.into_iter().filter(|s| !seen.contains(&s.key)));
             });
             // Nearest the light first, so the depth test rejects what lies under it.
             let light = v.light;
@@ -4428,7 +4585,13 @@ impl Renderer {
                     }
                 }
                 let before = self.draws.len();
-                facing_runs(&s.sides, Some(toward), v.origin, |first, quads| {
+                // Every face of a section within the unculled distance.
+                let unculled = view.unculled.is_some_and(|d| {
+                    let o = glam::Vec3::from(v.origin) + 8.0;
+                    o.x.abs().max(o.z.abs()) <= d + 8.0
+                });
+                let toward = (!unculled).then_some(toward);
+                facing_runs(&s.sides, toward, v.origin, |first, quads| {
                     let start = s.start as u32 + first * 4;
                     self.draws.push([quads * 6, 1, 0, start, instance]);
                     self.draw_pages.push((s.page, None));
@@ -4878,7 +5041,18 @@ impl Renderer {
             cull.bind_depth(&self.device, world_depth);
         }
         let cull = self.cull.as_ref().filter(|_| culling && solid_draws > 0);
-        let clear = if frame.title || (frame.end_sky && !frame.underwater && sky_open(frame)) {
+        let pack_sky_clear = pack_draws_sky
+            .then(|| self.pack_post.as_ref().and_then(|p| p.1.as_ref()))
+            .flatten()
+            .and_then(|p| p.sky_clear());
+        let clear = if let Some([r, g, b, a]) = pack_sky_clear {
+            wgpu::Color {
+                r: f64::from(r),
+                g: f64::from(g),
+                b: f64::from(b),
+                a: f64::from(a),
+            }
+        } else if frame.title || (frame.end_sky && !frame.underwater && sky_open(frame)) {
             wgpu::Color::BLACK
         } else {
             wgpu::Color {
@@ -5339,7 +5513,8 @@ impl Renderer {
             let mut terrain =
                 |rp: &mut wgpu::RenderPass<'_>,
                  list: pack_post::TerrainList,
-                 page: &dyn Fn(&mut wgpu::RenderPass<'_>, u32)| {
+                 page: &dyn Fn(&mut wgpu::RenderPass<'_>, u32),
+                 geometry: Option<(u32, u32, &wgpu::BindGroupLayout)>| {
                     use pack_post::TerrainList as L;
                     let shadow = matches!(list, L::ShadowSolid | L::ShadowTranslucent);
                     if !(if shadow {
@@ -5358,8 +5533,29 @@ impl Renderer {
                                 L::ShadowSolid => &flat.calls[shadow..shadow_translucent],
                                 L::ShadowTranslucent => &flat.calls[shadow_translucent..],
                             };
-                            flat.draw_with(rp, calls, |p| self.arena.buffer(p), page);
+                            match geometry {
+                                Some((instances, group_slot, layout)) => {
+                                    if group_slot != 3 {
+                                        let indices = self.device.create_bind_group(
+                                            &wgpu::BindGroupDescriptor {
+                                                label: Some("Shader pack geometry indices"),
+                                                layout,
+                                                entries: &[wgpu::BindGroupEntry {
+                                                    binding: 0,
+                                                    resource: flat.indices.as_entire_binding(),
+                                                }],
+                                            },
+                                        );
+                                        rp.set_bind_group(group_slot, &indices, &[]);
+                                    }
+                                    let vertices = |p| self.arena.buffer(p);
+                                    flat.draw_geometry(rp, calls, vertices, page, instances);
+                                }
+                                None => flat.draw_with(rp, calls, |p| self.arena.buffer(p), page),
+                            }
                         }
+                        // A geometry stage reads flat draws' indices; without them it draws nothing.
+                        None if geometry.is_some() => {}
                         None => {
                             rp.set_index_buffer(self.indices.slice(..), wgpu::IndexFormat::Uint32);
                             rp.set_vertex_buffer(1, self.instances.slice(..));
@@ -5393,6 +5589,7 @@ impl Renderer {
                 size,
                 [self.config.width, self.config.height],
                 &pages,
+                self.flat.as_ref().filter(|_| flat_frame).map(|f| &f.indices),
                 &mut terrain,
             );
             self.pack_post = Some((dimension, Some(post)));

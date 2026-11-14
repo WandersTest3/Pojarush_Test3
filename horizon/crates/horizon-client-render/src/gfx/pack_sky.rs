@@ -82,9 +82,9 @@ pub fn inputs() -> horizon_shaders::GbuffersInputs {
          }}\n    \
          hz_Vertex = vec4(hz_p, 1.0);\n    \
          hz_MultiTexCoord0 = vec4(0.0, 0.0, 0.0, 1.0);\n    \
-         hz_MultiTexCoord1 = vec4(0.0, 240.0, 0.0, 1.0);\n    \
+         hz_MultiTexCoord1 = vec4(240.0, 240.0, 0.0, 1.0);\n    \
          hz_MultiTexCoord2 = hz_MultiTexCoord1;\n    \
-         hz_Normal = vec3(0.0, 1.0, 0.0);\n"
+         hz_Normal = vec3(0.0, 0.0, 1.0);\n"
     );
     horizon_shaders::GbuffersInputs {
         declarations,
@@ -109,7 +109,7 @@ pub fn celestial_inputs() -> horizon_shaders::GbuffersInputs {
                 .into(),
         body: "    hz_Vertex = vec4(hz_v_pos, 1.0);\n    \
              hz_MultiTexCoord0 = vec4(hz_v_uv, 0.0, 1.0);\n    \
-             hz_MultiTexCoord1 = vec4(0.0, 240.0, 0.0, 1.0);\n    \
+             hz_MultiTexCoord1 = vec4(240.0, 240.0, 0.0, 1.0);\n    \
              hz_MultiTexCoord2 = hz_MultiTexCoord1;\n    \
              hz_Color = hz_v_color;\n    \
              hz_Normal = vec3(0.0, 0.0, 1.0);\n"
@@ -132,22 +132,39 @@ pub(super) struct Part {
     pub range: Range<u32>,
 }
 
-/// A disc fan at height `y`, radius 512, as triangles (SkyRenderer's sky and void discs).
+/// A subdivided hemisphere dome of radius 128 (`y >= 0` for `sign > 0`, `y <= 0` for `sign < 0`),
+/// plus a lower-hemisphere extension when `kind == SKY` so `gbuffers_skybasic` covers the full
+/// 360x180 skybox (including the horizon and below-horizon reflections/sky) without clipping.
 fn disc(y: f32, kind: u32, out: &mut Vec<Vertex>) {
     let sign = y.signum();
-    let rim = |i: i32| {
-        let a = (i as f32).to_radians();
+    let radius = 128.0f32;
+    let rings = 6i32;
+    let slices = 24i32;
+    let pt = |elev_rad: f32, azim_rad: f32| -> Vertex {
+        let ce = elev_rad.cos();
+        let se = elev_rad.sin();
         Vertex {
-            pos: [sign * 512.0 * a.cos(), y, 512.0 * a.sin()],
+            pos: [
+                sign * radius * ce * azim_rad.cos(),
+                sign * radius * se,
+                radius * ce * azim_rad.sin(),
+            ],
             kind,
         }
     };
-    let centre = Vertex {
-        pos: [0.0, y, 0.0],
-        kind,
-    };
-    for i in (-180..180).step_by(45) {
-        out.extend([centre, rim(i), rim(i + 45)]);
+    let start_ring = if kind == SKY { -rings } else { 0 };
+    for r in start_ring..rings {
+        let e0 = (r as f32 / rings as f32) * std::f32::consts::FRAC_PI_2;
+        let e1 = ((r + 1) as f32 / rings as f32) * std::f32::consts::FRAC_PI_2;
+        for s in 0..slices {
+            let a0 = (s as f32 / slices as f32) * std::f32::consts::TAU;
+            let a1 = ((s + 1) as f32 / slices as f32) * std::f32::consts::TAU;
+            let v00 = pt(e0, a0);
+            let v01 = pt(e0, a1);
+            let v10 = pt(e1, a0);
+            let v11 = pt(e1, a1);
+            out.extend([v00, v01, v11, v00, v11, v10]);
+        }
     }
 }
 

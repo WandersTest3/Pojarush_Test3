@@ -30,3 +30,9 @@ and `optical_flow.rs` follows the SDK's `sdk/src/components/opticalflow/ffx_opti
 (its passes, their order and their dispatch sizes). Copyright (C) 2024 Advanced Micro Devices,
 Inc., under the MIT license, whose text heads both files. AMD and FidelityFX are AMD's
 trademarks; Horizon is not affiliated with AMD.
+
+## naga
+
+`third_party/naga` is [naga](https://github.com/gfx-rs/wgpu) 30.0.1 by the gfx-rs developers, with
+fixes to its GLSL frontend that shader packs need (taken from Starling 0.7.8). It is licensed under MIT
+or Apache-2.0; both licenses are in that folder (`LICENSE.MIT`, `LICENSE.APACHE`).

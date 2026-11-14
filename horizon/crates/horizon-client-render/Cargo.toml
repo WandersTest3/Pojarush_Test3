@@ -34,6 +34,7 @@ log = "0.4"
 miniz_oxide = "0.8"
 naga = { version = "30.0.1", features = ["wgsl-in", "hlsl-out"] }
 png = "0.18"
+half = "2"
 pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }

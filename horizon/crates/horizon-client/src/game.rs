@@ -13006,6 +13006,14 @@ impl Game<'_> {
             Vec::new()
         };
         let mut hud = horizon_client::spans::time("hud", || self.hud(size));
+        // A shader pack compiling off the main thread: its name and step on top of the HUD.
+        if let Some(status) = shader_packs::pending_shader_pack_status() {
+            let atlas = &self.gui.atlas;
+            let w = horizon_client::hud::HudBatch::text_width(atlas, &status);
+            let x = ((hud.width - w) / 2.0).floor();
+            hud.fill(atlas, x - 4.0, 6.0, w + 8.0, 13.0, 0xA0000000);
+            hud.text(atlas, &status, x, 8.0, 0xFFFFFFFF, true);
+        }
         // LevelLoadingScreen (Reason.OTHER) draws the title's panorama.
         let title = self.title.is_some()
             || self.loading_reason() == Some(horizon_client::level_loading::Reason::Other)
@@ -13135,9 +13143,22 @@ impl Game<'_> {
             yaw,
             pitch,
             fov_degrees,
+            eye: if title || self.camera_type.first_person() {
+                camera
+            } else {
+                self.eye_position().map_or(camera, glam::DVec3::from_array)
+            },
+            eye_rotation: if !title && self.camera_type == perspective::CameraType::ThirdPersonFront {
+                [yaw + 180.0, -pitch]
+            } else {
+                [yaw, pitch]
+            },
+            first_person: title || self.camera_type.first_person(),
             bob,
             spin,
             sky,
+            shadow_scene_revision: (self.world.revision, self.world.chunks.membership_revision()),
+            shadow_cache: false,
             distance,
             detail_distance: (self.streaming.radius * 16) as f32,
             depth_far,
@@ -16348,9 +16369,14 @@ fn loading_frame(hud: &HudBatch) -> Frame<'_> {
         yaw: 0.0,
         pitch: 10.0,
         fov_degrees: 85.0,
+        eye: glam::DVec3::new(0.5, 100.0, 0.5),
+        eye_rotation: [0.0, 10.0],
+        first_person: true,
         bob: glam::Mat4::IDENTITY,
         spin: glam::Mat4::IDENTITY,
         sky: horizon_client::environment::Sky::default(),
+        shadow_scene_revision: (0, 0),
+        shadow_cache: false,
         distance: 12.0,
         detail_distance: 12.0,
         depth_far: 1000.0,

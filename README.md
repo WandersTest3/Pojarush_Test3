@@ -231,7 +231,7 @@ O jogo aceita dois formatos na pasta `shaderpacks/`:
 | Formato | Arquivo | Estado |
 |---|---|---|
 | Horizon | `.hshader` (WGSL) | Verificado antes de rodar; é o formato recomendado |
-| OptiFine/Iris | `.zip` com a pasta `shaders/` | Experimental no celular; packs pesados podem ter falhas visuais |
+| OptiFine/Iris | `.zip` ou pasta com `shaders/` | Tradutor do Starling 0.7.8; packs pesados podem ter falhas visuais |
 
 ## 1. Ferramenta
 
@@ -302,6 +302,9 @@ começam com `horizon_`. O limite é de 20 000 expressões e 64 leituras de text
    Importar arquivo.
 2. Deixe "Carregar shaders ao iniciar" ligado no launcher.
 3. No jogo: Opções > Horizon Settings > Shader Packs. Um pack roda por vez; tocar de novo desliga.
+4. Packs OptiFine/Iris: com o pack escolhido, o botão "Opções do shader..." no topo da lista abre as telas,
+   perfis e sliders do próprio pack (`shaders.properties` e `lang/`). Os valores ficam em
+   `shaderpacks/<pack>.txt`, como no Iris, e o pack recompila ao sair da página com mudanças.
 
 Enquanto o pack roda, o jogo relê os arquivos duas vezes por segundo: ao salvar, ele é verificado e recarregado. Se a
 versão nova falhar, o chat mostra onde e a última versão boa continua desenhando.

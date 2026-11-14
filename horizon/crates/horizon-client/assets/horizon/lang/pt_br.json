@@ -214,5 +214,9 @@
   "horizon.literal:Saves time": "Economiza tempo",
   "horizon.literal:Render Settings": "Configurações de renderização",
   "horizon.literal:Resource Packs": "Pacotes de recursos",
-  "horizon.literal:Mod Settings": "Configurações do mod"
+  "horizon.literal:Mod Settings": "Configurações do mod",
+  "horizon.pages.shader_options": "Opções do shader",
+  "horizon.shader_options.open": "Opções do shader...",
+  "horizon.shader_options.profile": "Perfil",
+  "horizon.shader_options.loading": "Lendo as opções do shader pack..."
 }

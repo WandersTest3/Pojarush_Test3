@@ -113,6 +113,16 @@ impl PackAtlas {
     }
 }
 
+/// A `TerrainVertex` of flat draws' arena page (`hz_vertices`, six words each) into the vertex
+/// inputs, for vertex `hz_vertex_index`.
+pub const PULL: &str = "        uint hz_pw = hz_vertex_index * 6u;\n        \
+    hz_v_pos = uintBitsToFloat(uvec3(hz_vertices[hz_pw], hz_vertices[hz_pw + 1u], hz_vertices[hz_pw + 2u]));\n        \
+    hz_v_uv = uvec2(hz_vertices[hz_pw + 3u] & 65535u, hz_vertices[hz_pw + 3u] >> 16u);\n        \
+    hz_v_layer = hz_vertices[hz_pw + 4u] & 65535u;\n        \
+    uint hz_pl = hz_vertices[hz_pw + 4u] >> 16u;\n        \
+    hz_v_light = uvec2(hz_pl & 255u, hz_pl >> 8u);\n        \
+    hz_v_color = unpackUnorm4x8(hz_vertices[hz_pw + 5u]);\n";
+
 /// GLSL: the face normal and tangent of a flat-drawn vertex, from its quad's first three corners
 /// (quads are four consecutive vertices of the page; position words 0-2, UV word 3).
 const FACE: &str = "    uint hz_q = (uint(gl_VertexIndex) & ~3u) * 6u;\n    \
@@ -141,6 +151,14 @@ impl PackAtlas {
     /// The vertex inputs of a gbuffers program drawing terrain (`TerrainVertex`, terrain.wgsl's
     /// `vs_terrain` or, for `flat` draws, `vs_terrain_flat`), in atlas coordinates.
     pub fn terrain_inputs(&self, flat: bool) -> horizon_shaders::GbuffersInputs {
+        self.terrain_inputs_with_ids(flat, flat)
+    }
+
+    pub fn terrain_inputs_with_ids(
+        &self,
+        flat: bool,
+        block_ids: bool,
+    ) -> horizon_shaders::GbuffersInputs {
         let mut declarations = String::from(
             "layout(location = 0) in vec3 hz_v_pos;\nlayout(location = 1) in uvec2 hz_v_uv;\n\
              layout(location = 2) in uint hz_v_layer;\nlayout(location = 3) in vec4 hz_v_color;\n\
@@ -160,6 +178,11 @@ impl PackAtlas {
             "hz_slot_origins[hz_block_slots[uint(gl_VertexIndex) >> 8u]]"
         } else {
             declarations.push_str("layout(location = 5) in vec4 hz_v_origin;\n");
+            if block_ids {
+                declarations.push_str(
+                    "layout(set = 3, binding = 0) readonly buffer HzBlockIds { int hz_block_ids[]; };\n",
+                );
+            }
             "hz_v_origin"
         };
         let [width, height] = self.size();
@@ -176,7 +199,7 @@ impl PackAtlas {
              hz_cell = vec2(float(hz_layer % {columns}u), float(hz_layer / {columns}u));\n    \
              hz_scale = vec2({:?}, {:?});\n    \
              hz_Vertex = vec4(hz_v_pos + hz_origin.xyz, 1.0);\n    \
-             hz_MultiTexCoord0 = vec4((hz_cell + clamp(vec2(hz_v_uv) * hz_origin.w, 0.0, 1.0)) * hz_scale, 0.0, 1.0);\n    \
+             hz_MultiTexCoord0 = vec4((hz_cell + clamp(vec2(hz_v_uv) * (hz_origin.w > 0.0 ? uintBitsToFloat(floatBitsToUint(hz_origin.w) & 0xff800000u) : fract(abs(hz_origin.w))), 0.0, 1.0)) * hz_scale, 0.0, 1.0);\n    \
              hz_MultiTexCoord1 = vec4(float(hz_v_light.y), float(hz_v_light.x), 0.0, 1.0);\n    \
              hz_MultiTexCoord2 = hz_MultiTexCoord1;\n    \
              hz_Color = vec4(hz_v_color.rgb, 1.0);\n    \
@@ -187,15 +210,44 @@ impl PackAtlas {
         let mut body = body;
         if flat {
             body.push_str(FACE);
+        } else {
+            body.push_str(
+                "    uint hz_face = min((uint(round(hz_v_color.a * 255.0)) >> 4u) & 7u, 5u);\n    \
+                 vec3 hz_faces[6] = vec3[6](\n        \
+                     vec3(0.0, -1.0, 0.0),\n        \
+                     vec3(0.0, 1.0, 0.0),\n        \
+                     vec3(0.0, 0.0, -1.0),\n        \
+                     vec3(0.0, 0.0, 1.0),\n        \
+                     vec3(-1.0, 0.0, 0.0),\n        \
+                     vec3(1.0, 0.0, 0.0)\n    \
+                 );\n    \
+                 vec4 hz_tangents[6] = vec4[6](\n        \
+                     vec4(1.0, 0.0, 0.0, -1.0),\n        \
+                     vec4(1.0, 0.0, 0.0, 1.0),\n        \
+                     vec4(-1.0, 0.0, 0.0, 1.0),\n        \
+                     vec4(1.0, 0.0, 0.0, 1.0),\n        \
+                     vec4(0.0, 0.0, 1.0, 1.0),\n        \
+                     vec4(0.0, 0.0, -1.0, 1.0)\n    \
+                 );\n    \
+                 hz_Normal = hz_faces[hz_face];\n    \
+                 hz_tangent = hz_tangents[hz_face];\n",
+            );
         }
         declarations.push_str("vec2 hz_cell; vec2 hz_scale; vec4 hz_tangent;\n");
-        let entity = if flat {
+        let entity = if flat || block_ids {
             "vec4(float(hz_block_ids[2u * hz_layer]), float(hz_block_ids[2u * hz_layer + 1u]), 0.0, 0.0)"
         } else {
             "vec4(-1.0, -1.0, 0.0, 0.0)"
         };
+        // The block a face belongs to: half a block behind its centre (the quad's diagonal).
+        let mid_block = if flat {
+            "vec4((floor((hz_p0 + hz_p2) * 0.5 - 0.5 * hz_Normal) + 0.5 - hz_v_pos) * 64.0, 0.0)"
+        } else {
+            "vec4((floor(hz_v_pos - 0.5 * hz_Normal) + 0.5 - hz_v_pos) * 64.0, 0.0)"
+        };
         let attributes = [
             ("mc_Entity", entity),
+            ("at_midBlock", mid_block),
             (
                 "mc_midTexCoord",
                 "vec4((hz_cell + 0.5) * hz_scale, 0.0, 1.0)",

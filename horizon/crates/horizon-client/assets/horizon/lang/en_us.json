@@ -63,5 +63,9 @@
   "horizon.multiplayer.cancel_reconnecting": "Cancel Reconnecting",
   "horizon.multiplayer.join_friend": "Join a Friend",
   "horizon.multiplayer.invite_code": "Invite Code",
-  "horizon.multiplayer.relay": "Relay (optional)"
+  "horizon.multiplayer.relay": "Relay (optional)",
+  "horizon.pages.shader_options": "Shader Options",
+  "horizon.shader_options.open": "Shader Options...",
+  "horizon.shader_options.profile": "Profile",
+  "horizon.shader_options.loading": "Reading the shader pack's options..."
 }
