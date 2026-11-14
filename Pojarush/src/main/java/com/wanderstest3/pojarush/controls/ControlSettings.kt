@@ -114,6 +114,12 @@ class ControlSettings(context: Context) {
     var customFont: String
         get() = prefs.getString("custom_font", "").orEmpty()
         set(v) = prefs.edit().putString("custom_font", v).apply()
+    var fontScale: Float
+        get() = prefs.getFloat("font_scale", 1.00f).coerceIn(0.70f, 1.60f)
+        set(v) = prefs.edit().putFloat("font_scale", v.coerceIn(0.70f, 1.60f)).apply()
+    var cleanLogs: Boolean
+        get() = prefs.getBoolean("clean_logs", true)
+        set(v) = prefs.edit().putBoolean("clean_logs", v).apply()
     var fontMode: String
         get() = prefs.getString("font_mode", null) ?: when {
             customFont.isNotEmpty() -> "custom"

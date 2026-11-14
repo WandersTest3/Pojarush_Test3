@@ -110,7 +110,7 @@ object HorizonManager {
 
     private val logLock = Any()
 
-    fun archiveLog() {
+    fun archiveLog(prune: Boolean = true) {
         runCatching {
             synchronized(logLock) {
                 val log = gameLog
@@ -126,6 +126,7 @@ object HorizonManager {
                 }
                 java.util.zip.GZIPOutputStream(archive(next).outputStream().buffered()).use { out -> log.inputStream().use { it.copyTo(out) } }
                 log.delete()
+                if (prune) pruneLogs()
             }
         }
     }
@@ -194,6 +195,50 @@ object HorizonManager {
         staging.deleteRecursively()
         File(prepareRoot, ".local").listFiles()?.forEach { if (it.name != "horizon-client") it.deleteRecursively() }
         File(Paths.cache, "horizon-tmp").deleteRecursively()
+    }
+
+    /// Everything the launcher can delete and rebuild on its own: the Minecraft download kept
+    /// after preparing, the Java runtime of the preparation, the shader and app caches and the
+    /// resources of versions that are no longer used. Never worlds, packs, mods, controls,
+    /// options or accounts.
+    private fun junkPaths(context: android.content.Context): List<File> {
+        val list = mutableListOf(staging, javaShim, cacheRoot, context.cacheDir, context.codeCacheDir)
+        list += File(Paths.cache, "horizon-tmp")
+        runCatching { context.externalCacheDirs?.filterNotNull()?.let { list += it } }
+        File(prepareRoot, ".local").listFiles()?.forEach { if (it.name != "horizon-client") list += it }
+        File(prepareRoot, ".local/horizon-client").listFiles()?.forEach { if (it.name != VERSION) list += it }
+        return list.filter { it.exists() }
+    }
+
+    private fun sizeOf(file: File): Long =
+        if (file.isDirectory) file.listFiles().orEmpty().sumOf { sizeOf(it) } else file.length()
+
+    fun junkSize(context: android.content.Context): Long = runCatching {
+        if (isBusy()) 0L else junkPaths(context).sumOf { sizeOf(it) }
+    }.getOrDefault(0L)
+
+    fun clearJunk(context: android.content.Context): Long {
+        if (isBusy()) return 0L
+        var removed = 0L
+        junkPaths(context).forEach { file ->
+            val size = runCatching { sizeOf(file) }.getOrDefault(0L)
+            val gone = runCatching { file.deleteRecursively() }.getOrDefault(false)
+            if (gone) removed += size else removed += size - runCatching { sizeOf(file) }.getOrDefault(size)
+        }
+        runCatching { soundsMarker.delete() }
+        return removed
+    }
+
+    /// Keeps the 3 most recent archived logs and the 3 most recent crash reports.
+    fun pruneLogs(keep: Int = 3) {
+        runCatching {
+            listOf(
+                logsDir.listFiles { f -> f.isFile && f.name.endsWith(".log.gz") }.orEmpty(),
+                crashDir.listFiles { f -> f.isFile }.orEmpty(),
+            ).forEach { files ->
+                files.sortedByDescending { it.lastModified() }.drop(keep).forEach { it.delete() }
+            }
+        }
     }
 
     fun shareLogs(context: android.content.Context) {
@@ -635,12 +680,11 @@ object HorizonManager {
         removeLegacyBundledMods(context)
         disableBuiltInCounter()
         privateRoot.mkdirs()
-        val cs = com.wanderstest3.pojarush.controls.ControlSettings(context)
-        toggleDir(modsDir, cs.modsEnabled)
-        toggleDir(nativeModsDir, cs.modsEnabled)
-        toggleFile(modsFile, cs.modsEnabled)
-        toggleDir(shaderPacksDir, cs.shadersEnabled)
-        if (cs.modsEnabled) disableOverlayForFpsMod()
+        toggleDir(modsDir, true)
+        toggleDir(nativeModsDir, true)
+        toggleFile(modsFile, true)
+        toggleDir(shaderPacksDir, true)
+        disableOverlayForFpsMod()
         val args = arrayListOf(
             "--resources", resources.absolutePath,
             "--game-dir", gameDir.absolutePath,

@@ -236,7 +236,7 @@
     <string name="minecraft_font_desc">Usa a letra pixelizada ao estilo do Minecraft no launcher.</string>
     <string name="lod_title">Terreno distante (LOD)</string>
     <string name="lod_distance">Distância do LOD (chunks)</string>
-    <string name="lod_desc">Até onde o terreno simplificado é desenhado para lá da distância de renderização normal, de 32 chunks até 512 mil chunks. Distâncias maiores gastam mais memória e bateria; aplica-se da próxima vez que o jogo abrir.</string>
+    <string name="lod_desc">Até onde o terreno simplificado é desenhado para lá da distância de renderização normal. O jogo constrói até 4096 chunks: acima disso o plano do terreno distante cresce até um fotograma levar segundos e nada carregar, por isso os passos maiores constroem o mesmo. Distâncias maiores gastam mais memória e bateria; aplica-se da próxima vez que o jogo abrir.</string>
     <string name="lod_off">Desligado</string>
     <string name="hud_title">Imagens de HUD</string>
     <string name="hud_desc">Imagens para os botões e joysticks dos controlos. Importe um .zip (por exemplo as imagens de UI do Bedrock) ou imagens soltas; a imagem estica para o tamanho do botão. O esquema Bedrock Controls usa nomes como attack, interact, jump, sneak, sprint, perspective, joystick_frame e joystick_knob (com variantes _pressed).</string>
@@ -295,4 +295,18 @@
     <string name="wallpaper_official">Wallpaper oficial Black Hole</string>
     <string name="system_font">Tipo de letra do sistema</string>
     <string name="custom_font_option">Tipo de letra personalizado</string>
+    <string name="prepare_failed">A preparação falhou:</string>
+    <string name="font_size">Tamanho do tipo de letra</string>
+    <string name="clean_logs">Limpar registos e crash reports recorrentemente</string>
+    <string name="clean_logs_desc">Mantém só os 3 registos e os 3 crash reports mais recentes, para não acumular e não pesar à toa.</string>
+    <string name="clean_junk">Limpar lixo</string>
+    <string name="clean_junk_desc">Apaga a transferência do Minecraft que fica guardada depois da preparação, as caches de shaders e da aplicação e as sobras de versões antigas. Mundos, pacotes, mods, controlos e as suas definições não são tocados. Preparar de novo transfere o que precisar outra vez.</string>
+    <string name="clean_junk_button">Limpar %1$s</string>
+    <string name="clean_junk_none">Nada para limpar</string>
+    <string name="clean_junk_done">%1$s libertados</string>
+    <string name="vulkan_status_ok">Este aparelho indica Vulkan %1$s.</string>
+    <string name="vulkan_status_none">Este aparelho não indica suporte a Vulkan.</string>
+    <string name="vulkan_warn_title">O Vulkan pode não funcionar aqui</string>
+    <string name="vulkan_warn_body">Este aparelho não indica suporte a Vulkan. Com ele o jogo pode ficar com o ecrã preto, piscar ou não abrir. O OpenGL é a escolha segura aqui.</string>
+    <string name="vulkan_warn_continue">Usar mesmo assim</string>
 </resources>

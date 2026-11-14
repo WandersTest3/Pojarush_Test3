@@ -331,6 +331,11 @@ pub const MAX_LOD_DISTANCE: u32 = 512_000;
 pub const LOD_STEPS: [u32; 16] = [
     0, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 512_000,
 ];
+/// The farthest distance far terrain is actually built at. The quadtree splits every tile
+/// whose distance is under eight times its own size, so a range past this one makes the plan
+/// grow until a frame takes seconds and nothing finishes loading. The steps above it stay in
+/// the menu and all mean the same build.
+pub const MAX_LOD_BUILD: u32 = 4096;
 /// Whether `INTEGRATED_LOD_DISTANCE` applies to this adapter. Apple's GPUs
 /// are integrated too, with memory and bandwidth enough for every distance.
 pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
@@ -338,7 +343,7 @@ pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
 }
 /// A LOD distance as far terrain uses it on this adapter.
 pub fn lod_distance_capped(distance: u32, info: &wgpu::AdapterInfo) -> u32 {
-    let distance = distance.min(MAX_LOD_DISTANCE);
+    let distance = distance.min(MAX_LOD_BUILD);
     // The phone's player picks the distance on purpose: no integrated cap there.
     if lod_capped(info) && !cfg!(target_os = "android") {
         distance.min(INTEGRATED_LOD_DISTANCE)

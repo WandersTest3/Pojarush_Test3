@@ -184,6 +184,14 @@ fun InterfaceSettings(settings: ControlSettings) {
     var custom by remember { mutableStateOf(settings.customFont) }
     var fontVersion by remember { mutableIntStateOf(0) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
+    fun choose(value: String, path: String) {
+        settings.fontMode = value
+        settings.customFont = path
+        mode = value
+        custom = path
+        UiPrefs.fontMode = value
+        UiPrefs.customFont = path
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         var last: File? = null
         uris.forEach { uri ->
@@ -191,16 +199,13 @@ fun InterfaceSettings(settings: ControlSettings) {
                 .onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
         }
         last?.let {
-            settings.customFont = it.absolutePath
-            custom = it.absolutePath
-            UiPrefs.customFont = it.absolutePath
+            choose("custom", it.absolutePath)
             fontVersion++
         }
     }
-    fun choose(path: String) {
-        settings.customFont = path
-        custom = path
-        UiPrefs.customFont = path
+    val fonts = remember(fontVersion) {
+        ControlLayouts.fontDir().listFiles { f -> f.isFile && f.extension.lowercase() in setOf("ttf", "otf") }
+            ?.sortedBy { it.name.lowercase() }.orEmpty()
     }
     PojarushCard {
         CardTitle(stringResource(R.string.interface_title))
@@ -208,64 +213,35 @@ fun InterfaceSettings(settings: ControlSettings) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
         }
-        fun pick(value: String) {
-            settings.fontMode = value
-            mode = value
-            UiPrefs.fontMode = value
+        SettingSlider(stringResource(R.string.font_size), settings.fontScale, 0.70f..1.60f, 0.05f, { "${Math.round(it * 100)}%" }) {
+            settings.fontScale = it
+            UiPrefs.fontScale = it
         }
-        listOf("minecraft" to R.string.minecraft_font, "system" to R.string.system_font, "custom" to R.string.custom_font_option).forEach { (value, label) ->
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable { pick(value) },
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                androidx.compose.material3.RadioButton(selected = mode == value, onClick = { pick(value) })
-                Text(stringResource(label), modifier = Modifier.weight(1f))
-            }
+        FontChoice(stringResource(R.string.minecraft_font), mode == "minecraft" && custom.isEmpty()) { choose("minecraft", "") }
+        FontChoice(stringResource(R.string.system_font), mode == "system" && custom.isEmpty()) { choose("system", "") }
+        fonts.forEach { f ->
+            FontChoice(f.name, custom == f.absolutePath, onDelete = {
+                if (custom == f.absolutePath) choose("minecraft", "")
+                f.delete()
+                fontVersion++
+            }) { choose("custom", f.absolutePath) }
         }
-        if (mode == "custom") CustomFontSection(settings, custom, fontVersion, { custom = it }, { fontVersion++ }, picker)
+        Button(onClick = { picker.launch(arrayOf("font/*", "application/x-font-ttf", "application/x-font-otf", "application/vnd.ms-opentype", "application/octet-stream")) }) {
+            Text(stringResource(R.string.custom_font_choose))
+        }
         Hint(stringResource(R.string.custom_font_desc))
     }
 }
 
 @Composable
-private fun CustomFontSection(
-    settings: ControlSettings,
-    custom: String,
-    fontVersion: Int,
-    onCustom: (String) -> Unit,
-    onVersion: () -> Unit,
-    picker: androidx.activity.result.ActivityResultLauncher<Array<String>>
-) {
-    fun choose(path: String) {
-        settings.customFont = path
-        onCustom(path)
-        UiPrefs.customFont = path
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        val fonts = remember(fontVersion) {
-            ControlLayouts.fontDir().listFiles { f -> f.isFile && f.extension.lowercase() in setOf("ttf", "otf") }
-                ?.sortedBy { it.name.lowercase() }.orEmpty()
-        }
-        fonts.forEach { f ->
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable { choose(f.absolutePath) },
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                androidx.compose.material3.RadioButton(selected = custom == f.absolutePath, onClick = { choose(f.absolutePath) })
-                Text(f.name, modifier = Modifier.weight(1f), maxLines = 1)
-                androidx.compose.material3.TextButton(onClick = {
-                    if (custom == f.absolutePath) choose("")
-                    f.delete()
-                    onVersion()
-                }) { Text("✕") }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { picker.launch(arrayOf("font/*", "application/x-font-ttf", "application/x-font-otf", "application/vnd.ms-opentype", "application/octet-stream")) }) {
-                Text(stringResource(R.string.custom_font_choose))
-            }
-            if (custom.isNotEmpty()) OutlinedButton(onClick = { choose("") }) { Text(stringResource(R.string.custom_font_default)) }
-        }
+private fun FontChoice(label: String, selected: Boolean, onDelete: (() -> Unit)? = null, onPick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onPick),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        androidx.compose.material3.RadioButton(selected = selected, onClick = onPick)
+        Text(label, modifier = Modifier.weight(1f), maxLines = 1)
+        if (onDelete != null) androidx.compose.material3.TextButton(onClick = onDelete) { Text("\u2715") }
     }
 }
 
@@ -291,13 +267,57 @@ fun LodSettings() {
 @Composable
 fun ExtrasSettings(settings: ControlSettings) {
     var keep by remember { mutableStateOf(settings.keepAlive) }
+    val context = LocalContext.current
+    var clean by remember { mutableStateOf(settings.cleanLogs) }
+    var junk by remember { mutableStateOf(-1L) }
+    var working by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val freed = stringResource(R.string.clean_junk_done, "%s")
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        junk = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.wanderstest3.pojarush.horizon.HorizonManager.junkSize(context)
+        }
+    }
     PojarushCard {
         CardTitle(stringResource(R.string.extras_title))
         SettingSwitch(stringResource(R.string.keep_alive), keep, stringResource(R.string.keep_alive_desc)) {
             settings.keepAlive = it
             keep = it
         }
+        SettingSwitch(stringResource(R.string.clean_logs), clean, stringResource(R.string.clean_logs_desc)) {
+            settings.cleanLogs = it
+            clean = it
+            if (it) com.wanderstest3.pojarush.horizon.HorizonManager.pruneLogs()
+        }
+        Button(
+            enabled = !working && junk > 0,
+            onClick = {
+                working = true
+                scope.launch {
+                    val removed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        com.wanderstest3.pojarush.horizon.HorizonManager.clearJunk(context)
+                    }
+                    junk = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        com.wanderstest3.pojarush.horizon.HorizonManager.junkSize(context)
+                    }
+                    working = false
+                    Toast.makeText(context, freed.replace("%s", formatBytes(removed)), Toast.LENGTH_LONG).show()
+                }
+            }
+        ) {
+            Text(
+                if (junk > 0) stringResource(R.string.clean_junk_button, formatBytes(junk))
+                else stringResource(R.string.clean_junk_none)
+            )
+        }
+        Hint(stringResource(R.string.clean_junk_desc))
     }
+}
+
+fun formatBytes(bytes: Long): String = when {
+    bytes >= 1024L * 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.2f GB", bytes / (1024.0 * 1024 * 1024))
+    bytes >= 1024L * 1024 -> String.format(java.util.Locale.ROOT, "%.0f MB", bytes / (1024.0 * 1024))
+    else -> String.format(java.util.Locale.ROOT, "%.0f KB", bytes / 1024.0)
 }
 
 @Composable

@@ -146,7 +146,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        Thread { HorizonManager.migrateLogs() }.start()
+        Thread {
+            HorizonManager.migrateLogs()
+            if (ControlSettings(this).cleanLogs) HorizonManager.pruneLogs()
+        }.start()
         Thread { HorizonManager.prewarm(this, Accounts.profile.value) }.start()
         for (delay in longArrayOf(800, 2500, 6000)) {
             window.decorView.postDelayed({ Thread { HorizonManager.prewarm(this, Accounts.profile.value) }.start() }, delay)
@@ -308,10 +311,11 @@ private fun OnboardingFlow(
     val context = LocalContext.current
     val state by HorizonManager.state.collectAsStateWithLifecycle()
     val downloadStarted = state !is HorizonManager.State.Idle || prepared
+    var continued by rememberSaveable { mutableStateOf(false) }
     val effectiveStep = when {
         !hasStorage -> 0
         profile == null -> 1
-        !prepared -> 2
+        !prepared && !continued -> 2
         else -> 3
     }
     Box(
@@ -347,7 +351,7 @@ private fun OnboardingFlow(
                     downloadStarted = downloadStarted,
                     state = state,
                     onStart = { HorizonManager.prepare(context.applicationContext, true) },
-                    onContinue = { /* avança automaticamente quando prepared muda */ }
+                    onContinue = { continued = true }
                 )
                 else -> OnboardingWallpaperStep(onFinished = onFinished)
             }
@@ -404,10 +408,19 @@ private fun OnboardingDownloadStep(
                     if (s.progress != null) LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth())
                     else LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
+                is HorizonManager.State.Failed -> {
+                    Text(stringResource(R.string.prepare_failed), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    Text(s.message, style = MaterialTheme.typography.bodySmall)
+                }
                 else -> {}
             }
             Hint(stringResource(R.string.onboarding_download_background))
-            Button(onClick = onContinue) { Text(stringResource(R.string.onboarding_continue)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onContinue) { Text(stringResource(R.string.onboarding_continue)) }
+                if (state is HorizonManager.State.Failed) {
+                    OutlinedButton(onClick = onStart) { Text(stringResource(R.string.prepare_again)) }
+                }
+            }
         } else {
             Button(onClick = onStart) { Text(stringResource(R.string.onboarding_download_start)) }
         }

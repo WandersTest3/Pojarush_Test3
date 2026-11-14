@@ -63,6 +63,7 @@ object UiPrefs {
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
     var customFont by androidx.compose.runtime.mutableStateOf("")
     var fontMode by androidx.compose.runtime.mutableStateOf("minecraft")
+    var fontScale by androidx.compose.runtime.mutableStateOf(1.00f)
 
     fun load(context: android.content.Context) {
         val s = com.wanderstest3.pojarush.controls.ControlSettings(context)
@@ -70,6 +71,7 @@ object UiPrefs {
         minecraftFont = s.minecraftFont
         customFont = s.customFont
         fontMode = s.fontMode
+        fontScale = s.fontScale
     }
 }
 
@@ -106,8 +108,15 @@ fun PojarushTheme(content: @Composable () -> Unit) {
         }
     }
     val typography = if (family != null) androidx.compose.material3.Typography().withFont(family) else androidx.compose.material3.Typography()
+    val base = androidx.compose.ui.platform.LocalDensity.current
+    val density = remember(base, UiPrefs.fontScale) {
+        androidx.compose.ui.unit.Density(base.density, base.fontScale * UiPrefs.fontScale)
+    }
     MaterialTheme(colorScheme = PojarushColors, typography = typography) {
-        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides PojarushColors.onSurface) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides PojarushColors.onSurface,
+            androidx.compose.ui.platform.LocalDensity provides density,
+        ) {
             androidx.compose.material3.ProvideTextStyle(androidx.compose.ui.text.TextStyle(fontFamily = family), content = content)
         }
     }
@@ -119,37 +128,39 @@ fun pojarushBackgroundBrush(): androidx.compose.ui.graphics.Brush =
     androidx.compose.ui.graphics.Brush.verticalGradient(listOf(BackgroundTop, BackgroundBottom))
 
 fun Modifier.liquidGlass(shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(22.dp), tint: Color = Color.Black, selected: Boolean = false): Modifier {
-    val strength = UiPrefs.menuBackground
+    val strength = UiPrefs.menuBackground.coerceIn(0f, 1f)
     val base = if (selected) Purple else tint
-    val body = androidx.compose.ui.graphics.Brush.linearGradient(
-        listOf(
-            base.copy(alpha = (strength * 0.78f).coerceIn(0f, 1f)),
-            base.copy(alpha = (strength * 0.52f).coerceIn(0f, 1f)),
-        ),
-        start = androidx.compose.ui.geometry.Offset(0f, 0f),
-        end = androidx.compose.ui.geometry.Offset(0f, Float.POSITIVE_INFINITY),
+    val body = androidx.compose.ui.graphics.Brush.verticalGradient(
+        listOf(base.copy(alpha = strength), base.copy(alpha = strength * 0.88f)),
     )
     val sheen = androidx.compose.ui.graphics.Brush.verticalGradient(
-        0f to Color.White.copy(alpha = 0.16f),
-        0.45f to Color.White.copy(alpha = 0.04f),
+        0f to Color.White.copy(alpha = 0.16f * strength),
+        0.45f to Color.White.copy(alpha = 0.04f * strength),
         1f to Color.Transparent,
     )
     val rim = androidx.compose.ui.graphics.Brush.linearGradient(
-        0f to Color.White.copy(alpha = 0.60f),
-        0.35f to Color.White.copy(alpha = 0.14f),
-        0.7f to Color.White.copy(alpha = 0.08f),
-        1f to Color.White.copy(alpha = 0.34f),
+        0f to Color.White.copy(alpha = 0.60f * strength),
+        0.35f to Color.White.copy(alpha = 0.14f * strength),
+        0.7f to Color.White.copy(alpha = 0.08f * strength),
+        1f to Color.White.copy(alpha = 0.34f * strength),
     )
     return this
-        .glassShadow(shape)
+        .glassShadow(shape, strength)
         .clip(shape)
         .background(body)
         .background(sheen)
         .border(1.dp, rim, shape)
 }
 
-private fun Modifier.glassShadow(shape: androidx.compose.ui.graphics.Shape): Modifier =
-    this.shadow(10.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.5f))
+private fun Modifier.glassShadow(shape: androidx.compose.ui.graphics.Shape, strength: Float): Modifier =
+    if (strength <= 0.02f) this
+    else this.shadow(
+        (10 * strength).dp,
+        shape,
+        clip = false,
+        ambientColor = Color.Black.copy(alpha = 0.5f),
+        spotColor = Color.Black.copy(alpha = 0.5f),
+    )
 
 @Composable
 fun PojarushCard(content: @Composable () -> Unit) {

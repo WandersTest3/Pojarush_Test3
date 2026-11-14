@@ -237,7 +237,7 @@
     <string name="minecraft_font_desc">Uses the Minecraft-style pixel font in the launcher.</string>
     <string name="lod_title">Far terrain (LOD)</string>
     <string name="lod_distance">LOD distance (chunks)</string>
-    <string name="lod_desc">How far simplified terrain is drawn past the normal render distance, from 32 chunks up to 512,000 chunks. Long distances use more memory and battery; it is applied the next time the game starts.</string>
+    <string name="lod_desc">How far simplified terrain is drawn past the normal render distance. The game builds up to 4,096 chunks: past that the far-terrain plan grows until a frame takes seconds and nothing loads, so the longer steps all build the same. Long distances use more memory and battery; it is applied the next time the game starts.</string>
     <string name="lod_off">Off</string>
     <string name="hud_title">HUD images</string>
     <string name="hud_desc">Images for control buttons and joysticks. Import a .zip (for example the Bedrock UI images) or single images; an image stretches to the button\'s size. The Bedrock Controls layout uses names such as attack, interact, jump, sneak, sprint, perspective, joystick_frame and joystick_knob (with _pressed variants).</string>
@@ -296,4 +296,18 @@
     <string name="wallpaper_official">Official Black Hole wallpaper</string>
     <string name="system_font">System font</string>
     <string name="custom_font_option">Custom font</string>
+    <string name="prepare_failed">The preparation failed:</string>
+    <string name="font_size">Font size</string>
+    <string name="clean_logs">Clear logs and crash reports regularly</string>
+    <string name="clean_logs_desc">Keeps only the 3 most recent logs and the 3 most recent crash reports, so they do not pile up and take space for nothing.</string>
+    <string name="clean_junk">Clear junk files</string>
+    <string name="clean_junk_desc">Deletes the Minecraft download kept after preparing, the shader and app caches and leftovers from old versions. Worlds, packs, mods, controls and your settings are not touched. Preparing again downloads what it needs once more.</string>
+    <string name="clean_junk_button">Clear %1$s</string>
+    <string name="clean_junk_none">Nothing to clear</string>
+    <string name="clean_junk_done">%1$s freed</string>
+    <string name="vulkan_status_ok">This device reports Vulkan %1$s.</string>
+    <string name="vulkan_status_none">This device does not report Vulkan support.</string>
+    <string name="vulkan_warn_title">Vulkan may not work here</string>
+    <string name="vulkan_warn_body">This device does not report Vulkan support. With Vulkan the game may show a black screen, flicker or not open at all. OpenGL is the safe choice here.</string>
+    <string name="vulkan_warn_continue">Use it anyway</string>
 </resources>

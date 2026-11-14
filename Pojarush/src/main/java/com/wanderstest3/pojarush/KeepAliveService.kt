@@ -18,6 +18,8 @@ abstract class KeepAliveService : Service() {
     protected abstract val notificationId: Int
     protected abstract val title: Int
     protected abstract val body: Int
+    protected open fun openIntent(): Intent =
+        Intent.makeMainActivity(android.content.ComponentName(this, MainActivity::class.java)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -35,7 +37,7 @@ abstract class KeepAliveService : Service() {
         val open = PendingIntent.getActivity(
             this,
             notificationId,
-            Intent.makeMainActivity(android.content.ComponentName(this, MainActivity::class.java)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            openIntent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL)
@@ -91,6 +93,11 @@ class GameKeepAliveService : KeepAliveService() {
     override val notificationId = 3001
     override val title = R.string.keep_alive_game_title
     override val body = R.string.keep_alive_game_body
+    override fun openIntent(): Intent =
+        Intent(this, com.wanderstest3.pojarush.horizon.HorizonActivity::class.java).addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION
+        )
 }
 
 class PrepareKeepAliveService : KeepAliveService() {

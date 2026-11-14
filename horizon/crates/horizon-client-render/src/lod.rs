@@ -424,7 +424,7 @@ impl Plan {
         elevation: i32,
         reduced: bool,
     ) -> Self {
-        let range = distance.min(crate::graphics::MAX_LOD_DISTANCE) as i32 * 16;
+        let range = distance.min(crate::graphics::MAX_LOD_BUILD) as i32 * 16;
         let mut level = 0;
         while (16 << level) < range {
             level += 1;

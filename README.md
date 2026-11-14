@@ -54,9 +54,14 @@ Tudo fica em `Pojarush_Test3/horizon/game/`:
 | `crash-reports/` | Relatórios de crash, só quando o jogo realmente falha |
 
 O `latest.log` fica aberto enquanto o jogo roda e só é compactado em `AAAA-MM-DD-N.log.gz` depois que o jogo fecha.
+Com "Limpar logs e crash reports recorrentemente" ligado (o padrão), ficam só os 3 arquivos mais recentes de cada um.
 
-A página **Pacotes** do launcher importa arquivos para essas pastas, baixa do registro do playhorizon.dev e tem as
-chaves "Carregar mods ao iniciar" e "Carregar shaders ao iniciar".
+Em **Outros → Extras**, "Limpar lixo" apaga o que o launcher consegue refazer sozinho: o download do Minecraft que
+fica guardado depois do preparo, o Java do preparo, os caches de shaders e do app e os recursos de versões antigas.
+Mundos, pacotes, mods, controles e configurações não são tocados.
+
+A página **Pacotes** do launcher importa arquivos para essas pastas e baixa do registro do playhorizon.dev. Mods e
+shaders instalados são sempre carregados; para desligar um, tire-o da pasta.
 
 # Tutorial: como fazer mods
 

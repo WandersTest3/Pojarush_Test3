@@ -442,7 +442,10 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
 
 @Composable
 fun GraphicsApiSettings(settings: ControlSettings) {
+    val context = LocalContext.current
     var api by remember { mutableStateOf(settings.graphicsApi) }
+    var warn by remember { mutableStateOf(false) }
+    val vulkan = remember { vulkanSupport(context) }
     PojarushCard {
         CardTitle(stringResource(R.string.graphics_api_title))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -452,11 +455,55 @@ fun GraphicsApiSettings(settings: ControlSettings) {
                 "opengl" to R.string.graphics_api_opengl,
             ).forEach { (id, label) ->
                 FilterChip(selected = api == id, onClick = {
-                    api = id
-                    settings.graphicsApi = id
+                    if (id == "vulkan" && vulkan == null) {
+                        warn = true
+                    } else {
+                        api = id
+                        settings.graphicsApi = id
+                    }
                 }, label = { Text(stringResource(label)) })
             }
         }
+        Text(
+            if (vulkan != null) stringResource(R.string.vulkan_status_ok, vulkan) else stringResource(R.string.vulkan_status_none),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (vulkan != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+        )
         Hint(stringResource(R.string.graphics_api_desc))
     }
+    if (warn) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { warn = false },
+            title = { Text(stringResource(R.string.vulkan_warn_title)) },
+            text = { Text(stringResource(R.string.vulkan_warn_body)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    warn = false
+                    api = "vulkan"
+                    settings.graphicsApi = "vulkan"
+                }) { Text(stringResource(R.string.vulkan_warn_continue)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { warn = false }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+}
+
+/// The Vulkan version the system reports for this device, or null when it reports none:
+/// FEATURE_VULKAN_HARDWARE_VERSION carries the version in Vulkan's own packing, and the
+/// loader has to be there for wgpu to open a Vulkan device at all.
+fun vulkanSupport(context: android.content.Context): String? {
+    val version = runCatching {
+        context.packageManager.systemAvailableFeatures
+            .firstOrNull { it.name == android.content.pm.PackageManager.FEATURE_VULKAN_HARDWARE_VERSION }
+            ?.version ?: 0
+    }.getOrDefault(0)
+    if (version <= 0) return null
+    val loader = listOf(
+        "/system/lib64/libvulkan.so", "/system/lib/libvulkan.so",
+        "/vendor/lib64/libvulkan.so", "/vendor/lib/libvulkan.so",
+    ).any { java.io.File(it).exists() }
+    if (!loader) return null
+    return "${version shr 22}.${(version shr 12) and 0x3FF}.${version and 0xFFF}"
 }

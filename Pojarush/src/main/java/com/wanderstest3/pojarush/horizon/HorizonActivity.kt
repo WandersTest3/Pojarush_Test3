@@ -177,7 +177,7 @@ class HorizonActivity : GameActivity() {
     override fun onDestroy() {
         KeepAliveService.stop(this, GameKeepAliveService::class.java)
         super.onDestroy()
-        if (isFinishing && !prewarmed) HorizonManager.archiveLog()
+        if (isFinishing && !prewarmed) HorizonManager.archiveLog(ControlSettings(this).cleanLogs)
         Process.killProcess(Process.myPid())
     }
 }
