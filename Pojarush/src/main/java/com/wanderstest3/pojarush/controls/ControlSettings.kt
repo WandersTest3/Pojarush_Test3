@@ -114,6 +114,13 @@ class ControlSettings(context: Context) {
     var customFont: String
         get() = prefs.getString("custom_font", "").orEmpty()
         set(v) = prefs.edit().putString("custom_font", v).apply()
+    var fontMode: String
+        get() = prefs.getString("font_mode", null) ?: when {
+            customFont.isNotEmpty() -> "custom"
+            minecraftFont -> "minecraft"
+            else -> "system"
+        }
+        set(v) = prefs.edit().putString("font_mode", v).apply()
     var mirrorSize: Boolean
         get() = prefs.getBoolean("mirror_size", false)
         set(v) = prefs.edit().putBoolean("mirror_size", v).apply()

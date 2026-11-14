@@ -67,10 +67,17 @@ pub fn game_home() -> PathBuf {
 
 /// `logs/` and `crash-reports/` of a game folder.
 pub fn logs_dir(home: &Path) -> PathBuf {
-    home.join("logs")
+    logs_root(home).join("logs")
 }
 pub fn crash_reports_dir(home: &Path) -> PathBuf {
-    home.join("crash-reports")
+    logs_root(home).join("crash-reports")
+}
+
+fn logs_root(home: &Path) -> PathBuf {
+    match std::env::var_os("HORIZON_LOGS_ROOT").filter(|d| !d.is_empty()) {
+        Some(root) => PathBuf::from(root),
+        None => home.to_path_buf(),
+    }
 }
 
 /// `2026-10-14-3.log.gz`
@@ -208,6 +215,10 @@ pub fn open_latest(dir: &Path) -> io::Result<Option<Latest>> {
         .create(true)
         .truncate(false)
         .open(dir.join("latest.log"))?;
+    if std::env::var_os("HORIZON_KEEP_LOG").is_some_and(|v| !v.is_empty()) {
+        file.seek(SeekFrom::End(0))?;
+        return Ok(Some(Latest { file, _lock: lock }));
+    }
     let modified = file.metadata()?.modified()?;
     let date = DateTime::<Local>::from(modified).date_naive();
     roll(&mut file, dir, date)?;
@@ -304,6 +315,9 @@ impl log::Log for Logger {
             return;
         }
         let message = record.args().to_string();
+        if message.contains("after GameActivity was destroyed") {
+            return;
+        }
         let current = std::thread::current();
         let thread = match current.name() {
             Some("main") => self.main_thread,

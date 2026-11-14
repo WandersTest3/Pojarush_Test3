@@ -21,6 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -179,7 +180,7 @@ private class WallpaperVideoView(context: Context, private val file: File, priva
 @Composable
 fun InterfaceSettings(settings: ControlSettings) {
     val context = LocalContext.current
-    var font by remember { mutableStateOf(settings.minecraftFont) }
+    var mode by remember { mutableStateOf(settings.fontMode) }
     var custom by remember { mutableStateOf(settings.customFont) }
     var fontVersion by remember { mutableIntStateOf(0) }
     val failed = stringResource(R.string.controls_import_failed, "%s")
@@ -207,12 +208,40 @@ fun InterfaceSettings(settings: ControlSettings) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
         }
-        SettingSwitch(stringResource(R.string.minecraft_font), font, stringResource(R.string.minecraft_font_desc)) {
-            settings.minecraftFont = it
-            font = it
-            UiPrefs.minecraftFont = it
+        fun pick(value: String) {
+            settings.fontMode = value
+            mode = value
+            UiPrefs.fontMode = value
         }
-        Text(stringResource(R.string.custom_font), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        listOf("minecraft" to R.string.minecraft_font, "system" to R.string.system_font, "custom" to R.string.custom_font_option).forEach { (value, label) ->
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { pick(value) },
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.RadioButton(selected = mode == value, onClick = { pick(value) })
+                Text(stringResource(label), modifier = Modifier.weight(1f))
+            }
+        }
+        if (mode == "custom") CustomFontSection(settings, custom, fontVersion, { custom = it }, { fontVersion++ }, picker)
+        Hint(stringResource(R.string.custom_font_desc))
+    }
+}
+
+@Composable
+private fun CustomFontSection(
+    settings: ControlSettings,
+    custom: String,
+    fontVersion: Int,
+    onCustom: (String) -> Unit,
+    onVersion: () -> Unit,
+    picker: androidx.activity.result.ActivityResultLauncher<Array<String>>
+) {
+    fun choose(path: String) {
+        settings.customFont = path
+        onCustom(path)
+        UiPrefs.customFont = path
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val fonts = remember(fontVersion) {
             ControlLayouts.fontDir().listFiles { f -> f.isFile && f.extension.lowercase() in setOf("ttf", "otf") }
                 ?.sortedBy { it.name.lowercase() }.orEmpty()
@@ -227,7 +256,7 @@ fun InterfaceSettings(settings: ControlSettings) {
                 androidx.compose.material3.TextButton(onClick = {
                     if (custom == f.absolutePath) choose("")
                     f.delete()
-                    fontVersion++
+                    onVersion()
                 }) { Text("✕") }
             }
         }
@@ -237,7 +266,6 @@ fun InterfaceSettings(settings: ControlSettings) {
             }
             if (custom.isNotEmpty()) OutlinedButton(onClick = { choose("") }) { Text(stringResource(R.string.custom_font_default)) }
         }
-        Hint(stringResource(R.string.custom_font_desc))
     }
 }
 

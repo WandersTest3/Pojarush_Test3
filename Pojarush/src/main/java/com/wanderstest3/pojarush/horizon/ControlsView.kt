@@ -213,7 +213,7 @@ class ControlsView(
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = runCatching { com.wanderstest3.pojarush.ui.launcherTypeface(context) }.getOrNull()?.let { Typeface.create(it, Typeface.BOLD) } ?: Typeface.DEFAULT_BOLD }
     private val cursorPath = Path()
     private var cursorDrawable: Drawable? = null
     private var menuDrawable: Drawable? = null

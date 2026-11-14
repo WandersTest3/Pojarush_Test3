@@ -42,6 +42,16 @@ object ActionCatalog {
         add("\\" to KeyEvent.KEYCODE_BACKSLASH)
         add("`" to KeyEvent.KEYCODE_GRAVE)
         add("Caps Lock" to KeyEvent.KEYCODE_CAPS_LOCK)
+        add("Num Lock" to KeyEvent.KEYCODE_NUM_LOCK)
+        add("Scroll Lock" to KeyEvent.KEYCODE_SCROLL_LOCK)
+        add("Pause" to KeyEvent.KEYCODE_BREAK)
+        for (d in 0..9) add("Num $d" to KeyEvent.KEYCODE_NUMPAD_0 + d)
+        add("Num /" to KeyEvent.KEYCODE_NUMPAD_DIVIDE)
+        add("Num *" to KeyEvent.KEYCODE_NUMPAD_MULTIPLY)
+        add("Num -" to KeyEvent.KEYCODE_NUMPAD_SUBTRACT)
+        add("Num +" to KeyEvent.KEYCODE_NUMPAD_ADD)
+        add("Num ." to KeyEvent.KEYCODE_NUMPAD_DOT)
+        add("Num Enter" to KeyEvent.KEYCODE_NUMPAD_ENTER)
     }
 
     fun all(context: Context): List<Pair<String, Action>> = listOf(

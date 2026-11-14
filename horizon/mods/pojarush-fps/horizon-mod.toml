@@ -1,0 +1,9 @@
+id = "pojarush_fps"
+name = "Pojarush FPS"
+version = "1.1.0"
+description = "Frames per second anywhere on the screen, at any size, with the slowest frame and the 1% low if you like. Turns Horizon's own overlay off."
+authors = ["Wanders_Test3"]
+api = "0.1"
+side = "client"
+capabilities = ["render", "ui", "storage"]
+experimental = ["render", "ui"]

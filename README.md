@@ -50,6 +50,10 @@ Tudo fica em `Pojarush_Test3/horizon/game/`:
 | `resourcepacks/` | Resource packs do Java Edition (`.zip` com `pack.mcmeta`) |
 | `shaderpacks/` | Shader packs `.hshader` e packs no formato OptiFine/Iris (`.zip`) |
 | `saves/`, `screenshots/` | Mundos e capturas |
+| `logs/` | `latest.log` (preparo e jogo no mesmo arquivo, como no Minecraft) e os `.log.gz` de jogos anteriores |
+| `crash-reports/` | Relatórios de crash, só quando o jogo realmente falha |
+
+O `latest.log` fica aberto enquanto o jogo roda e só é compactado em `AAAA-MM-DD-N.log.gz` depois que o jogo fecha.
 
 A página **Pacotes** do launcher importa arquivos para essas pastas, baixa do registro do playhorizon.dev e tem as
 chaves "Carregar mods ao iniciar" e "Carregar shaders ao iniciar".
@@ -212,6 +216,7 @@ Capacidades (`capabilities` no manifesto). O jogador vê a lista antes de ligar 
 Exemplos completos neste repositório:
 
 - `horizon/mods/pojarush-zoom`: tecla própria, roda do mouse, zoom, página de ajustes e ajustes salvos.
+- `horizon/mods/pojarush-fps`: formas no HUD (fonte pixel desenhada com retângulos), tamanho e posição ajustáveis e ajustes salvos. Com ele instalado, o launcher desliga a sobreposição do próprio Horizon.
 - `horizon/crates/horizon-mod-sdk/examples/`: `welcome`, `coords-hud`, `beacons`, `ruby-content`, `predator-missile`.
 - Contrato completo da API: `horizon/crates/horizon-mod-sdk/wit/horizon.wit`.
 
@@ -337,3 +342,4 @@ OAuth do Azure em `.oauth_client_id.txt` ou `OAUTH_CLIENT_ID`; sem ele o app jog
 | `runtimes/jre-25/` | Java 25 para arm64 e arm de 32 bits (do Zalith Launcher 2), baixado pelo app no primeiro preparo |
 | `horizon/` | Código do Horizon com o port para Android (`crates/horizon-android`, `horizon-client/src/android.rs`) |
 | `horizon/mods/pojarush-zoom/` | Mod de zoom do Pojarush |
+| `horizon/mods/pojarush-fps/` | Mod de FPS do Pojarush |

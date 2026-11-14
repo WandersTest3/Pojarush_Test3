@@ -294,4 +294,6 @@
     <string name="custom_font_default">Use default font</string>
     <string name="custom_font_desc">Fonts are saved in the Pojarush \"font\" folder and replace the launcher font.</string>
     <string name="wallpaper_official">Official Black Hole wallpaper</string>
+    <string name="system_font">System font</string>
+    <string name="custom_font_option">Custom font</string>
 </resources>

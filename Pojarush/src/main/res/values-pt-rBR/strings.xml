@@ -293,4 +293,6 @@
     <string name="custom_font_default">Usar fonte padrão</string>
     <string name="custom_font_desc">As fontes ficam na pasta \"font\" do Pojarush e substituem a fonte do launcher.</string>
     <string name="wallpaper_official">Wallpaper oficial Black Hole</string>
+    <string name="system_font">Fonte do sistema</string>
+    <string name="custom_font_option">Fonte personalizada</string>
 </resources>

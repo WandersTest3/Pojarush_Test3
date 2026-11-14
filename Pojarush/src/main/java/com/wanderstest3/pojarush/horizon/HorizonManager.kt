@@ -76,13 +76,13 @@ object HorizonManager {
     val modsFile: File get() = File(gameDir, "horizon-mods.txt")
 
     fun ensureFolders() {
-        listOf(gameDir, modsDir, nativeModsDir, resourcePacksDir, shaderPacksDir, File(gameDir, "saves"), File(gameDir, "screenshots"), File(homeDir, "logs"))
+        listOf(gameDir, modsDir, nativeModsDir, resourcePacksDir, shaderPacksDir, File(gameDir, "saves"), File(gameDir, "screenshots"), logsDir)
             .forEach { runCatching { it.mkdirs() } }
     }
     val resources: File get() = File(prepareRoot, ".local/horizon-client/$VERSION")
-    val prepareLog: File get() = File(homeDir, "logs/prepare.log")
-    val gameLog: File get() = File(homeDir, "logs/latest.log")
-    val stdioLog: File get() = File(homeDir, "logs/stdio.log")
+    val logsDir: File get() = File(gameDir, "logs")
+    val crashDir: File get() = File(gameDir, "crash-reports")
+    val gameLog: File get() = File(logsDir, "latest.log")
     private val soundsMarker: File get() = File(privateRoot, "sounds.ok")
 
     private val nativeDir: File get() = Paths.nativeDir
@@ -102,8 +102,51 @@ object HorizonManager {
     private fun appendLog(line: String) {
         _log.update { (it + line).takeLast(LOG_LINES) }
         runCatching {
-            prepareLog.parentFile?.mkdirs()
-            prepareLog.appendText(line + "\n")
+            logsDir.mkdirs()
+            val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+            synchronized(logLock) { gameLog.appendText("[$time] [Prepare/INFO]: $line\n") }
+        }
+    }
+
+    private val logLock = Any()
+
+    fun archiveLog() {
+        runCatching {
+            synchronized(logLock) {
+                val log = gameLog
+                if (!log.isFile || log.length() == 0L) return
+                val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(log.lastModified()))
+                fun archive(index: Int) = File(logsDir, "$date-$index.log.gz")
+                val present = (1..99).filter { archive(it).isFile }
+                var next = (present.lastOrNull() ?: 0) + 1
+                if (present.size >= 7) {
+                    archive(present.first()).delete()
+                    present.drop(1).forEachIndexed { i, from -> archive(from).renameTo(archive(i + 1)) }
+                    next = present.size
+                }
+                java.util.zip.GZIPOutputStream(archive(next).outputStream().buffered()).use { out -> log.inputStream().use { it.copyTo(out) } }
+                log.delete()
+            }
+        }
+    }
+
+    fun migrateLogs() {
+        runCatching {
+            logsDir.mkdirs()
+            val old = File(homeDir, "logs")
+            old.listFiles { f -> f.isFile && f.name.endsWith(".log.gz") }?.forEach { f ->
+                val target = File(logsDir, f.name)
+                if (!target.exists()) f.copyTo(target)
+            }
+            File(homeDir, "crash-reports").listFiles { f -> f.isFile }?.forEach { f ->
+                crashDir.mkdirs()
+                val target = File(crashDir, f.name)
+                if (!target.exists()) f.copyTo(target)
+            }
+            old.deleteRecursively()
+            File(homeDir, "crash-reports").deleteRecursively()
+            File(publicRoot.parentFile, "logs").deleteRecursively()
+            File(publicRoot.parentFile, "crash-reports").deleteRecursively()
         }
     }
 
@@ -117,7 +160,6 @@ object HorizonManager {
         if (isBusy()) return
         javaHeapMb = com.wanderstest3.pojarush.controls.ControlSettings(context).javaHeapMb
         _log.value = emptyList()
-        runCatching { prepareLog.delete() }
         runCatching { File(homeDir, "exit-code").delete() }
         val app = context.applicationContext
         com.wanderstest3.pojarush.KeepAliveService.start(app, com.wanderstest3.pojarush.PrepareKeepAliveService::class.java)
@@ -163,13 +205,13 @@ object HorizonManager {
                 out.write(bytes)
                 out.closeEntry()
             }
-            for (file in listOf(prepareLog, gameLog, stdioLog, File(homeDir, "exit-code"))) {
+            for (file in listOf(gameLog, File(homeDir, "exit-code"))) {
                 if (file.isFile) add(file.name, file.readBytes())
             }
-            File(homeDir, "logs").listFiles { f -> f.isFile && f.name != "latest.log" && f.name != "stdio.log" && f.name != "prepare.log" }
+            logsDir.listFiles { f -> f.isFile && f.name != "latest.log" }
                 .orEmpty().sortedByDescending { it.lastModified() }.take(3)
                 .forEach { add("logs/${it.name}", it.readBytes()) }
-            File(homeDir, "crash-reports").listFiles { f -> f.isFile }
+            crashDir.listFiles { f -> f.isFile }
                 .orEmpty().sortedByDescending { it.lastModified() }.take(3)
                 .forEach { add("crash-reports/${it.name}", it.readBytes()) }
             runCatching {
@@ -229,29 +271,8 @@ object HorizonManager {
         tree.forEach { child -> runCatching { android.system.Os.kill(child, android.system.OsConstants.SIGKILL) } }
     }
 
-    fun syncLogs() {
-        runCatching {
-            val out = File(publicRoot.parentFile, "logs").apply { mkdirs() }
-            File(homeDir, "logs").listFiles()?.forEach { f ->
-                val target = File(out, f.name)
-                if (f.isFile && (!target.isFile || target.lastModified() < f.lastModified() || target.length() != f.length())) {
-                    f.copyTo(target, overwrite = true)
-                    target.setLastModified(f.lastModified())
-                }
-            }
-            val crashes = File(homeDir, "crash-reports")
-            if (crashes.isDirectory) {
-                val dst = File(publicRoot.parentFile, "crash-reports").apply { mkdirs() }
-                crashes.listFiles()?.forEach { f ->
-                    val target = File(dst, f.name)
-                    if (f.isFile && !target.isFile) f.copyTo(target)
-                }
-            }
-        }
-    }
-
     fun lastCrashReason(): String? = runCatching {
-        val report = File(homeDir, "crash-reports").listFiles { f -> f.isFile }?.maxByOrNull { it.lastModified() }
+        val report = crashDir.listFiles { f -> f.isFile }?.maxByOrNull { it.lastModified() }
         val exit = File(homeDir, "exit-code")
         if (report == null || !exit.isFile || report.lastModified() + 60_000 < exit.lastModified()) return@runCatching null
         val lines = report.readLines()
@@ -293,6 +314,23 @@ object HorizonManager {
             gameDir.mkdirs()
             file.writeText(lines.joinToString("\n", postfix = "\n"))
         }
+    }
+
+    private fun fpsModActive(): Boolean = runCatching {
+        modsDir.listFiles { f -> f.isFile && f.extension.equals("hmod", true) }.orEmpty().any { f ->
+            java.util.zip.ZipFile(f).use { zip ->
+                val entry = zip.getEntry("horizon-mod.toml") ?: return@use false
+                zip.getInputStream(entry).bufferedReader().readText().lineSequence()
+                    .any { it.trim().replace(" ", "") == "id=\"pojarush_fps\"" }
+            }
+        }
+    }.getOrDefault(false)
+
+    fun disableOverlayForFpsMod() {
+        if (!fpsModActive()) return
+        val current = graphicsLines().firstOrNull { it.startsWith("overlay:") }?.substringAfter(':')?.trim()
+        if (current != null && current != "off") setGraphics("overlay", "off")
+        else if (current == null) setGraphics("overlay", "off")
     }
 
     private fun installBundle(context: Context) {
@@ -483,8 +521,8 @@ object HorizonManager {
         val code = process.waitFor()
         watchdog.cancel()
         this.process = null
-        if (stalled.get()) throw IOException("horizon-prepare stopped answering (low memory?). Lower the Java memory limit in Graphics or free RAM, then Prepare again; see ${prepareLog.absolutePath}")
-        if (code != 0) throw IOException("horizon-prepare stopped with exit code $code; see ${prepareLog.absolutePath}")
+        if (stalled.get()) throw IOException("horizon-prepare stopped answering (low memory?). Lower the Java memory limit in Graphics or free RAM, then Prepare again; see ${gameLog.absolutePath}")
+        if (code != 0) throw IOException("horizon-prepare stopped with exit code $code; see ${gameLog.absolutePath}")
     }
 
     fun stopRunningGame(context: Context) {
@@ -602,6 +640,7 @@ object HorizonManager {
         toggleDir(nativeModsDir, cs.modsEnabled)
         toggleFile(modsFile, cs.modsEnabled)
         toggleDir(shaderPacksDir, cs.shadersEnabled)
+        if (cs.modsEnabled) disableOverlayForFpsMod()
         val args = arrayListOf(
             "--resources", resources.absolutePath,
             "--game-dir", gameDir.absolutePath,
@@ -625,6 +664,7 @@ object HorizonManager {
             .putStringArrayListExtra(HorizonActivity.EXTRA_ARGS, args)
             .putExtra(HorizonActivity.EXTRA_GAME_DIR, gameDir.absolutePath)
             .putExtra(HorizonActivity.EXTRA_HOME, homeDir.absolutePath)
+            .putExtra(HorizonActivity.EXTRA_LOGS, gameDir.absolutePath)
             .putExtra(HorizonActivity.EXTRA_CACHE, cacheRoot.apply { mkdirs() }.absolutePath)
     }
 }

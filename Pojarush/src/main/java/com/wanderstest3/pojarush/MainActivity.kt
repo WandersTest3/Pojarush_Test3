@@ -80,6 +80,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wanderstest3.pojarush.controls.ControlSettings
 import com.wanderstest3.pojarush.ui.WallpaperState
+import com.wanderstest3.pojarush.ui.liquidGlass
 import com.wanderstest3.pojarush.ui.OnboardingWallpaperStep
 import com.wanderstest3.pojarush.horizon.HorizonManager
 import com.wanderstest3.pojarush.ui.AccountsCard
@@ -145,7 +146,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        Thread { HorizonManager.syncLogs() }.start()
+        Thread { HorizonManager.migrateLogs() }.start()
         Thread { HorizonManager.prewarm(this, Accounts.profile.value) }.start()
         for (delay in longArrayOf(800, 2500, 6000)) {
             window.decorView.postDelayed({ Thread { HorizonManager.prewarm(this, Accounts.profile.value) }.start() }, delay)
@@ -256,9 +257,8 @@ private fun Header() {
         Spacer(Modifier.width(10.dp))
         Text(
             stringResource(R.string.app_name),
-            modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                .background(Color.Black.copy(alpha = com.wanderstest3.pojarush.ui.UiPrefs.menuBackground * 0.75f))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.liquidGlass(RoundedCornerShape(14.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
                 .basicMarquee(),
             style = MaterialTheme.typography.titleMedium,
             color = Color.White,
@@ -270,9 +270,8 @@ private fun Header() {
 
 @Composable
 private fun NavItem(section: Section, selected: Boolean, onClick: () -> Unit) {
-    val bg = if (selected) com.wanderstest3.pojarush.ui.Purple else Color.Black.copy(alpha = com.wanderstest3.pojarush.ui.UiPrefs.menuBackground * 0.75f)
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 11.dp),
+        modifier = Modifier.fillMaxWidth().liquidGlass(RoundedCornerShape(18.dp), selected = selected).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val tint = if (selected) Color.White else MaterialTheme.colorScheme.primary
@@ -330,7 +329,7 @@ private fun OnboardingFlow(
             Text(
                 stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineSmall,
-                fontFamily = FontFamily.Monospace,
+                
                 fontWeight = FontWeight.Bold
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -557,23 +556,16 @@ private fun LogCard(modifier: Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prepareLog by HorizonManager.log.collectAsStateWithLifecycle()
-    var tab by rememberSaveable { mutableIntStateOf(0) }
     var refresh by remember { mutableIntStateOf(0) }
     var fileLines by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(tab, refresh) {
-        fileLines = when (tab) {
-            1 -> withContext(Dispatchers.IO) { HorizonManager.readTail(HorizonManager.gameLog).lines() }
-            2 -> withContext(Dispatchers.IO) { HorizonManager.readTail(HorizonManager.stdioLog).lines() }
-            else -> withContext(Dispatchers.IO) { HorizonManager.readTail(HorizonManager.prepareLog).lines() }
-        }.filter { it.isNotEmpty() }
+    LaunchedEffect(prepareLog.size, refresh) {
+        fileLines = withContext(Dispatchers.IO) { HorizonManager.readTail(HorizonManager.gameLog).lines() }.filter { it.isNotEmpty() }
     }
-    val lines = if (tab == 0 && prepareLog.isNotEmpty()) prepareLog else fileLines
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    val lines = fileLines
+    Box(modifier = modifier.liquidGlass()) {
         Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(R.string.tab_prepare, R.string.tab_game, R.string.tab_stdio).forEachIndexed { i, label ->
-                    FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label), maxLines = 1, modifier = Modifier.basicMarquee()) })
-                }
+                Text("latest.log", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 4.dp))
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { refresh++ }) { Text(stringResource(R.string.refresh), maxLines = 1, modifier = Modifier.basicMarquee()) }
                 TextButton(onClick = {
@@ -581,7 +573,7 @@ private fun LogCard(modifier: Modifier) {
                 }) { Text(stringResource(R.string.share_logs), maxLines = 1, modifier = Modifier.basicMarquee()) }
             }
             val listState = rememberLazyListState()
-            LaunchedEffect(lines.size, tab) {
+            LaunchedEffect(lines.size) {
                 if (lines.isNotEmpty()) listState.scrollToItem(lines.size - 1)
             }
             if (lines.isEmpty()) {
@@ -589,7 +581,7 @@ private fun LogCard(modifier: Modifier) {
             } else {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(top = 8.dp), contentPadding = PaddingValues(bottom = 8.dp)) {
                     items(lines) { line ->
-                        Text(line, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                        Text(line, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

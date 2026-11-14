@@ -1,0 +1,20 @@
+[package]
+name = "pojarush_fps"
+version = "1.1.0"
+edition = "2024"
+license-file = "LICENSE.txt"
+publish = false
+description = "Pojarush FPS: frames per second anywhere on the screen, at any size."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+horizon-mod-sdk = { path = "../../crates/horizon-mod-sdk" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+
+[workspace]

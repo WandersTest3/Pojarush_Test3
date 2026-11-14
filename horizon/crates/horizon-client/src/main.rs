@@ -60,6 +60,13 @@ fn main() {
     }
     raise_open_file_limit();
     if let Err(error) = game::run() {
+        #[cfg(target_os = "android")]
+        if format!("{error:?}").contains("underlying handle is not available") {
+            log::info!("Horizon: the window closed before the game started");
+            logging::flush();
+            android::finished(game::exit_code::OK);
+            return;
+        }
         // A bad command line is the caller's mistake, not a crash: no report.
         let usage = error.is::<game::UsageError>();
         log::error!("Horizon: {error}");

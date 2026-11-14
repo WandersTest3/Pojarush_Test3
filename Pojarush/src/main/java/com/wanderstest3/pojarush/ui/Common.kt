@@ -3,6 +3,10 @@ package com.wanderstest3.pojarush.ui
 import android.content.Context
 import android.os.Build
 import android.view.WindowManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,12 +62,14 @@ object UiPrefs {
     var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.60f)
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
     var customFont by androidx.compose.runtime.mutableStateOf("")
+    var fontMode by androidx.compose.runtime.mutableStateOf("minecraft")
 
     fun load(context: android.content.Context) {
         val s = com.wanderstest3.pojarush.controls.ControlSettings(context)
         menuBackground = s.menuBackground
         minecraftFont = s.minecraftFont
         customFont = s.customFont
+        fontMode = s.fontMode
     }
 }
 
@@ -79,27 +85,31 @@ private fun androidx.compose.material3.Typography.withFont(f: androidx.compose.u
 
 fun launcherTypeface(context: Context): android.graphics.Typeface? {
     val settings = com.wanderstest3.pojarush.controls.ControlSettings(context)
-    val file = java.io.File(settings.customFont)
-    if (settings.customFont.isNotEmpty() && file.isFile) android.graphics.Typeface.Builder(file).build()?.let { return it }
-    if (!settings.minecraftFont) return null
-    return runCatching { androidx.core.content.res.ResourcesCompat.getFont(context, com.wanderstest3.pojarush.R.font.minecraft) }.getOrNull()
+    return when (settings.fontMode) {
+        "custom" -> java.io.File(settings.customFont).takeIf { settings.customFont.isNotEmpty() && it.isFile }
+            ?.let { runCatching { android.graphics.Typeface.Builder(it).build() }.getOrNull() }
+        "minecraft" -> runCatching { androidx.core.content.res.ResourcesCompat.getFont(context, com.wanderstest3.pojarush.R.font.minecraft) }.getOrNull()
+        else -> null
+    }
 }
 
 @Composable
 fun PojarushTheme(content: @Composable () -> Unit) {
     val custom = UiPrefs.customFont
-    val family = remember(custom, UiPrefs.minecraftFont) {
-        val file = java.io.File(custom)
-        when {
-            custom.isNotEmpty() && file.isFile && android.graphics.Typeface.Builder(file).build() != null ->
-                androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(file))
-            UiPrefs.minecraftFont -> MinecraftFont
+    val mode = UiPrefs.fontMode
+    val family = remember(custom, mode) {
+        when (mode) {
+            "custom" -> java.io.File(custom).takeIf { custom.isNotEmpty() && it.isFile && runCatching { android.graphics.Typeface.Builder(it).build() }.getOrNull() != null }
+                ?.let { androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(it)) }
+            "minecraft" -> MinecraftFont
             else -> null
         }
     }
     val typography = if (family != null) androidx.compose.material3.Typography().withFont(family) else androidx.compose.material3.Typography()
     MaterialTheme(colorScheme = PojarushColors, typography = typography) {
-        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides PojarushColors.onSurface, content = content)
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides PojarushColors.onSurface) {
+            androidx.compose.material3.ProvideTextStyle(androidx.compose.ui.text.TextStyle(fontFamily = family), content = content)
+        }
     }
 }
 
@@ -108,13 +118,43 @@ fun PojarushTheme(content: @Composable () -> Unit) {
 fun pojarushBackgroundBrush(): androidx.compose.ui.graphics.Brush =
     androidx.compose.ui.graphics.Brush.verticalGradient(listOf(BackgroundTop, BackgroundBottom))
 
+fun Modifier.liquidGlass(shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(22.dp), tint: Color = Color.Black, selected: Boolean = false): Modifier {
+    val strength = UiPrefs.menuBackground
+    val base = if (selected) Purple else tint
+    val body = androidx.compose.ui.graphics.Brush.linearGradient(
+        listOf(
+            base.copy(alpha = (strength * 0.78f).coerceIn(0f, 1f)),
+            base.copy(alpha = (strength * 0.52f).coerceIn(0f, 1f)),
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(0f, Float.POSITIVE_INFINITY),
+    )
+    val sheen = androidx.compose.ui.graphics.Brush.verticalGradient(
+        0f to Color.White.copy(alpha = 0.16f),
+        0.45f to Color.White.copy(alpha = 0.04f),
+        1f to Color.Transparent,
+    )
+    val rim = androidx.compose.ui.graphics.Brush.linearGradient(
+        0f to Color.White.copy(alpha = 0.60f),
+        0.35f to Color.White.copy(alpha = 0.14f),
+        0.7f to Color.White.copy(alpha = 0.08f),
+        1f to Color.White.copy(alpha = 0.34f),
+    )
+    return this
+        .glassShadow(shape)
+        .clip(shape)
+        .background(body)
+        .background(sheen)
+        .border(1.dp, rim, shape)
+}
+
+private fun Modifier.glassShadow(shape: androidx.compose.ui.graphics.Shape): Modifier =
+    this.shadow(10.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.5f))
+
 @Composable
 fun PojarushCard(content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = UiPrefs.menuBackground)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
-        shape = RoundedCornerShape(14.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth().liquidGlass(),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
     }

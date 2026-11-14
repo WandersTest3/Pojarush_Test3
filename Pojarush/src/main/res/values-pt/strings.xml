@@ -293,4 +293,6 @@
     <string name="custom_font_default">Usar tipo de letra predefinido</string>
     <string name="custom_font_desc">Os tipos de letra ficam na pasta \"font\" do Pojarush e substituem o do launcher.</string>
     <string name="wallpaper_official">Wallpaper oficial Black Hole</string>
+    <string name="system_font">Tipo de letra do sistema</string>
+    <string name="custom_font_option">Tipo de letra personalizado</string>
 </resources>

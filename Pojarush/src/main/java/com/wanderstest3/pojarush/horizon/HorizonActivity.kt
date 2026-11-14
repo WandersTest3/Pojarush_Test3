@@ -2,7 +2,6 @@ package com.wanderstest3.pojarush.horizon
 
 import android.os.Build
 import android.os.Bundle
-import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemClock
 import android.system.Os
@@ -24,17 +23,19 @@ class HorizonActivity : GameActivity() {
         const val EXTRA_ARGS = "horizon_args"
         const val EXTRA_GAME_DIR = "horizon_game_dir"
         const val EXTRA_HOME = "horizon_home"
+        const val EXTRA_LOGS = "horizon_logs"
         const val EXTRA_CACHE = "horizon_cache"
         const val EXTRA_PREWARM = "horizon_prewarm"
     }
-
-    private var stdio: ParcelFileDescriptor? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val args = intent.getStringArrayListExtra(EXTRA_ARGS).orEmpty()
         val gameDir = intent.getStringExtra(EXTRA_GAME_DIR).orEmpty()
         val home = intent.getStringExtra(EXTRA_HOME).orEmpty()
-        File(home, "logs").mkdirs()
+        val logsRoot = intent.getStringExtra(EXTRA_LOGS).orEmpty().ifEmpty { gameDir }
+        File(logsRoot, "logs").mkdirs()
+        Os.setenv("HORIZON_LOGS_ROOT", logsRoot, true)
+        Os.setenv("HORIZON_KEEP_LOG", "1", true)
         Os.setenv("HORIZON_ANDROID_ARGS", args.joinToString("\u001f"), true)
         Os.setenv("POJARUSH_GAME_DIR", gameDir, true)
         Os.setenv("POJARUSH_EXIT_FILE", File(home, "exit-code").absolutePath, true)
@@ -47,15 +48,6 @@ class HorizonActivity : GameActivity() {
         Os.setenv("HOME", home, true)
         Os.setenv("TMPDIR", cacheDir.absolutePath, true)
         File(home, "exit-code").delete()
-        runCatching {
-            stdio = ParcelFileDescriptor.open(
-                File(home, "logs/stdio.log"),
-                ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE or ParcelFileDescriptor.MODE_WRITE_ONLY
-            ).also { pfd ->
-                Os.dup2(pfd.fileDescriptor, 1)
-                Os.dup2(pfd.fileDescriptor, 2)
-            }
-        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (ControlSettings(this).keepAlive) KeepAliveService.start(this, GameKeepAliveService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -185,7 +177,7 @@ class HorizonActivity : GameActivity() {
     override fun onDestroy() {
         KeepAliveService.stop(this, GameKeepAliveService::class.java)
         super.onDestroy()
-        runCatching { stdio?.close() }
+        if (isFinishing && !prewarmed) HorizonManager.archiveLog()
         Process.killProcess(Process.myPid())
     }
 }
