@@ -192,17 +192,29 @@ private fun PojarushScreen() {
         return
     }
 
+    var menuOpen by rememberSaveable { mutableStateOf(true) }
     Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(modifier = Modifier.width(176.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Header()
-                Spacer(Modifier.height(6.dp))
-                Section.entries.forEach { s ->
-                    NavItem(s, s == section) { section = s }
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            MenuToggle { menuOpen = !menuOpen }
+            Spacer(Modifier.width(10.dp))
+            Header()
+            Spacer(Modifier.weight(1f))
+            profile?.let { com.wanderstest3.pojarush.ui.PlayerBadge(it) }
+        }
+        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = menuOpen,
+                enter = androidx.compose.animation.slideInHorizontally { -it } + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.Start),
+                exit = androidx.compose.animation.slideOutHorizontally { -it } + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.Start),
+            ) {
+                Column(modifier = Modifier.padding(end = 12.dp).width(176.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Section.entries.forEach { s ->
+                        NavItem(s, s == section) { section = s }
+                    }
                 }
             }
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                profile?.let { com.wanderstest3.pojarush.ui.PlayerBadge(it, Modifier.align(Alignment.End)) }
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (section) {
                     Section.Logs -> LogCard(modifier = Modifier.fillMaxSize().padding(bottom = 76.dp))
@@ -250,7 +262,25 @@ private fun PojarushScreen() {
                 }
             }
         }
+        }
         PlayButton(modifier = Modifier.align(Alignment.BottomEnd))
+    }
+}
+
+@Composable
+private fun MenuToggle(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.size(44.dp)
+            .liquidGlass(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            repeat(3) {
+                Box(Modifier.width(20.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
+            }
+        }
     }
 }
 
@@ -268,12 +298,12 @@ private fun Header() {
         Text(
             stringResource(R.string.app_name),
             modifier = Modifier.liquidGlass(RoundedCornerShape(14.dp))
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-                .basicMarquee(),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.titleMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
+            softWrap = false,
         )
     }
 }
