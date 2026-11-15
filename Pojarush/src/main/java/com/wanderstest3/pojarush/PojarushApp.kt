@@ -48,14 +48,24 @@ object Paths {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager()
         else context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
 
+    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences("pojarush_storage", Context.MODE_PRIVATE)
+
+    fun deleteOnUninstall(context: Context): Boolean =
+        prefs(context).getBoolean("delete_on_uninstall", !sharedRoot.isDirectory)
+
+    fun setDeleteOnUninstall(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("delete_on_uninstall", value).apply()
+    }
+
     private fun choose(context: Context): File =
-        if (hasStorageAccess(context) && (sharedRoot.isDirectory || sharedRoot.mkdirs())) sharedRoot else appExternal
+        if (!deleteOnUninstall(context) && hasStorageAccess(context) && (sharedRoot.isDirectory || sharedRoot.mkdirs())) sharedRoot else appExternal
 
     fun refresh(context: Context): Boolean {
         val next = choose(context)
         if (next == publicRoot) return false
-        if (next == sharedRoot) migrate(appExternal, sharedRoot)
+        val from = publicRoot
         publicRoot = next
+        migrate(from, next)
         return true
     }
 
@@ -65,6 +75,8 @@ object Paths {
             val dst = File(to, name)
             if (!src.isDirectory) continue
             runCatching {
+                dst.parentFile?.mkdirs()
+                if (!dst.exists() && src.renameTo(dst)) return@runCatching
                 src.walkTopDown().forEach { f ->
                     val target = File(dst, f.relativeTo(src).path)
                     if (f.isDirectory) target.mkdirs()

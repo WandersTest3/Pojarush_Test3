@@ -1009,7 +1009,7 @@ fn extract_client_resources(
 }
 
 fn datagen_reports_missing(root: &Path) -> bool {
-    ["items.json", "registries.json", "commands.json"]
+    ["items.json", "registries.json", "commands.json", "biome-parameters/overworld.json"]
         .iter()
         .any(|name| !root.join(name).is_file())
 }

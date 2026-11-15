@@ -300,7 +300,7 @@
     <string name="clean_logs">Limpar registos e crash reports recorrentemente</string>
     <string name="clean_logs_desc">Mantém só os 3 registos e os 3 crash reports mais recentes, para não acumular e não pesar à toa.</string>
     <string name="clean_junk">Limpar lixo</string>
-    <string name="clean_junk_desc">Apaga a transferência do Minecraft que fica guardada depois da preparação, as caches de shaders e da aplicação e as sobras de versões antigas. Mundos, pacotes, mods, controlos e as suas definições não são tocados. Preparar de novo transfere o que precisar outra vez.</string>
+    <string name="clean_junk_desc">Remove apenas caches e restos de versões antigas. O Minecraft transferido, mundos, pacotes, mods, controlos e as suas definições nunca são tocados.</string>
     <string name="clean_junk_button">Limpar %1$s</string>
     <string name="clean_junk_none">Nada para limpar</string>
     <string name="clean_junk_done">%1$s libertados</string>
@@ -309,4 +309,10 @@
     <string name="vulkan_warn_title">O Vulkan pode não funcionar aqui</string>
     <string name="vulkan_warn_body">Este aparelho não indica suporte a Vulkan. Com ele o jogo pode ficar com o ecrã preto, piscar ou não abrir. O OpenGL é a escolha segura aqui.</string>
     <string name="vulkan_warn_continue">Usar mesmo assim</string>
+    <string name="keyboard_push">Subir o jogo acima do teclado</string>
+    <string name="keyboard_push_desc">Ao abrir o teclado, o jogo diminui para caber acima dele e continua a ver o chat.</string>
+    <string name="delete_on_uninstall">Apagar ficheiros ao desinstalar</string>
+    <string name="delete_on_uninstall_desc">Guarda mundos, pacotes e definições na pasta da app (Android/data), pelo que desinstalar o Pojarush também os remove. Desative para usar a pasta partilhada Pojarush_Test3, que permanece após desinstalar. Ao mudar, os seus ficheiros são movidos.</string>
+    <string name="language">Idioma</string>
+    <string name="language_system">Predefinição do sistema</string>
 </resources>

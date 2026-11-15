@@ -115,6 +115,10 @@ private enum class Section(val label: Int, val glyph: String) {
 }
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.wanderstest3.pojarush.Locales.wrap(newBase))
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) Fullscreen.apply(this)
@@ -169,7 +173,7 @@ private fun PojarushScreen() {
     }
 
     val profile by Accounts.profile.collectAsStateWithLifecycle()
-    val hasStorage = remember(storageVersion) { Paths.hasStorageAccess(context) }
+    val hasStorage = remember(storageVersion, resumes) { Paths.hasStorageAccess(context) || Paths.deleteOnUninstall(context) }
     val settings = remember { ControlSettings(context) }
     var onboardingDone by rememberSaveable { mutableStateOf(false) }
     val prepared = remember(storageVersion, resumes) { HorizonManager.isPrepared() }
@@ -197,7 +201,9 @@ private fun PojarushScreen() {
                     NavItem(s, s == section) { section = s }
                 }
             }
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                profile?.let { com.wanderstest3.pojarush.ui.PlayerBadge(it, Modifier.align(Alignment.End)) }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (section) {
                     Section.Logs -> LogCard(modifier = Modifier.fillMaxSize().padding(bottom = 76.dp))
                     else -> Column(
@@ -206,7 +212,7 @@ private fun PojarushScreen() {
                     ) {
                         when (section) {
                             Section.Home -> {
-                                val access = remember(storageVersion) { Paths.hasStorageAccess(context) }
+                                val access = remember(storageVersion, resumes) { Paths.hasStorageAccess(context) || Paths.deleteOnUninstall(context) }
                                 if (!access) StorageCard()
                                 GameCard(storageVersion)
                             }
@@ -240,6 +246,7 @@ private fun PojarushScreen() {
                             Section.Logs -> {}
                         }
                     }
+                }
                 }
             }
         }

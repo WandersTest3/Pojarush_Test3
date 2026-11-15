@@ -301,7 +301,7 @@
     <string name="clean_logs">Clear logs and crash reports regularly</string>
     <string name="clean_logs_desc">Keeps only the 3 most recent logs and the 3 most recent crash reports, so they do not pile up and take space for nothing.</string>
     <string name="clean_junk">Clear junk files</string>
-    <string name="clean_junk_desc">Deletes the Minecraft download kept after preparing, the shader and app caches and leftovers from old versions. Worlds, packs, mods, controls and your settings are not touched. Preparing again downloads what it needs once more.</string>
+    <string name="clean_junk_desc">Removes only caches and leftovers of old versions. The downloaded Minecraft, worlds, packs, mods, controls and your settings are never touched.</string>
     <string name="clean_junk_button">Clear %1$s</string>
     <string name="clean_junk_none">Nothing to clear</string>
     <string name="clean_junk_done">%1$s freed</string>
@@ -310,4 +310,10 @@
     <string name="vulkan_warn_title">Vulkan may not work here</string>
     <string name="vulkan_warn_body">This device does not report Vulkan support. With Vulkan the game may show a black screen, flicker or not open at all. OpenGL is the safe choice here.</string>
     <string name="vulkan_warn_continue">Use it anyway</string>
+    <string name="keyboard_push">Move the game above the keyboard</string>
+    <string name="keyboard_push_desc">When the keyboard opens, the game shrinks to fit above it so you can still see the chat.</string>
+    <string name="delete_on_uninstall">Delete files when uninstalling</string>
+    <string name="delete_on_uninstall_desc">Keeps worlds, packs and settings inside the app folder (Android/data), so uninstalling Pojarush removes them too. Turn it off to use the shared Pojarush_Test3 folder, which stays after uninstalling. Changing it moves your files.</string>
+    <string name="language">Language</string>
+    <string name="language_system">System default</string>
 </resources>

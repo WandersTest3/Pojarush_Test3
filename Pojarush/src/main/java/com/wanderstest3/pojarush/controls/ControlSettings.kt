@@ -117,6 +117,12 @@ class ControlSettings(context: Context) {
     var fontScale: Float
         get() = prefs.getFloat("font_scale", 1.00f).coerceIn(0.70f, 1.60f)
         set(v) = prefs.edit().putFloat("font_scale", v.coerceIn(0.70f, 1.60f)).apply()
+    var keyboardPush: Boolean
+        get() = prefs.getBoolean("keyboard_push", false)
+        set(v) = prefs.edit().putBoolean("keyboard_push", v).apply()
+    var language: String
+        get() = prefs.getString("language", "").orEmpty()
+        set(v) = prefs.edit().putString("language", v).apply()
     var cleanLogs: Boolean
         get() = prefs.getBoolean("clean_logs", true)
         set(v) = prefs.edit().putBoolean("clean_logs", v).apply()

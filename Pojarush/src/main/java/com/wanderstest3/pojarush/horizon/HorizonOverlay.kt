@@ -71,18 +71,20 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     private val defaultName = activity.getString(R.string.controls_default_name)
     private val controls = ControlsView(activity, this, settings, ControlLayouts.load(activity, settings.layout, defaultName))
     private val keyMap: KeyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
-    private val sentinel = " "
     private var panel by mutableStateOf(Panel.NONE)
     private var mouseOn by mutableStateOf(controls.virtualMouse)
     private var hiddenOn by mutableStateOf(settings.controlsHidden)
 
-    private val textInput = EditText(context).apply {
-        alpha = 0f
-        isFocusableInTouchMode = true
-        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
-        imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_ACTION_SEND
-        setText(sentinel)
-    }
+    private val textInput = GameTextInput(
+        context,
+        onText = { typeText(it) },
+        onDelete = { activity.tapKey(KeyEvent.KEYCODE_DEL) },
+        onKey = { event -> activity.dispatchKeyToGame(event) },
+        onEnter = {
+            activity.tapKey(KeyEvent.KEYCODE_ENTER)
+            hideKeyboard()
+        }
+    )
 
     private val poll = object : Runnable {
         override fun run() {
@@ -103,7 +105,6 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         addView(textInput, LayoutParams(1, 1))
         addView(controls, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(ComposeView(context).apply { setContent { PojarushTheme { OverlayUi() } } }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        setupTextInput()
     }
 
     override fun onAttachedToWindow() {
@@ -280,6 +281,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
             textInput.clearFocus()
         } else {
             textInput.requestFocus()
+            imm.restartInput(textInput)
             imm.showSoftInput(textInput, 0)
         }
     }
@@ -294,38 +296,6 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         activity.tapKey(KeyEvent.KEYCODE_T)
         uiHandler.postDelayed({ HorizonBridge.command("type $text") }, 200)
         uiHandler.postDelayed({ activity.tapKey(KeyEvent.KEYCODE_ENTER) }, 400)
-    }
-
-    private fun setupTextInput() {
-        textInput.setOnEditorActionListener { _, _, _ ->
-            activity.tapKey(KeyEvent.KEYCODE_ENTER)
-            hideKeyboard()
-            true
-        }
-        textInput.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_ENTER) {
-                activity.sendKey(keyCode, event.action == KeyEvent.ACTION_DOWN)
-                if (keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_UP) hideKeyboard()
-                true
-            } else false
-        }
-        textInput.addTextChangedListener(object : TextWatcher {
-            private var busy = false
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                if (busy || s == null) return
-                val text = s.toString()
-                busy = true
-                when {
-                    text.length < sentinel.length -> activity.tapKey(KeyEvent.KEYCODE_DEL)
-                    text.length > sentinel.length -> typeText(text.substring(sentinel.length))
-                }
-                s.replace(0, s.length, sentinel)
-                textInput.setSelection(sentinel.length)
-                busy = false
-            }
-        })
     }
 
     private fun typeText(text: String) {

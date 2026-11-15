@@ -6,6 +6,7 @@ import android.os.Process
 import android.os.SystemClock
 import android.system.Os
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
@@ -19,6 +20,10 @@ import com.wanderstest3.pojarush.controls.ControlSettings
 import java.io.File
 
 class HorizonActivity : GameActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.wanderstest3.pojarush.Locales.wrap(newBase))
+    }
+
     companion object {
         const val EXTRA_ARGS = "horizon_args"
         const val EXTRA_GAME_DIR = "horizon_game_dir"
@@ -60,7 +65,14 @@ class HorizonActivity : GameActivity() {
             }
         }
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         super.onCreate(savedInstanceState)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { v, insets ->
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val bottom = if (ControlSettings(this).keyboardPush) ime else 0
+            if (v.paddingBottom != bottom) v.setPadding(0, 0, 0, bottom)
+            insets
+        }
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

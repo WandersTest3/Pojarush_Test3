@@ -22,6 +22,10 @@ import com.wanderstest3.pojarush.ui.ControlEditor
 import com.wanderstest3.pojarush.ui.PojarushTheme
 
 class ControlEditorActivity : ComponentActivity(), ControlsHost {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.wanderstest3.pojarush.Locales.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Fullscreen.apply(this)

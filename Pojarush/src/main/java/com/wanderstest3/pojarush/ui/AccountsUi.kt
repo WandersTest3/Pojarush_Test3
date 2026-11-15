@@ -14,6 +14,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -231,7 +232,7 @@ fun SkinCard(profile: Profile) {
 }
 
 @Composable
-fun SkinViewer(data: SkinData, modifier: Modifier = Modifier) {
+fun SkinViewer(data: SkinData, modifier: Modifier = Modifier, headOnly: Boolean = false) {
     var angle by remember { mutableFloatStateOf(25f) }
     var dragging by remember { mutableStateOf(false) }
     LaunchedEffect(dragging) {
@@ -254,7 +255,7 @@ fun SkinViewer(data: SkinData, modifier: Modifier = Modifier) {
         }
     ) {
         val a = angle
-        drawIntoCanvas { c -> drawModel(c.nativeCanvas, size.width, size.height, data, a, paint) }
+        drawIntoCanvas { c -> drawModel(c.nativeCanvas, size.width, size.height, data, a, paint, headOnly) }
     }
 }
 
@@ -282,7 +283,7 @@ private class Raster {
 
 private var raster: Raster? = null
 
-private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data: SkinData, angle: Float, paint: Paint) {
+private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data: SkinData, angle: Float, paint: Paint, headOnly: Boolean = false) {
     val skin = data.skin ?: return
     val r = raster ?: Raster().also { raster = it }
     java.util.Arrays.fill(r.color, 0)
@@ -347,34 +348,49 @@ private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data:
     val rightArmX = -(4f + armW / 2f)
     val leftArmX = 4f + armW / 2f
     box(0f, 0f, 0f, 8f, 8f, 8f, 0f, 0f, 0f)
-    box(0f, 0f, 8f, 8f, 12f, 4f, 16f, 16f, 0f)
-    box(rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 16f, 0f)
-    box(leftArmX, 0f, 8f, armW, 12f, 4f, if (full) 32f else 40f, if (full) 48f else 16f, 0f)
-    box(-2f, 0f, 20f, 4f, 12f, 4f, 0f, 16f, 0f)
-    box(2f, 0f, 20f, 4f, 12f, 4f, if (full) 16f else 0f, if (full) 48f else 16f, 0f)
-    if (full) {
-        box(0f, 0f, 0f, 8f, 8f, 8f, 32f, 0f, 0.5f, 0.01f)
-        box(0f, 0f, 8f, 8f, 12f, 4f, 16f, 32f, 0.25f, 0.01f)
-        box(rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 32f, 0.25f, 0.01f)
-        box(leftArmX, 0f, 8f, armW, 12f, 4f, 48f, 48f, 0.25f, 0.01f)
-        box(-2f, 0f, 20f, 4f, 12f, 4f, 0f, 32f, 0.25f, 0.01f)
-        box(2f, 0f, 20f, 4f, 12f, 4f, 0f, 48f, 0.25f, 0.01f)
+    if (!headOnly) {
+        box(0f, 0f, 8f, 8f, 12f, 4f, 16f, 16f, 0f)
+        box(rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 16f, 0f)
+        box(leftArmX, 0f, 8f, armW, 12f, 4f, if (full) 32f else 40f, if (full) 48f else 16f, 0f)
+        box(-2f, 0f, 20f, 4f, 12f, 4f, 0f, 16f, 0f)
+        box(2f, 0f, 20f, 4f, 12f, 4f, if (full) 16f else 0f, if (full) 48f else 16f, 0f)
+        if (full) {
+            box(0f, 0f, 8f, 8f, 12f, 4f, 16f, 32f, 0.25f, 0.01f)
+            box(rightArmX, 0f, 8f, armW, 12f, 4f, 40f, 32f, 0.25f, 0.01f)
+            box(leftArmX, 0f, 8f, armW, 12f, 4f, 48f, 48f, 0.25f, 0.01f)
+            box(-2f, 0f, 20f, 4f, 12f, 4f, 0f, 32f, 0.25f, 0.01f)
+            box(2f, 0f, 20f, 4f, 12f, 4f, 0f, 48f, 0.25f, 0.01f)
+        }
+        val cape = data.cape
+        if (cape != null) {
+            val ct = texelsOf(cape)
+            val ck = cape.width / 64f
+            val back = -3.3f
+            val front = back + 1f
+            val half = 5f
+            val top = 8f
+            val bottom = 24f
+            if (cs < 0f) face(ct, ck, 1f, 1f, 11f, 17f, half, back, -half, back, top, bottom, 0f)
+            if (cs > 0f) face(ct, ck, 12f, 1f, 22f, 17f, -half, front, half, front, top, bottom, 0f)
+            if (sn > 0f) face(ct, ck, 11f, 1f, 12f, 17f, -half, back, -half, front, top, bottom, 0f)
+            if (sn < 0f) face(ct, ck, 0f, 1f, 1f, 17f, half, front, half, back, top, bottom, 0f)
+        }
     }
-    val cape = data.cape
-    if (cape != null) {
-        val ct = texelsOf(cape)
-        val ck = cape.width / 64f
-        val back = -3.3f
-        val front = back + 1f
-        val half = 5f
-        val top = 8f
-        val bottom = 24f
-        if (cs < 0f) face(ct, ck, 1f, 1f, 11f, 17f, half, back, -half, back, top, bottom, 0f)
-        if (cs > 0f) face(ct, ck, 12f, 1f, 22f, 17f, -half, front, half, front, top, bottom, 0f)
-        if (sn > 0f) face(ct, ck, 11f, 1f, 12f, 17f, -half, back, -half, front, top, bottom, 0f)
-        if (sn < 0f) face(ct, ck, 0f, 1f, 1f, 17f, half, front, half, back, top, bottom, 0f)
-    }
+    if (full) box(0f, 0f, 0f, 8f, 8f, 8f, 32f, 0f, 0.5f, 0.01f)
     r.bitmap.setPixels(r.color, 0, r.width, 0, 0, r.width, r.height)
+    if (headOnly) {
+        val srcLeft = ((HALF_SPAN - 6.5f) * PPU).toInt()
+        val srcRight = ((HALF_SPAN + 6.5f) * PPU).toInt()
+        val srcBottom = (9f * PPU).toInt()
+        val headScale = minOf(w / (srcRight - srcLeft), h / srcBottom)
+        val headW = (srcRight - srcLeft) * headScale
+        val headH = srcBottom * headScale
+        val headLeft = (w - headW) / 2f
+        val headTop = (h - headH) / 2f
+        paint.isFilterBitmap = false
+        canvas.drawBitmap(r.bitmap, android.graphics.Rect(srcLeft, 0, srcRight, srcBottom), RectF(headLeft, headTop, headLeft + headW, headTop + headH), paint)
+        return
+    }
     val scale = h * 0.88f / (32f * PPU)
     val dw = r.width * scale
     val dh = r.height * scale
@@ -382,4 +398,18 @@ private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data:
     val topPx = (h - 32f * PPU * scale) / 2f - 0.5f * PPU * scale
     paint.isFilterBitmap = false
     canvas.drawBitmap(r.bitmap, null, RectF(left, topPx, left + dw, topPx + dh), paint)
+}
+
+@Composable
+fun PlayerBadge(profile: Profile, modifier: Modifier = Modifier) {
+    var data by remember { mutableStateOf<SkinData?>(null) }
+    LaunchedEffect(profile.key) {
+        data = runCatching { Skins.load(profile) }.getOrNull()
+    }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(profile.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        val current = data
+        if (current?.skin != null) SkinViewer(current, Modifier.size(48.dp), headOnly = true)
+        else Box(Modifier.size(48.dp))
+    }
 }

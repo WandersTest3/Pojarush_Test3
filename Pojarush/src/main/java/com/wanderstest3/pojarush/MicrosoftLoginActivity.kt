@@ -16,6 +16,10 @@ import android.widget.ProgressBar
 import androidx.activity.ComponentActivity
 
 class MicrosoftLoginActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.wanderstest3.pojarush.Locales.wrap(newBase))
+    }
+
     companion object {
         const val EXTRA_CODE = "code"
         const val EXTRA_ERROR = "error"

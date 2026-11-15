@@ -470,6 +470,10 @@ class ControlsView(
         invalidate()
     }
 
+    private fun releaseStuckMouse() {
+        for (b in 0..2) if (bridgeDown[b] && heldMouse[b] == 0 && !capturedButtonsDown[b]) mouse(b, false)
+    }
+
     private fun loadCursor() {
         (cursorDrawable as? AnimatedImageDrawable)?.stop()
         cursorDrawable?.callback = null
@@ -579,17 +583,24 @@ class ControlsView(
         }
     }
 
+    private val bridgeDown = BooleanArray(3)
+
     private fun mouse(button: Int, down: Boolean) {
-        if (captured) {
-            val name = when (button) {
-                1 -> "right"
-                2 -> "middle"
-                else -> "left"
-            }
-            HorizonBridge.command("mouse $name ${if (down) "down" else "up"}")
+        if (button !in 0..2) return
+        if (down) {
+            bridgeDown[button] = true
+            if (captured) HorizonBridge.command("mouse ${mouseName(button)} down") else HorizonBridge.button(button, true)
         } else {
-            HorizonBridge.button(button, down)
+            bridgeDown[button] = false
+            HorizonBridge.command("mouse ${mouseName(button)} up")
+            HorizonBridge.button(button, false)
         }
+    }
+
+    private fun mouseName(button: Int) = when (button) {
+        1 -> "right"
+        2 -> "middle"
+        else -> "left"
     }
 
     private fun holdMouse(button: Int, down: Boolean) {
@@ -731,8 +742,14 @@ class ControlsView(
                 val index = e.actionIndex
                 pointerUp(e.getPointerId(index), e.eventTime, false)
             }
-            MotionEvent.ACTION_UP -> pointerUp(e.getPointerId(e.actionIndex), e.eventTime, false)
-            MotionEvent.ACTION_CANCEL -> roles.keys.toList().forEach { pointerUp(it, e.eventTime, true) }
+            MotionEvent.ACTION_UP -> {
+                pointerUp(e.getPointerId(e.actionIndex), e.eventTime, false)
+                if (roles.isEmpty()) releaseStuckMouse()
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                roles.keys.toList().forEach { pointerUp(it, e.eventTime, true) }
+                releaseAll()
+            }
         }
         return true
     }
@@ -915,7 +932,7 @@ class ControlsView(
             if (!m.moved && !m.consumed && roles[id] === m) {
                 m.dragging = true
                 vibrate()
-                HorizonBridge.button(0, true)
+                mouse(0, true)
             }
         }.also { uiHandler.postDelayed(it, settings.longPressMs.toLong() + 100) }
         roles[id] = m
@@ -1099,15 +1116,15 @@ class ControlsView(
             }
             is Role.Mouse -> {
                 role.longPress?.let(uiHandler::removeCallbacks)
-                if (role.dragging) HorizonBridge.button(0, false)
+                if (role.dragging) mouse(0, false)
                 else if (!cancel && !role.consumed && !role.moved && settings.tapToClick && time - role.downTime < 300) {
-                    HorizonBridge.button(0, true)
-                    HorizonBridge.button(0, false)
+                    mouse(0, true)
+                    mouse(0, false)
                 }
             }
             is Role.Scroll -> if (!cancel && !role.scrolled && time - role.downTime < 300) {
-                HorizonBridge.button(1, true)
-                HorizonBridge.button(1, false)
+                mouse(1, true)
+                mouse(1, false)
             }
             else -> {}
         }

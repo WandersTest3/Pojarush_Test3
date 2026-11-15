@@ -20,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -207,8 +208,44 @@ fun InterfaceSettings(settings: ControlSettings) {
         ControlLayouts.fontDir().listFiles { f -> f.isFile && f.extension.lowercase() in setOf("ttf", "otf") }
             ?.sortedBy { it.name.lowercase() }.orEmpty()
     }
+    var language by remember { mutableStateOf(settings.language) }
+    var languageMenu by remember { mutableStateOf(false) }
     PojarushCard {
         CardTitle(stringResource(R.string.interface_title))
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(stringResource(R.string.language), modifier = Modifier.weight(1f))
+            Box {
+                OutlinedButton(onClick = { languageMenu = true }) {
+                    Text(com.wanderstest3.pojarush.Locales.all.firstOrNull { it.first == language }?.second ?: stringResource(R.string.language_system))
+                }
+                androidx.compose.material3.DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(stringResource(R.string.language_system)) },
+                        onClick = {
+                            languageMenu = false
+                            language = ""
+                            settings.language = ""
+                            (context as? android.app.Activity)?.recreate()
+                        }
+                    )
+                    com.wanderstest3.pojarush.Locales.all.forEach { (tag, name) ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(name) },
+                            onClick = {
+                                languageMenu = false
+                                language = tag
+                                settings.language = tag
+                                (context as? android.app.Activity)?.recreate()
+                            }
+                        )
+                    }
+                }
+            }
+        }
         SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
@@ -269,6 +306,8 @@ fun ExtrasSettings(settings: ControlSettings) {
     var keep by remember { mutableStateOf(settings.keepAlive) }
     val context = LocalContext.current
     var clean by remember { mutableStateOf(settings.cleanLogs) }
+    var push by remember { mutableStateOf(settings.keyboardPush) }
+    var wipe by remember { mutableStateOf(com.wanderstest3.pojarush.Paths.deleteOnUninstall(context)) }
     var junk by remember { mutableStateOf(-1L) }
     var working by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -283,6 +322,15 @@ fun ExtrasSettings(settings: ControlSettings) {
         SettingSwitch(stringResource(R.string.keep_alive), keep, stringResource(R.string.keep_alive_desc)) {
             settings.keepAlive = it
             keep = it
+        }
+        SettingSwitch(stringResource(R.string.keyboard_push), push, stringResource(R.string.keyboard_push_desc)) {
+            settings.keyboardPush = it
+            push = it
+        }
+        SettingSwitch(stringResource(R.string.delete_on_uninstall), wipe, stringResource(R.string.delete_on_uninstall_desc)) {
+            wipe = it
+            com.wanderstest3.pojarush.Paths.setDeleteOnUninstall(context, it)
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) { com.wanderstest3.pojarush.Paths.refresh(context) }
         }
         SettingSwitch(stringResource(R.string.clean_logs), clean, stringResource(R.string.clean_logs_desc)) {
             settings.cleanLogs = it

@@ -93,7 +93,8 @@ object HorizonManager {
     fun isSupported(): Boolean =
         gameLibrary.isFile && prepareBinary.isFile && javaLauncher.isFile
 
-    fun isPrepared(): Boolean = File(resources, "horizon-resources.json").isFile
+    fun isPrepared(): Boolean =
+        File(resources, "horizon-resources.json").isFile && File(resources, "worldgen/presets.json").isFile
 
     fun hasSounds(): Boolean = soundsMarker.isFile && isPrepared()
 
@@ -193,7 +194,6 @@ object HorizonManager {
     fun freeSpace() {
         if (isBusy()) return
         staging.deleteRecursively()
-        File(prepareRoot, ".local").listFiles()?.forEach { if (it.name != "horizon-client") it.deleteRecursively() }
         File(Paths.cache, "horizon-tmp").deleteRecursively()
     }
 
@@ -202,10 +202,9 @@ object HorizonManager {
     /// resources of versions that are no longer used. Never worlds, packs, mods, controls,
     /// options or accounts.
     private fun junkPaths(context: android.content.Context): List<File> {
-        val list = mutableListOf(staging, javaShim, cacheRoot, context.cacheDir, context.codeCacheDir)
+        val list = mutableListOf(cacheRoot, context.cacheDir, context.codeCacheDir)
         list += File(Paths.cache, "horizon-tmp")
         runCatching { context.externalCacheDirs?.filterNotNull()?.let { list += it } }
-        File(prepareRoot, ".local").listFiles()?.forEach { if (it.name != "horizon-client") list += it }
         File(prepareRoot, ".local/horizon-client").listFiles()?.forEach { if (it.name != VERSION) list += it }
         return list.filter { it.exists() }
     }
@@ -225,7 +224,6 @@ object HorizonManager {
             val gone = runCatching { file.deleteRecursively() }.getOrDefault(false)
             if (gone) removed += size else removed += size - runCatching { sizeOf(file) }.getOrDefault(size)
         }
-        runCatching { soundsMarker.delete() }
         return removed
     }
 
