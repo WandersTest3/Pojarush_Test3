@@ -135,6 +135,8 @@ struct ModScreen {
     scrolls: Vec<ui::Scroll>,
     /// A key row waiting for the key to bind: the mod key's name.
     binding: Option<String>,
+    /// The slider widget being dragged: its id.
+    slider: Option<u32>,
 }
 impl ModsState {
     /// The chat's command tree: vanilla's, plus the running mods' commands.
@@ -280,6 +282,8 @@ impl Game<'_> {
         false
     }
     pub(super) fn mod_screen_scroll(&mut self, _delta: f32) {}
+    pub(super) fn mod_screen_drag(&mut self) {}
+    pub(super) fn mod_screen_release(&mut self) {}
 }
 /// What the launcher writes beside a game it built with native mods: their ids under `mods`.
 const BUILD_INFO: &str = "native-mods.json";
@@ -894,7 +898,7 @@ impl Game<'_> {
         for w in widgets {
             let wh = match w {
                 UiWidget::Text(_) => 12.0,
-                UiWidget::Item(_) | UiWidget::Button(_) => 20.0,
+                UiWidget::Item(_) | UiWidget::Button(_) | UiWidget::Slider(_) => 20.0,
                 UiWidget::List(l) => (l.rows.len().min(6) as f32 * 12.0) + 8.0,
             };
             // Nothing may cover Done; a crowded mod loses what won't fit.
@@ -928,6 +932,7 @@ impl Game<'_> {
             under: self.screen,
             scrolls: Vec::new(),
             binding: None,
+            slider: None,
         });
         self.screen = Screen::Mod;
         if self.player.is_some() {
@@ -1026,6 +1031,22 @@ impl Game<'_> {
                         &label,
                         true,
                         hover,
+                    );
+                }
+                UiWidget::Slider(sl) => {
+                    let hover = ui::hovered(self.cursor, x, wy, MOD_UI_COLUMN, 20.0);
+                    let label = Text::literal(sl.label.clone());
+                    ui::slider(
+                        batch,
+                        atlas,
+                        x,
+                        wy,
+                        MOD_UI_COLUMN,
+                        &label,
+                        sl.position as f32 / sl.steps.max(1) as f32,
+                        hover,
+                        true,
+                        ms.slider == Some(sl.id),
                     );
                 }
                 UiWidget::Text(t) => {
@@ -1167,6 +1188,18 @@ impl Game<'_> {
         // The `ui_select` call needs `&mut`: find the pick first.
         let mut hit = None;
         for (w, &(wy, wh)) in widgets.iter().zip(&layout) {
+            if let UiWidget::Slider(sl) = w
+                && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
+            {
+                let owner = self.mods.screen.as_ref().map_or(0, |ms| ms.owner);
+                if let Some(ms) = self.mods.screen.as_mut() {
+                    ms.slider = Some(sl.id);
+                }
+                let position = Self::slider_position(cursor.0, x, sl.steps);
+                self.mods.mods.ui_select(owner, sl.id, position);
+                self.show_mod_output();
+                return;
+            }
             // A button is `select(id, 0)`.
             if let UiWidget::Button(b) = w
                 && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
@@ -1193,6 +1226,44 @@ impl Game<'_> {
             self.audio.play_button_click();
             self.mods.mods.ui_select(owner, id, row);
             self.show_mod_output();
+        }
+    }
+    /// The slider position under cursor column `cx` of a track at `x`.
+    fn slider_position(cx: f32, x: f32, steps: u32) -> u32 {
+        let value = ((cx - (x + 4.0)) / (MOD_UI_COLUMN - 8.0)).clamp(0.0, 1.0);
+        (value * steps as f32).round() as u32
+    }
+    /// A drag moved the cursor: the dragged slider follows it.
+    pub(super) fn mod_screen_drag(&mut self) {
+        let Some(ms) = self.mods.screen.as_ref() else {
+            return;
+        };
+        let Some(id) = ms.slider else {
+            return;
+        };
+        let owner = ms.owner;
+        let Some((_, widgets)) = Self::mod_ui_view(&self.mods.mods, ms) else {
+            return;
+        };
+        let (w, _) = self.gui_size();
+        let x = (w / 2.0).floor() - MOD_UI_COLUMN / 2.0;
+        let steps = widgets.iter().find_map(|w| match w {
+            UiWidget::Slider(s) if s.id == id => Some((s.steps, s.position)),
+            _ => None,
+        });
+        let Some((steps, current)) = steps else {
+            return;
+        };
+        let position = Self::slider_position(self.cursor.0, x, steps);
+        if position != current {
+            self.mods.mods.ui_select(owner, id, position);
+            self.show_mod_output();
+        }
+    }
+    /// The mouse button came up: no slider is held.
+    pub(super) fn mod_screen_release(&mut self) {
+        if let Some(ms) = self.mods.screen.as_mut() {
+            ms.slider = None;
         }
     }
     /// The wheel over a `list` scrolls it.

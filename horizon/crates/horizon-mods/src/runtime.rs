@@ -63,7 +63,8 @@ type ServerEvents = server_bindings::exports::horizon::mods::server_events::Gues
 /// The widget model a `ui` screen or settings page shows (WIT `interface
 /// ui`), for the game to draw with its menus' own widgets.
 pub use ui_bindings::horizon::mods::ui::{
-    ButtonWidget, ItemWidget, ListWidget, Screen as UiScreen, TextWidget, Widget as UiWidget,
+    ButtonWidget, ItemWidget, ListWidget, Screen as UiScreen, SliderWidget, TextWidget,
+    Widget as UiWidget,
 };
 use ui_bindings::{UiHost, horizon::mods::ui};
 /// Capability `render`'s imports (docs/mods.md): the game draws the shapes.
@@ -1368,6 +1369,7 @@ fn clip_to(text: String, chars: usize) -> String {
 /// Widgets on a `ui` screen or settings page, and rows on one `list`.
 const WIDGETS: usize = 64;
 const LIST_ROWS: usize = 512;
+const SLIDER_STEPS: u32 = 100_000;
 
 fn clip_widgets(widgets: Vec<UiWidget>) -> Vec<UiWidget> {
     widgets
@@ -1391,6 +1393,12 @@ fn clip_widgets(widgets: Vec<UiWidget>) -> Vec<UiWidget> {
                 l.rows = l.rows.into_iter().take(LIST_ROWS).map(clip).collect();
                 l.selected = l.selected.filter(|&s| (s as usize) < l.rows.len());
                 UiWidget::List(l)
+            }
+            UiWidget::Slider(mut s) => {
+                s.label = clip(s.label);
+                s.steps = s.steps.clamp(1, SLIDER_STEPS);
+                s.position = s.position.min(s.steps);
+                UiWidget::Slider(s)
             }
         })
         .collect()
@@ -1926,6 +1934,22 @@ impl ui::Host for State {
     }
     fn set_settings(&mut self, widgets: Vec<ui::Widget>) {
         self.ui.settings = clip_widgets(widgets);
+    }
+    fn set_slider(&mut self, id: u32, position: u32, label: String) {
+        let label = clip(label);
+        let widgets = self
+            .ui
+            .settings
+            .iter_mut()
+            .chain(self.ui.screen.iter_mut().flat_map(|s| s.widgets.iter_mut()));
+        for w in widgets {
+            if let UiWidget::Slider(s) = w
+                && s.id == id
+            {
+                s.position = position.min(s.steps);
+                s.label = label.clone();
+            }
+        }
     }
 }
 impl storage::Host for State {

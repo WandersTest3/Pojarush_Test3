@@ -13,8 +13,8 @@
       "id": "f93bfc52-e745-4277-a4db-5c85829fb35e",
       "text": "hit",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.17399999499320984,
-      "y": 0.6712092757225037,
+      "x": 0.13448256254196167,
+      "y": 0.6744186282157898,
       "width": {
         "fraction": 0.14000000059604645,
         "ofWidth": false
@@ -54,13 +54,13 @@
       "id": "37f97e88-efe1-4052-a2d6-55f82d0f8be6",
       "text": "■",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.9340459108352661,
+      "x": 0.9260671138763428,
       "y": 1,
       "width": {
-        "dp": 130
+        "dp": 129
       },
       "height": {
-        "dp": 90
+        "dp": 89
       },
       "visibility": "IN_GAME",
       "press": [
@@ -94,7 +94,7 @@
       "text": "place",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
       "x": 0,
-      "y": 0.6679999828338623,
+      "y": 0.674418568611145,
       "width": {
         "fraction": 0.14000000059604645,
         "ofWidth": false
@@ -137,10 +137,10 @@
       "x": 1,
       "y": 0,
       "width": {
-        "dp": 50
+        "dp": 45
       },
       "height": {
-        "dp": 50
+        "dp": 45
       },
       "visibility": "ALWAYS",
       "press": [
@@ -212,7 +212,7 @@
       "id": "68d941b2-ff89-4914-bfea-cb95942ccab5",
       "text": "💬chat",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08423460274934769,
+      "x": 0.07479964941740036,
       "y": 0,
       "width": {
         "dp": 40
@@ -254,8 +254,8 @@
       "id": "44bdf6fc-0aaf-450a-8ea8-a1ff1a7f94e3",
       "text": "⚙️f5",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.025309916585683823,
-      "y": 0.10769230872392654,
+      "x": 0.02501082792878151,
+      "y": 0.11340206116437912,
       "width": {
         "dp": 40
       },
@@ -293,7 +293,7 @@
       "id": "7dc49583-0506-4687-9d74-4b08a417bf60",
       "text": "TAB",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.13916562497615814,
+      "x": 0.12414378672838211,
       "y": 0,
       "width": {
         "dp": 40
@@ -332,8 +332,8 @@
       "id": "5b2ebde3-508e-4402-9269-dafb26c721cf",
       "text": "F1",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.20048794150352478,
-      "y": 0,
+      "x": 0.12414378672838211,
+      "y": 0.11340206116437912,
       "width": {
         "dp": 40
       },
@@ -374,7 +374,7 @@
       "id": "6bcea41f-5fa2-48b8-b858-9bb899929da2",
       "text": "↓",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08699999749660492,
+      "x": 0.0670095831155777,
       "y": 1,
       "width": {
         "fraction": 0.14000000059604645,
@@ -416,7 +416,7 @@
       "text": "←",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
       "x": 0,
-      "y": 0.8339999914169312,
+      "y": 0.8372092843055725,
       "width": {
         "fraction": 0.14000000059604645,
         "ofWidth": false
@@ -456,8 +456,8 @@
       "id": "5f954f22-7467-4440-ab65-b5fc51467146",
       "text": "→",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.17399999499320984,
-      "y": 0.8339999914169312,
+      "x": 0.13448256254196167,
+      "y": 0.8372093439102173,
       "width": {
         "fraction": 0.14000000059604645,
         "ofWidth": false
@@ -497,8 +497,8 @@
       "id": "56283de4-dcfe-4d81-b789-740d0616a3da",
       "text": "×",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08699999749660492,
-      "y": 0.8339999914169312,
+      "x": 0.0672467052936554,
+      "y": 0.8372094035148621,
       "width": {
         "fraction": 0.14000000059604645,
         "ofWidth": false
@@ -538,8 +538,8 @@
       "id": "419f58e4-72ac-4a29-b08e-860a684d274c",
       "text": "hit",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.9773946404457092,
-      "y": 0.7189226150512695,
+      "x": 1,
+      "y": 0.6852089762687683,
       "width": {
         "dp": 110
       },
@@ -578,12 +578,12 @@
       "text": "MENU",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
       "x": 1,
-      "y": 0.13833992183208466,
+      "y": 0.12941177189350128,
       "width": {
-        "dp": 50
+        "dp": 45
       },
       "height": {
-        "dp": 50
+        "dp": 45
       },
       "visibility": "ALWAYS",
       "press": [
@@ -616,12 +616,12 @@
       "text": "↑",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
       "x": 1,
-      "y": 0.3240000009536743,
+      "y": 0.28628379106521606,
       "width": {
-        "dp": 55
+        "dp": 49
       },
       "height": {
-        "dp": 40
+        "dp": 34
       },
       "visibility": "ALWAYS",
       "press": [
@@ -656,12 +656,12 @@
       "text": "↓",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
       "x": 1,
-      "y": 0.43169230222702026,
+      "y": 0.381063312292099,
       "width": {
-        "dp": 55
+        "dp": 49
       },
       "height": {
-        "dp": 40
+        "dp": 34
       },
       "visibility": "ALWAYS",
       "press": [
@@ -695,8 +695,8 @@
       "id": "81d028e0-8d22-4ac9-9b38-a520b5472f9e",
       "text": "Screen shot",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08626512438058853,
-      "y": 0.10769230872392654,
+      "x": 0.07503248006105423,
+      "y": 0.11340206116437912,
       "width": {
         "dp": 40
       },
@@ -727,45 +727,6 @@
         "radiusInPx": false,
         "image": "screenshot",
         "imagePressed": "screenshot_prassed",
-        "opacity": 0.5000000596046448
-      }
-    },
-    {
-      "id": "1c4c0e16-a7e6-4977-be14-7da54f814caa",
-      "text": "place",
-      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.8124549984931946,
-      "y": 0.7364016771316528,
-      "width": {
-        "dp": 70
-      },
-      "height": {
-        "dp": 70
-      },
-      "visibility": "ALWAYS",
-      "press": [
-        {
-          "t": "mouse",
-          "button": 1
-        }
-      ],
-      "tap": [],
-      "toggle": [],
-      "swipe": false,
-      "penetrable": true,
-      "interactive": true,
-      "style": {
-        "fill": 5708159,
-        "fillPressed": 1358954495,
-        "text": -1,
-        "textPressed": -1,
-        "stroke": -12303292,
-        "strokeDp": 1,
-        "radiusDp": 10,
-        "textSp": 12,
-        "radiusInPx": false,
-        "image": "interact",
-        "imagePressed": "interact_pressed",
         "opacity": 0.5000000596046448
       }
     },
@@ -851,8 +812,8 @@
       "id": "6b0c6de7-3d89-47c9-bf13-b97c4cadddec",
       "text": "↑",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.08851831406354904,
-      "y": 0.6679999828338623,
+      "x": 0.0672467052936554,
+      "y": 0.674418568611145,
       "width": {
         "fraction": 0.14000000059604645,
         "ofWidth": false
@@ -896,7 +857,7 @@
       "id": "351d380e-0915-4a20-bcbd-f37fa074cbc7",
       "text": "•••",
       "layer": "abe49027-5dac-4bb9-865a-dea564664654",
-      "x": 0.7333925366401672,
+      "x": 0.6858643889427185,
       "y": 1,
       "width": {
         "dp": 40
@@ -928,6 +889,45 @@
         "radiusInPx": false,
         "image": "inv",
         "imagePressed": "inv_prassed",
+        "opacity": 0.5000000596046448
+      }
+    },
+    {
+      "id": "7c6e2c7e-33d0-480e-a3c0-4f95f8ce072f",
+      "text": "place",
+      "layer": "abe49027-5dac-4bb9-865a-dea564664654",
+      "x": 0.8629671335220337,
+      "y": 0.7242253422737122,
+      "width": {
+        "dp": 70
+      },
+      "height": {
+        "dp": 70
+      },
+      "visibility": "ALWAYS",
+      "press": [
+        {
+          "t": "mouse",
+          "button": 1
+        }
+      ],
+      "tap": [],
+      "toggle": [],
+      "swipe": false,
+      "penetrable": true,
+      "interactive": true,
+      "style": {
+        "fill": 5708159,
+        "fillPressed": 1358954495,
+        "text": -1,
+        "textPressed": -1,
+        "stroke": -12303292,
+        "strokeDp": 1,
+        "radiusDp": 10,
+        "textSp": 12,
+        "radiusInPx": false,
+        "image": "interact",
+        "imagePressed": "interact_pressed",
         "opacity": 0.5000000596046448
       }
     }

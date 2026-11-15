@@ -14142,6 +14142,9 @@ impl ApplicationHandler for Game<'_> {
                         if self.screen == Screen::Stats {
                             self.stats_drag();
                         }
+                        if self.screen == Screen::Mod {
+                            self.mod_screen_drag();
+                        }
                         if self.screen == Screen::WorldOptions {
                             self.world_options_drag();
                         }
@@ -14304,6 +14307,8 @@ impl ApplicationHandler for Game<'_> {
                 {
                     if state == ElementState::Pressed {
                         self.mod_screen_click(button);
+                    } else {
+                        self.mod_screen_release();
                     }
                 }
                 WindowEvent::MouseInput { state, button, .. } if self.screen == Screen::Options => {
@@ -14500,6 +14505,7 @@ impl ApplicationHandler for Game<'_> {
                         }
                         Screen::Stats if button == MouseButton::Left => self.stats_release(),
                         Screen::Mod if pressed => self.mod_screen_click(button),
+                        Screen::Mod => self.mod_screen_release(),
                         _ => {}
                     }
                 }

@@ -164,6 +164,20 @@ interface ui {
         /// Up to 256 characters.
         label: string,
     }
+    /// A slider as the options pages have them (200 × 20) with `steps + 1`
+    /// positions from 0 to `steps`: dragging it is `ui-events::select(id,
+    /// position)`, one call each time the position changes. The mod maps a
+    /// position to its own value and shows it in `label`.
+    record slider-widget {
+        /// The mod's own name for the widget.
+        id: u32,
+        /// Up to 256 characters, drawn over the track.
+        label: string,
+        /// The last position, 1 to 100000.
+        steps: u32,
+        /// Where the handle sits now, 0 to `steps`.
+        position: u32,
+    }
     variant widget {
         /// Text the player reads.
         text(text-widget),
@@ -173,6 +187,8 @@ interface ui {
         item(item-widget),
         /// Rows the player picks from.
         %list(list-widget),
+        /// A slider.
+        slider(slider-widget),
     }
     /// A screen the mod owns: a title over widgets stacked down the middle,
     /// the Done button the game adds, and Esc to leave it.
@@ -193,6 +209,9 @@ interface ui {
     /// opening the page is `ui-events::settings-opened`: push fresh widgets
     /// then; later calls update the page while it shows.
     set-settings: func(widgets: list<widget>);
+    /// Move the handle and change the label of the slider `id` on the
+    /// screen and the settings page without sending every widget again.
+    set-slider: func(id: u32, position: u32, label: string);
 }
 
 /// What the game calls on a mod that shows widgets (capability `ui`):

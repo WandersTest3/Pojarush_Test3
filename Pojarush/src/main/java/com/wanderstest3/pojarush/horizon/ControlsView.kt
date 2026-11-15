@@ -63,6 +63,7 @@ class ControlsView(
     private val density = resources.displayMetrics.density
     private val scaledDensity = density * resources.configuration.fontScale
     private val uiHandler = Handler(Looper.getMainLooper())
+    private val spamRunners = HashMap<Int, Runnable>()
 
     var layout: ControlLayout = initial
         private set
@@ -707,7 +708,6 @@ class ControlsView(
         return -1
     }
 
-    private val spamRunners = HashMap<Int, Runnable>()
 
     private fun stopSpam(i: Int) {
         spamRunners.remove(i)?.let(uiHandler::removeCallbacks)
