@@ -69,8 +69,8 @@ class HorizonActivity : GameActivity() {
         super.onCreate(savedInstanceState)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { v, insets ->
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            val bottom = if (ControlSettings(this).keyboardPush) ime else 0
-            if (v.paddingBottom != bottom) v.setPadding(0, 0, 0, bottom)
+            val shift = if (ControlSettings(this).keyboardPush) -ime.toFloat() else 0f
+            if (v.translationY != shift) v.translationY = shift
             insets
         }
         WindowInsetsControllerCompat(window, window.decorView).apply {

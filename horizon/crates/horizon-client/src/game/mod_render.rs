@@ -86,8 +86,14 @@ impl Game<'_> {
 impl Game<'_> {
     /// The running mods' HUD shapes, in order, over the HUD.
     pub(super) fn draw_mod_shapes(&self, batch: &mut HudBatch) {
-        for shape in self.mods.mods.hud_shapes() {
-            self.draw_shapes(batch, std::slice::from_ref(shape), (0.0, 0.0));
+        for (scale, shapes) in self.mods.mods.hud_layers() {
+            let start = batch.vertices.len();
+            for shape in shapes {
+                self.draw_shapes(batch, std::slice::from_ref(shape), (0.0, 0.0));
+            }
+            if scale != 1.0 {
+                batch.scale_since(start, 0.0, 0.0, scale, scale);
+            }
         }
     }
     /// Shapes with their GUI coordinates moved by `(ox, oy)`.

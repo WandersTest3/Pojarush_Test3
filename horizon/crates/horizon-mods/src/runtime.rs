@@ -408,6 +408,7 @@ struct State {
     ui: UiState,
     /// Capability `render`'s HUD shapes, drawn until replaced.
     shapes: Vec<Shape>,
+    hud_scale: f32,
     /// Capability `render`'s corner panel.
     corner: Option<CornerPanel>,
     /// Capability `render`'s zoom, when the mod zooms.
@@ -615,6 +616,7 @@ impl Mods {
             panel: None,
             ui: UiState::default(),
             shapes: Vec::new(),
+            hud_scale: 1.0,
             corner: None,
             zoom: None,
             minimap: None,
@@ -1194,6 +1196,12 @@ impl Mods {
     }
     /// The running mods' HUD shapes (capability `render`), each mod's in
     /// its own order, mods in load order.
+    pub fn hud_layers(&self) -> impl Iterator<Item = (f32, &[Shape])> {
+        self.entries
+            .iter()
+            .filter_map(|e| e.run.as_ref())
+            .map(|r| (r.store.data().hud_scale, r.store.data().shapes.as_slice()))
+    }
     pub fn hud_shapes(&self) -> impl Iterator<Item = &Shape> {
         self.entries
             .iter()
@@ -1777,6 +1785,9 @@ fn clip_shapes(shapes: Vec<Shape>) -> Vec<Shape> {
 impl render::Host for State {
     fn set_hud(&mut self, shapes: Vec<Shape>) {
         self.shapes = clip_shapes(shapes);
+    }
+    fn set_hud_scale(&mut self, scale: f32) {
+        self.hud_scale = if scale.is_finite() { scale.clamp(0.25, 16.0) } else { 1.0 };
     }
     fn set_corner(&mut self, corner: RenderCorner, width: f32, height: f32, shapes: Vec<Shape>) {
         let size = |v: f32| {

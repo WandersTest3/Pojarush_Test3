@@ -1,6 +1,6 @@
 use horizon_mod_sdk::{
     Mod, Registration,
-    render::{self, FillShape, Rect, Shape},
+    render::{self, FillShape, Point, Rect, Shape, TextShape},
     storage,
     ui::{self, ButtonWidget, Widget},
 };
@@ -36,40 +36,6 @@ const BACKGROUND: u32 = 10;
 const COLOR: u32 = 11;
 const RESET: u32 = 12;
 
-const GLYPH_W: usize = 3;
-const GLYPH_H: usize = 5;
-
-fn glyph(c: char) -> Option<[&'static str; GLYPH_H]> {
-    Some(match c {
-        '0' | 'O' => ["XXX", "X.X", "X.X", "X.X", "XXX"],
-        '1' => [".X.", "XX.", ".X.", ".X.", "XXX"],
-        '2' => ["XXX", "..X", "XXX", "X..", "XXX"],
-        '3' => ["XXX", "..X", "XXX", "..X", "XXX"],
-        '4' => ["X.X", "X.X", "XXX", "..X", "..X"],
-        '5' | 'S' => ["XXX", "X..", "XXX", "..X", "XXX"],
-        '6' => ["XXX", "X..", "XXX", "X.X", "XXX"],
-        '7' => ["XXX", "..X", ".X.", ".X.", ".X."],
-        '8' => ["XXX", "X.X", "XXX", "X.X", "XXX"],
-        '9' => ["XXX", "X.X", "XXX", "..X", "XXX"],
-        'F' => ["XXX", "X..", "XX.", "X..", "X.."],
-        'P' => ["XXX", "X.X", "XXX", "X..", "X.."],
-        'M' => ["X.X", "XXX", "XXX", "X.X", "X.X"],
-        'I' => ["XXX", ".X.", ".X.", ".X.", "XXX"],
-        'N' => ["XXX", "X.X", "X.X", "X.X", "X.X"],
-        'L' => ["X..", "X..", "X..", "X..", "XXX"],
-        'W' => ["X.X", "X.X", "XXX", "XXX", "X.X"],
-        ':' => ["...", ".X.", "...", ".X.", "..."],
-        '/' => ["..X", "..X", ".X.", "X..", "X.."],
-        ' ' => ["...", "...", "...", "...", "..."],
-        _ => return None,
-    })
-}
-
-fn text_cells(text: &str) -> usize {
-    let n = text.chars().count();
-    if n == 0 { 0 } else { n * (GLYPH_W + 1) - 1 }
-}
-
 struct Fps {
     show: bool,
     size: u32,
@@ -98,7 +64,7 @@ fn button(id: u32, label: String) -> Widget {
 }
 
 impl Fps {
-    fn unit(&self) -> f32 {
+    fn scale(&self) -> f32 {
         self.size as f32 * 0.5
     }
 
@@ -147,14 +113,14 @@ impl Fps {
         } else {
             0xFF5555
         };
-        0xFF00_0000 | rgb
+        rgb
     }
 
     fn lines(&self, fps: u32, min: u32, low: u32) -> Vec<String> {
-        let mut lines = vec![format!("{fps} FPS")];
+        let mut lines = vec![format!("{fps} fps")];
         if self.lows {
-            lines.push(format!("MIN {min}"));
-            lines.push(format!("LOW {low}"));
+            lines.push(format!("min {min}"));
+            lines.push(format!("1% low {low}"));
         }
         lines
     }
@@ -176,14 +142,13 @@ impl Fps {
         self.last = key;
         self.drawn = true;
         let lines = self.lines(stats.fps, stats.min, stats.low);
-        let unit = self.unit();
-        let pad = (unit * 2.0).max(1.0);
-        let gap = unit * 2.0;
-        let cells = lines.iter().map(|l| text_cells(l)).max().unwrap_or(0);
-        let box_w = cells as f32 * unit + pad * 2.0;
-        let box_h = lines.len() as f32 * GLYPH_H as f32 * unit
-            + (lines.len().saturating_sub(1)) as f32 * gap
-            + pad * 2.0;
+        let scale = self.scale();
+        let (w, h) = (w / scale, h / scale);
+        let pad = 2.0;
+        let line_h = 10.0;
+        let text_w = lines.iter().map(|l| render::text_width(l)).fold(0.0, f32::max);
+        let box_w = text_w + pad * 2.0;
+        let box_h = lines.len() as f32 * line_h + pad * 2.0 - 1.0;
         let left = (w - box_w).max(0.0) * self.x as f32 / 100.0;
         let top = (h - box_h).max(0.0) * self.y as f32 / 100.0;
         let mut shapes = Vec::new();
@@ -195,36 +160,15 @@ impl Fps {
         }
         let color = self.tint(stats.fps);
         for (row, line) in lines.iter().enumerate() {
-            let line_top = top + pad + row as f32 * (GLYPH_H as f32 * unit + gap);
-            let line_color = if row == 0 { color } else { 0xFFFF_FFFF };
-            for (i, c) in line.chars().enumerate() {
-                let Some(rows) = glyph(c) else { continue };
-                let cell_left = left + pad + (i * (GLYPH_W + 1)) as f32 * unit;
-                for (r, pattern) in rows.iter().enumerate() {
-                    let bytes = pattern.as_bytes();
-                    let mut start = None;
-                    for col in 0..=GLYPH_W {
-                        let on = col < GLYPH_W && bytes[col] == b'X';
-                        match (on, start) {
-                            (true, None) => start = Some(col),
-                            (false, Some(s)) => {
-                                shapes.push(Shape::Fill(FillShape {
-                                    rect: Rect {
-                                        x: cell_left + s as f32 * unit,
-                                        y: line_top + r as f32 * unit,
-                                        w: (col - s) as f32 * unit,
-                                        h: unit,
-                                    },
-                                    color: line_color,
-                                }));
-                                start = None;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
+            shapes.push(Shape::Text(TextShape {
+                text: line.clone(),
+                at: Point { x: left + pad, y: top + pad + row as f32 * line_h },
+                color: if row == 0 { color } else { 0xFFFFFF },
+                centered: false,
+                shadow: true,
+            }));
         }
+        render::set_hud_scale(scale);
         render::set_hud(&shapes);
     }
 }
@@ -233,8 +177,8 @@ impl Mod for Fps {
     fn init() -> Result<(Self, Registration), String> {
         let fps = Fps {
             show: stored("show", 1, 0, 1) == 1,
-            size: stored("size", 4, SIZE_MIN, SIZE_MAX),
-            x: stored("x", 0, 0, 100),
+            size: stored("size", 3, SIZE_MIN, SIZE_MAX),
+            x: stored("x", 50, 0, 100),
             y: stored("y", 0, 0, 100),
             lows: stored("lows", 0, 0, 1) == 1,
             background: stored("background", 1, 0, 1) == 1,
@@ -272,8 +216,8 @@ impl Mod for Fps {
             COLOR => self.color = (self.color + 1) % COLORS.len() as u32,
             RESET => {
                 self.show = true;
-                self.size = 4;
-                self.x = 0;
+                self.size = 3;
+                self.x = 50;
                 self.y = 0;
                 self.lows = false;
                 self.background = true;

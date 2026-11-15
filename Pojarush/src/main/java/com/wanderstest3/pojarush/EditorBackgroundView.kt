@@ -14,13 +14,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-class EditorBackgroundView(context: Context) : View(context) {
+class EditorBackgroundView(context: Context, private val interactive: Boolean = false) : View(context) {
     private enum class Shape { BLOCK, PIXEL, ORB, RING, SPARK, PLUS }
 
     private class Particle(
         var x: Float, var y: Float, var vx: Float, var vy: Float, var size: Float,
         var angle: Float, var spin: Float, var color: Int, var alpha: Float, var phase: Float, var shape: Int,
-    )
+    ) {
+        val bvx = vx
+        val bvy = vy
+    }
 
     private val rng = Random(SystemClock.uptimeMillis())
     private val palette = intArrayOf(
@@ -33,6 +36,47 @@ class EditorBackgroundView(context: Context) : View(context) {
     private var last = 0L
     private var hueShift = rng.nextFloat() * 360f
     private val blobs = Array(4) { floatArrayOf(rng.nextFloat(), rng.nextFloat(), rng.nextFloat() * 2f * PI.toFloat(), 0.1f + rng.nextFloat() * 0.2f) }
+
+    private val touches = HashMap<Int, FloatArray>()
+
+    override fun onTouchEvent(e: android.view.MotionEvent): Boolean {
+        if (!interactive) return super.onTouchEvent(e)
+        when (e.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_POINTER_DOWN -> {
+                val i = e.actionIndex
+                val x = e.getX(i)
+                val y = e.getY(i)
+                touches[e.getPointerId(i)] = floatArrayOf(x, y, x, y)
+                burst(x, y)
+            }
+            android.view.MotionEvent.ACTION_MOVE -> for (i in 0 until e.pointerCount) {
+                touches[e.getPointerId(i)]?.let { t ->
+                    t[2] = t[0]
+                    t[3] = t[1]
+                    t[0] = e.getX(i)
+                    t[1] = e.getY(i)
+                }
+            }
+            android.view.MotionEvent.ACTION_POINTER_UP -> touches.remove(e.getPointerId(e.actionIndex))
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> touches.clear()
+        }
+        return true
+    }
+
+    private fun burst(x: Float, y: Float) {
+        val reach = 160f * resources.displayMetrics.density
+        for (p in particles) {
+            val dx = p.x - x
+            val dy = p.y - y
+            val d = kotlin.math.sqrt(dx * dx + dy * dy)
+            if (d < reach && d > 0.01f) {
+                val f = (1f - d / reach) * 900f
+                p.vx += dx / d * f
+                p.vy += dy / d * f
+                p.spin += (rng.nextFloat() - 0.5f) * 720f
+            }
+        }
+    }
 
     private fun spawn(w: Float, h: Float, anywhere: Boolean): Particle {
         val shape = rng.nextInt(Shape.entries.size)
@@ -85,6 +129,23 @@ class EditorBackgroundView(context: Context) : View(context) {
         paint.shader = null
         for (i in particles.indices) {
             val p = particles[i]
+            if (interactive) {
+                val reach = 110f * resources.displayMetrics.density
+                for (t0 in touches.values) {
+                    val dx = p.x - t0[0]
+                    val dy = p.y - t0[1]
+                    val d = kotlin.math.sqrt(dx * dx + dy * dy)
+                    if (d < reach && d > 0.01f) {
+                        val f = (1f - d / reach) * 2600f * dt
+                        p.vx += dx / d * f + (t0[0] - t0[2]) * 4f * dt * (1f - d / reach) * 10f
+                        p.vy += dy / d * f + (t0[1] - t0[3]) * 4f * dt * (1f - d / reach) * 10f
+                    }
+                }
+                val k = (dt * 1.5f).coerceAtMost(1f)
+                p.vx += (p.bvx - p.vx) * k
+                p.vy += (p.bvy - p.vy) * k
+                p.spin = p.spin * (1f - k) + p.spin.coerceIn(-45f, 45f) * k
+            }
             p.x += p.vx * dt
             p.y += p.vy * dt + sin(t + p.phase) * 6f * dt
             p.angle += p.spin * dt

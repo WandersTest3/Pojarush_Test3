@@ -308,7 +308,7 @@
     <string name="vulkan_warn_body">Este aparelho não informa suporte a Vulkan. Com ele o jogo pode ficar com a tela preta, piscar ou não abrir. O OpenGL é a escolha segura aqui.</string>
     <string name="vulkan_warn_continue">Usar mesmo assim</string>
     <string name="keyboard_push">Subir o jogo acima do teclado</string>
-    <string name="keyboard_push_desc">Ao abrir o teclado, o jogo diminui para caber acima dele e você continua vendo o chat.</string>
+    <string name="keyboard_push_desc">Ao abrir o teclado, o jogo sobe para cima dele sem mudar a resolução: a parte de cima fica cortada e o chat continua visível.</string>
     <string name="language">Idioma</string>
     <string name="language_system">Padrão do sistema</string>
 </resources>

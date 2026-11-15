@@ -31,6 +31,8 @@ impl Game<'_> {
         android::set_captured(self.captured && self.screen == Screen::Playing);
         let typing = self.pad_typing()
             || self.screen == Screen::CommandBlock
+            || (self.screen == Screen::Options && self.ui.options.typing())
+            || self.mod_browser_typing()
             || self.title.as_mut().is_some_and(|t| t.has_caret_field());
         android::set_typing(typing);
         let master = if android::muted() { 0.0 } else { self.settings.master_volume };

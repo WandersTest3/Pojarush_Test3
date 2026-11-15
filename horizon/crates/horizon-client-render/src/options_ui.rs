@@ -1421,6 +1421,16 @@ impl OptionsUi {
         let label = format!("{}: {}", item.caption(), item.value(&s.extras));
         button(0.0, 0.0, 150.0, Text::literal(label), Act::Extra(item))
     }
+    pub fn typing(&self) -> bool {
+        if self.resource_error.is_some() {
+            return false;
+        }
+        match self.page() {
+            Page::Language => true,
+            Page::Packs => self.pack_screen.as_ref().is_some_and(|p| p.search_focused()),
+            _ => self.settings_search_active(),
+        }
+    }
     fn settings_search_active(&self) -> bool {
         self.settings_search.focused
             && matches!(self.page(), Page::Video | Page::Controls | Page::KeyBinds)

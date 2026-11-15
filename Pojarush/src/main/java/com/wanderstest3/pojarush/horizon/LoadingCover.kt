@@ -24,10 +24,9 @@ class LoadingCover(context: Context) : FrameLayout(context) {
     private var done = false
 
     init {
-        isClickable = true
         isFocusable = true
         setBackgroundColor(Color.BLACK)
-        addView(EditorBackgroundView(context), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(EditorBackgroundView(context, interactive = true), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         val dp = resources.displayMetrics.density
         val font = runCatching { com.wanderstest3.pojarush.ui.launcherTypeface(context) }.getOrNull()
         val column = LinearLayout(context).apply {

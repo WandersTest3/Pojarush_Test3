@@ -352,6 +352,9 @@ interface render {
     /// order over the HUD (after the hotbar, under chat and screens), hidden
     /// with the HUD (F1). An empty list removes them.
     set-hud: func(shapes: list<shape>);
+    /// Draws the mod's HUD shapes `scale` times larger from the screen's top
+    /// left (0.25 to 16; 1 is as given), the text included.
+    set-hud-scale: func(scale: f32);
     /// The screen's size in GUI pixels (width, height), as of this tick.
     gui-size: func() -> tuple<f32, f32>;
     /// Shakes the camera: a jolt of `strength` (0 to 1, 1 the hardest) that

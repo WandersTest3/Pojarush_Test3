@@ -225,7 +225,7 @@ Capacidades (`capabilities` no manifesto). O jogador vê a lista antes de ligar 
 Exemplos completos neste repositório:
 
 - `horizon/mods/pojarush-zoom`: tecla própria, roda do mouse, zoom, página de ajustes e ajustes salvos.
-- `horizon/mods/pojarush-fps`: formas no HUD (fonte pixel desenhada com retângulos), tamanho e posição ajustáveis e ajustes salvos. Com ele instalado, o launcher desliga a sobreposição do próprio Horizon.
+- `horizon/mods/pojarush-fps`: texto na fonte do Minecraft no HUD, ampliado com `render::set_hud_scale` (função do Horizon do Pojarush), tamanho e posição ajustáveis e ajustes salvos. Com ele instalado, o launcher desliga a sobreposição do próprio Horizon.
 - `horizon/crates/horizon-mod-sdk/examples/`: `welcome`, `coords-hud`, `beacons`, `ruby-content`, `predator-missile`.
 - Contrato completo da API: `horizon/crates/horizon-mod-sdk/wit/horizon.wit`.
 
