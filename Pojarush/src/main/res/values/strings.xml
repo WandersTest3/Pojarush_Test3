@@ -109,6 +109,8 @@
     <string name="vis_game">In game</string>
     <string name="vis_menu">In menus</string>
     <string name="editor_swipe">Slide between buttons</string>
+    <string name="editor_spam">Keep clicking (spam while held)</string>
+    <string name="editor_spam_cps">Clicks per second</string>
     <string name="editor_penetrable">Also turns the camera</string>
     <string name="editor_sprint_lock">Sprint when pushed past the edge</string>
     <string name="editor_duplicate">Duplicate</string>

@@ -104,6 +104,8 @@
     <string name="vis_game">No jogo</string>
     <string name="vis_menu">Nos menus</string>
     <string name="editor_swipe">Deslizar entre botões</string>
+    <string name="editor_spam">Clicar sem parar (spam ao segurar)</string>
+    <string name="editor_spam_cps">Cliques por segundo</string>
     <string name="editor_penetrable">Também move a câmara</string>
     <string name="editor_sprint_lock">Correr ao empurrar para lá da borda</string>
     <string name="editor_duplicate">Duplicar</string>

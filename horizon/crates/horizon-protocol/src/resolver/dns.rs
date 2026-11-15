@@ -16,8 +16,16 @@ pub(super) const SERVER_TIMEOUT: Duration = Duration::from_secs(1);
 /// Windows, where it leaves out the scoped IPv6 ones.
 #[cfg(unix)]
 pub(super) fn system_name_servers() -> Vec<SocketAddr> {
-    std::fs::read_to_string("/etc/resolv.conf")
-        .map_or_else(|_| Vec::new(), |conf| name_servers(&conf))
+    let servers = std::fs::read_to_string("/etc/resolv.conf")
+        .map_or_else(|_| Vec::new(), |conf| name_servers(&conf));
+    if servers.is_empty() && cfg!(target_os = "android") {
+        return ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+            .iter()
+            .filter_map(|ip| ip.parse().ok())
+            .map(|ip| SocketAddr::new(ip, 53))
+            .collect();
+    }
+    servers
 }
 
 #[cfg(windows)]

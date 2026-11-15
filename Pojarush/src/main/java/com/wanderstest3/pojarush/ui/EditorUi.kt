@@ -523,6 +523,10 @@ private fun ButtonEditor(
     }
     SettingSwitch(stringResource(R.string.editor_swipe), b.swipe) { v -> onChange { it.copy(swipe = v) } }
     SettingSwitch(stringResource(R.string.editor_penetrable), b.penetrable) { v -> onChange { it.copy(penetrable = v) } }
+    SettingSwitch(stringResource(R.string.editor_spam), b.spam) { v -> onChange { it.copy(spam = v) } }
+    if (b.spam) {
+        SettingSlider(stringResource(R.string.editor_spam_cps), b.spamCps, 1f..40f, 1f, { "${Math.round(it)} CPS" }) { v -> onChange { it.copy(spamCps = v) } }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onDuplicate) { Text(stringResource(R.string.editor_duplicate)) }
         OutlinedButton(onClick = onDelete) { Text(stringResource(R.string.editor_delete), color = MaterialTheme.colorScheme.error) }

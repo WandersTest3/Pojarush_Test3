@@ -62,6 +62,8 @@ data class ControlButton(
     val penetrable: Boolean = false,
     val interactive: Boolean = true,
     val style: Style? = null,
+    val spam: Boolean = false,
+    val spamCps: Float = 12f,
 )
 
 data class ControlStick(
@@ -857,6 +859,7 @@ private object PojarushFormat {
         .put("width", size(b.width)).put("height", size(b.height)).put("visibility", b.visibility.name)
         .put("press", actions(b.press)).put("tap", actions(b.tap)).put("toggle", actions(b.toggle))
         .put("swipe", b.swipe).put("penetrable", b.penetrable).put("interactive", b.interactive)
+        .put("spam", b.spam).put("spamCps", b.spamCps.toDouble())
         .apply { style(b.style)?.let { put("style", it) } }
 
     private fun stick(s: ControlStick): JSONObject = JSONObject()
@@ -882,6 +885,7 @@ private object PojarushFormat {
                 press = actions(b.optJSONArray("press")), tap = actions(b.optJSONArray("tap")), toggle = actions(b.optJSONArray("toggle")),
                 swipe = b.optBoolean("swipe"), penetrable = b.optBoolean("penetrable"), interactive = b.optBoolean("interactive", true),
                 style = style(b.optJSONObject("style")),
+                spam = b.optBoolean("spam", false), spamCps = b.optDouble("spamCps", 12.0).toFloat(),
             )
         },
         sticks = json.list("sticks").map { s ->

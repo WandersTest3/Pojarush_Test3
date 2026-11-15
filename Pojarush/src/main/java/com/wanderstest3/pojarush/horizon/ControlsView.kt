@@ -440,6 +440,7 @@ class ControlsView(
     }
 
     fun releaseAll() {
+        spamRunners.keys.toList().forEach(::stopSpam)
         roles.values.forEach { role ->
             when (role) {
                 is Role.Look -> role.longPress?.let(uiHandler::removeCallbacks)
@@ -706,11 +707,30 @@ class ControlsView(
         return -1
     }
 
+    private val spamRunners = HashMap<Int, Runnable>()
+
+    private fun stopSpam(i: Int) {
+        spamRunners.remove(i)?.let(uiHandler::removeCallbacks)
+    }
+
+    private fun startSpam(i: Int, b: ControlButton) {
+        stopSpam(i)
+        val delay = (1000f / b.spamCps.coerceIn(1f, 40f)).toLong().coerceAtLeast(10L)
+        val r = object : Runnable {
+            override fun run() {
+                b.press.forEach(::tap)
+                uiHandler.postDelayed(this, delay)
+            }
+        }
+        spamRunners[i] = r
+        uiHandler.post(r)
+    }
+
     private fun pressButton(i: Int) {
         val b = layout.buttons[i]
         pressed[i]++
         vibrate()
-        b.press.forEach(::down)
+        if (b.spam && b.press.isNotEmpty()) startSpam(i, b) else b.press.forEach(::down)
         if (b.toggle.isNotEmpty()) {
             toggled[i] = !toggled[i]
             if (toggled[i]) b.toggle.forEach(::down) else b.toggle.forEach(::up)
@@ -721,7 +741,7 @@ class ControlsView(
     private fun releaseButton(i: Int, tapped: Boolean) {
         val b = layout.buttons[i]
         if (pressed[i] > 0) pressed[i]--
-        b.press.forEach(::up)
+        if (b.spam && b.press.isNotEmpty()) stopSpam(i) else b.press.forEach(::up)
         if (tapped) b.tap.forEach(::tap)
         invalidate()
     }
