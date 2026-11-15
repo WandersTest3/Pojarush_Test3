@@ -80,6 +80,7 @@ class ControlsView(
     private var stickLastTap = LongArray(0)
     private val heldKeys = HashMap<Int, Int>()
     private val heldMouse = IntArray(3)
+    private val bridgeDown = BooleanArray(3)
     private val scrollRepeats = HashMap<Float, Runnable>()
     private val menuRect = RectF()
 
@@ -582,8 +583,6 @@ class ControlsView(
             } else heldKeys[code] = count - 1
         }
     }
-
-    private val bridgeDown = BooleanArray(3)
 
     private fun mouse(button: Int, down: Boolean) {
         if (button !in 0..2) return
