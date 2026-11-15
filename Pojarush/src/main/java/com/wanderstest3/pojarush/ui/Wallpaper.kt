@@ -307,7 +307,6 @@ fun ExtrasSettings(settings: ControlSettings) {
     val context = LocalContext.current
     var clean by remember { mutableStateOf(settings.cleanLogs) }
     var push by remember { mutableStateOf(settings.keyboardPush) }
-    var wipe by remember { mutableStateOf(com.wanderstest3.pojarush.Paths.deleteOnUninstall(context)) }
     var junk by remember { mutableStateOf(-1L) }
     var working by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -326,11 +325,6 @@ fun ExtrasSettings(settings: ControlSettings) {
         SettingSwitch(stringResource(R.string.keyboard_push), push, stringResource(R.string.keyboard_push_desc)) {
             settings.keyboardPush = it
             push = it
-        }
-        SettingSwitch(stringResource(R.string.delete_on_uninstall), wipe, stringResource(R.string.delete_on_uninstall_desc)) {
-            wipe = it
-            com.wanderstest3.pojarush.Paths.setDeleteOnUninstall(context, it)
-            scope.launch(kotlinx.coroutines.Dispatchers.IO) { com.wanderstest3.pojarush.Paths.refresh(context) }
         }
         SettingSwitch(stringResource(R.string.clean_logs), clean, stringResource(R.string.clean_logs_desc)) {
             settings.cleanLogs = it

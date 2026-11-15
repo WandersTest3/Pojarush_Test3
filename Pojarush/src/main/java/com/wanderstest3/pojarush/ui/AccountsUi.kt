@@ -242,6 +242,7 @@ fun SkinViewer(data: SkinData, modifier: Modifier = Modifier, headOnly: Boolean 
         }
     }
     val paint = remember { Paint().apply { isFilterBitmap = false; isAntiAlias = false } }
+    val raster = remember { Raster() }
     Canvas(
         modifier = modifier.pointerInput(Unit) {
             detectDragGestures(
@@ -255,7 +256,7 @@ fun SkinViewer(data: SkinData, modifier: Modifier = Modifier, headOnly: Boolean 
         }
     ) {
         val a = angle
-        drawIntoCanvas { c -> drawModel(c.nativeCanvas, size.width, size.height, data, a, paint, headOnly) }
+        drawIntoCanvas { c -> drawModel(c.nativeCanvas, size.width, size.height, data, a, paint, headOnly, raster) }
     }
 }
 
@@ -281,11 +282,8 @@ private class Raster {
     val bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 }
 
-private var raster: Raster? = null
-
-private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data: SkinData, angle: Float, paint: Paint, headOnly: Boolean = false) {
+private fun drawModel(canvas: android.graphics.Canvas, w: Float, h: Float, data: SkinData, angle: Float, paint: Paint, headOnly: Boolean = false, r: Raster) {
     val skin = data.skin ?: return
-    val r = raster ?: Raster().also { raster = it }
     java.util.Arrays.fill(r.color, 0)
     java.util.Arrays.fill(r.depth, Float.NEGATIVE_INFINITY)
     val rad = Math.toRadians(angle.toDouble())

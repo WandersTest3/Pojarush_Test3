@@ -27,8 +27,6 @@
     <string name="prepare">เตรียมไฟล์เกม</string>
     <string name="prepare_again">เตรียมใหม่ / ซ่อมแซม</string>
     <string name="cancel">ยกเลิก</string>
-    <string name="free_space">เพิ่มพื้นที่ว่าง (ลบไฟล์ดาวน์โหลด)</string>
-    <string name="free_space_done">ลบไฟล์ที่ดาวน์โหลดแล้ว</string>
     <string name="storage_title">โฟลเดอร์ Pojarush_Test3</string>
     <string name="storage_grant">อนุญาตการเข้าถึง</string>
     <string name="onboarding_account_title">ลงชื่อเข้าใช้เพื่อเล่น</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">เพิ่มพื้นที่ %1$s</string>
     <string name="clean_junk_button">ล้าง %1$s</string>
     <string name="keyboard_push">ยกเกมขึ้นเหนือคีย์บอร์ด</string>
-    <string name="delete_on_uninstall">ลบไฟล์เมื่อถอนการติดตั้ง</string>
     <string name="language">ภาษา</string>
     <string name="language_system">ค่าเริ่มต้นของระบบ</string>
     <string name="vulkan_warn_title">Vulkan อาจใช้งานไม่ได้ที่นี่</string>

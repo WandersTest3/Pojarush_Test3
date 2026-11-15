@@ -27,8 +27,6 @@
     <string name="prepare">تجهيز ملفات اللعبة</string>
     <string name="prepare_again">التجهيز مجددًا / الإصلاح</string>
     <string name="cancel">إلغاء</string>
-    <string name="free_space">تحرير مساحة (حذف التنزيلات)</string>
-    <string name="free_space_done">تم حذف الملفات المنزَّلة</string>
     <string name="storage_title">مجلد Pojarush_Test3</string>
     <string name="storage_grant">السماح بالوصول</string>
     <string name="onboarding_account_title">سجّل الدخول للعب</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">تم تحرير %1$s</string>
     <string name="clean_junk_button">مسح %1$s</string>
     <string name="keyboard_push">رفع اللعبة فوق لوحة المفاتيح</string>
-    <string name="delete_on_uninstall">حذف الملفات عند إلغاء التثبيت</string>
     <string name="language">اللغة</string>
     <string name="language_system">افتراضي النظام</string>
     <string name="vulkan_warn_title">قد لا يعمل Vulkan هنا</string>

@@ -27,8 +27,6 @@
     <string name="prepare">Підготувати файли гри</string>
     <string name="prepare_again">Підготувати знову / виправити</string>
     <string name="cancel">Скасувати</string>
-    <string name="free_space">Звільнити місце (видалити завантаження)</string>
-    <string name="free_space_done">Завантажені файли видалено</string>
     <string name="storage_title">Тека Pojarush_Test3</string>
     <string name="storage_grant">Дозволити доступ</string>
     <string name="onboarding_account_title">Увійдіть, щоб грати</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">Звільнено: %1$s</string>
     <string name="clean_junk_button">Очистити %1$s</string>
     <string name="keyboard_push">Піднімати гру над клавіатурою</string>
-    <string name="delete_on_uninstall">Видаляти файли під час видалення застосунку</string>
     <string name="language">Мова</string>
     <string name="language_system">Як у системі</string>
     <string name="vulkan_warn_title">Vulkan тут може не працювати</string>

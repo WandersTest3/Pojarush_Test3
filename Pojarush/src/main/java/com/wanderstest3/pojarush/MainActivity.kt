@@ -173,7 +173,7 @@ private fun PojarushScreen() {
     }
 
     val profile by Accounts.profile.collectAsStateWithLifecycle()
-    val hasStorage = remember(storageVersion, resumes) { Paths.hasStorageAccess(context) || Paths.deleteOnUninstall(context) }
+    val hasStorage = remember(storageVersion, resumes) { Paths.hasStorageAccess(context) }
     val settings = remember { ControlSettings(context) }
     var onboardingDone by rememberSaveable { mutableStateOf(false) }
     val prepared = remember(storageVersion, resumes) { HorizonManager.isPrepared() }
@@ -212,7 +212,7 @@ private fun PojarushScreen() {
                     ) {
                         when (section) {
                             Section.Home -> {
-                                val access = remember(storageVersion, resumes) { Paths.hasStorageAccess(context) || Paths.deleteOnUninstall(context) }
+                                val access = remember(storageVersion, resumes) { Paths.hasStorageAccess(context) }
                                 if (!access) StorageCard()
                                 GameCard(storageVersion)
                             }
@@ -535,14 +535,6 @@ private fun GameCard(storageVersion: Int) {
                     enabled = supported,
                     onClick = { HorizonManager.prepare(context.applicationContext, withSounds) }
                 ) { Text(stringResource(if (prepared) R.string.prepare_again else R.string.prepare)) }
-                val done = stringResource(R.string.free_space_done)
-                TextButton(onClick = {
-                    scope.launch {
-                        withContext(Dispatchers.IO) { HorizonManager.freeSpace() }
-                        refresh++
-                        Toast.makeText(context, done, Toast.LENGTH_SHORT).show()
-                    }
-                }) { Text(stringResource(R.string.free_space)) }
             }
         }
         HorizonManager.lastExitCode()?.takeIf { it != "0" }?.let {

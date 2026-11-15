@@ -27,8 +27,6 @@
     <string name="prepare">Preparar archivos del juego</string>
     <string name="prepare_again">Preparar de nuevo / reparar</string>
     <string name="cancel">Cancelar</string>
-    <string name="free_space">Liberar espacio (borrar descargas)</string>
-    <string name="free_space_done">Archivos descargados borrados</string>
     <string name="storage_title">Carpeta Pojarush_Test3</string>
     <string name="storage_grant">Permitir acceso</string>
     <string name="onboarding_account_title">Inicia sesión para jugar</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">%1$s liberados</string>
     <string name="clean_junk_button">Borrar %1$s</string>
     <string name="keyboard_push">Subir el juego sobre el teclado</string>
-    <string name="delete_on_uninstall">Borrar archivos al desinstalar</string>
     <string name="language">Idioma</string>
     <string name="language_system">Predeterminado del sistema</string>
     <string name="vulkan_warn_title">Vulkan puede no funcionar aquí</string>

@@ -118,7 +118,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getFloat("font_scale", 1.00f).coerceIn(0.70f, 1.60f)
         set(v) = prefs.edit().putFloat("font_scale", v.coerceIn(0.70f, 1.60f)).apply()
     var keyboardPush: Boolean
-        get() = prefs.getBoolean("keyboard_push", false)
+        get() = prefs.getBoolean("keyboard_push", true)
         set(v) = prefs.edit().putBoolean("keyboard_push", v).apply()
     var language: String
         get() = prefs.getString("language", "").orEmpty()

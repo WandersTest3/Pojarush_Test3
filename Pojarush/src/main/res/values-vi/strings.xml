@@ -27,8 +27,6 @@
     <string name="prepare">Chuẩn bị tệp trò chơi</string>
     <string name="prepare_again">Chuẩn bị lại / sửa chữa</string>
     <string name="cancel">Hủy</string>
-    <string name="free_space">Giải phóng dung lượng (xóa tệp tải xuống)</string>
-    <string name="free_space_done">Đã xóa các tệp tải xuống</string>
     <string name="storage_title">Thư mục Pojarush_Test3</string>
     <string name="storage_grant">Cho phép truy cập</string>
     <string name="onboarding_account_title">Đăng nhập để chơi</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">Đã giải phóng %1$s</string>
     <string name="clean_junk_button">Xóa %1$s</string>
     <string name="keyboard_push">Đẩy trò chơi lên trên bàn phím</string>
-    <string name="delete_on_uninstall">Xóa tệp khi gỡ cài đặt</string>
     <string name="language">Ngôn ngữ</string>
     <string name="language_system">Mặc định của hệ thống</string>
     <string name="vulkan_warn_title">Vulkan có thể không hoạt động ở đây</string>

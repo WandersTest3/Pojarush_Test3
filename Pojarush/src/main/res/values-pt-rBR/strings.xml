@@ -27,8 +27,6 @@
     <string name="prepare">Preparar arquivos do jogo</string>
     <string name="prepare_again">Preparar de novo / reparar</string>
     <string name="cancel">Cancelar</string>
-    <string name="free_space">Liberar espaço (apagar downloads)</string>
-    <string name="free_space_done">Arquivos baixados apagados</string>
     <string name="ownership">O Pojarush_Test3 não contém arquivos da Mojang: ele baixa o Minecraft 26.3 da Mojang e o prepara no celular. É preciso ter o Minecraft: Java Edition.</string>
     <string name="folder_info">Mundos, opções e pacotes: %1$s</string>
     <string name="storage_title">Pasta Pojarush_Test3</string>
@@ -311,8 +309,6 @@
     <string name="vulkan_warn_continue">Usar mesmo assim</string>
     <string name="keyboard_push">Subir o jogo acima do teclado</string>
     <string name="keyboard_push_desc">Ao abrir o teclado, o jogo diminui para caber acima dele e você continua vendo o chat.</string>
-    <string name="delete_on_uninstall">Apagar arquivos ao desinstalar</string>
-    <string name="delete_on_uninstall_desc">Guarda mundos, pacotes e configurações na pasta do app (Android/data), então desinstalar o Pojarush também os remove. Desative para usar a pasta compartilhada Pojarush_Test3, que permanece após desinstalar. Ao mudar, seus arquivos são movidos.</string>
     <string name="language">Idioma</string>
     <string name="language_system">Padrão do sistema</string>
 </resources>

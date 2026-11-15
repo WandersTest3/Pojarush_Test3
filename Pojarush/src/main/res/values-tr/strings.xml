@@ -27,8 +27,6 @@
     <string name="prepare">Oyun dosyalarını hazırla</string>
     <string name="prepare_again">Yeniden hazırla / onar</string>
     <string name="cancel">İptal</string>
-    <string name="free_space">Yer aç (indirilenleri sil)</string>
-    <string name="free_space_done">İndirilen dosyalar silindi</string>
     <string name="storage_title">Pojarush_Test3 klasörü</string>
     <string name="storage_grant">Erişime izin ver</string>
     <string name="onboarding_account_title">Oynamak için giriş yap</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">%1$s boşaltıldı</string>
     <string name="clean_junk_button">%1$s temizle</string>
     <string name="keyboard_push">Oyunu klavyenin üstüne taşı</string>
-    <string name="delete_on_uninstall">Kaldırırken dosyaları sil</string>
     <string name="language">Dil</string>
     <string name="language_system">Sistem varsayılanı</string>
     <string name="vulkan_warn_title">Vulkan burada çalışmayabilir</string>

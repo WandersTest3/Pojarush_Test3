@@ -27,8 +27,6 @@
     <string name="prepare">準備遊戲檔案</string>
     <string name="prepare_again">重新準備 / 修復</string>
     <string name="cancel">取消</string>
-    <string name="free_space">釋放空間（刪除下載內容）</string>
-    <string name="free_space_done">已刪除下載的檔案</string>
     <string name="storage_title">Pojarush_Test3 資料夾</string>
     <string name="storage_grant">允許存取</string>
     <string name="onboarding_account_title">登入後開始遊戲</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">已釋放 %1$s</string>
     <string name="clean_junk_button">清理 %1$s</string>
     <string name="keyboard_push">鍵盤彈出時將遊戲上移</string>
-    <string name="delete_on_uninstall">解除安裝時刪除檔案</string>
     <string name="language">語言</string>
     <string name="language_system">跟隨系統</string>
     <string name="vulkan_warn_title">Vulkan 在此裝置上可能無法使用</string>

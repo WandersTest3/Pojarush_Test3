@@ -28,8 +28,6 @@
     <string name="prepare">Prepare game files</string>
     <string name="prepare_again">Prepare again / repair</string>
     <string name="cancel">Cancel</string>
-    <string name="free_space">Free space (delete downloads)</string>
-    <string name="free_space_done">Downloaded files deleted</string>
     <string name="ownership">Pojarush_Test3 contains no Mojang files: it downloads Minecraft 26.3 from Mojang and prepares it on the phone. You need to own Minecraft: Java Edition.</string>
     <string name="folder_info">Worlds, options and packs: %1$s</string>
     <string name="storage_title">Pojarush_Test3 folder</string>
@@ -312,8 +310,6 @@
     <string name="vulkan_warn_continue">Use it anyway</string>
     <string name="keyboard_push">Move the game above the keyboard</string>
     <string name="keyboard_push_desc">When the keyboard opens, the game shrinks to fit above it so you can still see the chat.</string>
-    <string name="delete_on_uninstall">Delete files when uninstalling</string>
-    <string name="delete_on_uninstall_desc">Keeps worlds, packs and settings inside the app folder (Android/data), so uninstalling Pojarush removes them too. Turn it off to use the shared Pojarush_Test3 folder, which stays after uninstalling. Changing it moves your files.</string>
     <string name="language">Language</string>
     <string name="language_system">System default</string>
 </resources>

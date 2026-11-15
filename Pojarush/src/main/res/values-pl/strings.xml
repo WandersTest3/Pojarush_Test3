@@ -27,8 +27,6 @@
     <string name="prepare">Przygotuj pliki gry</string>
     <string name="prepare_again">Przygotuj ponownie / napraw</string>
     <string name="cancel">Anuluj</string>
-    <string name="free_space">Zwolnij miejsce (usuń pobrane pliki)</string>
-    <string name="free_space_done">Pobrane pliki usunięte</string>
     <string name="storage_title">Folder Pojarush_Test3</string>
     <string name="storage_grant">Zezwól na dostęp</string>
     <string name="onboarding_account_title">Zaloguj się, aby grać</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">Zwolniono %1$s</string>
     <string name="clean_junk_button">Wyczyść %1$s</string>
     <string name="keyboard_push">Przesuń grę nad klawiaturę</string>
-    <string name="delete_on_uninstall">Usuń pliki po odinstalowaniu</string>
     <string name="language">Język</string>
     <string name="language_system">Domyślny systemowy</string>
     <string name="vulkan_warn_title">Vulkan może tu nie działać</string>

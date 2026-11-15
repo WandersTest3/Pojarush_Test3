@@ -27,8 +27,6 @@
     <string name="prepare">Подготовить файлы игры</string>
     <string name="prepare_again">Подготовить заново / починить</string>
     <string name="cancel">Отмена</string>
-    <string name="free_space">Освободить место (удалить загрузки)</string>
-    <string name="free_space_done">Загруженные файлы удалены</string>
     <string name="storage_title">Папка Pojarush_Test3</string>
     <string name="storage_grant">Разрешить доступ</string>
     <string name="onboarding_account_title">Войдите, чтобы играть</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">Освобождено: %1$s</string>
     <string name="clean_junk_button">Очистить %1$s</string>
     <string name="keyboard_push">Поднимать игру над клавиатурой</string>
-    <string name="delete_on_uninstall">Удалять файлы при удалении приложения</string>
     <string name="language">Язык</string>
     <string name="language_system">Как в системе</string>
     <string name="vulkan_warn_title">Vulkan здесь может не работать</string>

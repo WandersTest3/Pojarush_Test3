@@ -27,8 +27,6 @@
     <string name="prepare">Siapkan file game</string>
     <string name="prepare_again">Siapkan ulang / perbaiki</string>
     <string name="cancel">Batal</string>
-    <string name="free_space">Kosongkan ruang (hapus unduhan)</string>
-    <string name="free_space_done">File unduhan dihapus</string>
     <string name="storage_title">Folder Pojarush_Test3</string>
     <string name="storage_grant">Izinkan akses</string>
     <string name="onboarding_account_title">Masuk untuk bermain</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">%1$s dibebaskan</string>
     <string name="clean_junk_button">Hapus %1$s</string>
     <string name="keyboard_push">Naikkan game di atas keyboard</string>
-    <string name="delete_on_uninstall">Hapus file saat dicopot</string>
     <string name="language">Bahasa</string>
     <string name="language_system">Bawaan sistem</string>
     <string name="vulkan_warn_title">Vulkan mungkin tidak berfungsi di sini</string>

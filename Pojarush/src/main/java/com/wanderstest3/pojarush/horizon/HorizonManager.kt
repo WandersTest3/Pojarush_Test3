@@ -94,7 +94,7 @@ object HorizonManager {
         gameLibrary.isFile && prepareBinary.isFile && javaLauncher.isFile
 
     fun isPrepared(): Boolean =
-        File(resources, "horizon-resources.json").isFile && File(resources, "worldgen/presets.json").isFile
+        File(resources, "horizon-resources.json").isFile && (File(resources, "worldgen/biome_parameters/overworld.json").isFile || File(resources, "worldgen/presets.json").isFile)
 
     fun hasSounds(): Boolean = soundsMarker.isFile && isPrepared()
 
@@ -189,12 +189,6 @@ object HorizonManager {
             }
             com.wanderstest3.pojarush.KeepAliveService.stop(app, com.wanderstest3.pojarush.PrepareKeepAliveService::class.java)
         }
-    }
-
-    fun freeSpace() {
-        if (isBusy()) return
-        staging.deleteRecursively()
-        File(Paths.cache, "horizon-tmp").deleteRecursively()
     }
 
     /// Everything the launcher can delete and rebuild on its own: the Minecraft download kept

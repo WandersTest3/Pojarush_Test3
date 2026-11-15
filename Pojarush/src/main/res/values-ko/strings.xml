@@ -27,8 +27,6 @@
     <string name="prepare">게임 파일 준비</string>
     <string name="prepare_again">다시 준비 / 복구</string>
     <string name="cancel">취소</string>
-    <string name="free_space">공간 확보 (다운로드 삭제)</string>
-    <string name="free_space_done">다운로드한 파일 삭제됨</string>
     <string name="storage_title">Pojarush_Test3 폴더</string>
     <string name="storage_grant">접근 허용</string>
     <string name="onboarding_account_title">플레이하려면 로그인하세요</string>
@@ -112,7 +110,6 @@
     <string name="clean_junk_done">%1$s 확보됨</string>
     <string name="clean_junk_button">%1$s 정리</string>
     <string name="keyboard_push">키보드 위로 게임 올리기</string>
-    <string name="delete_on_uninstall">제거할 때 파일 삭제</string>
     <string name="language">언어</string>
     <string name="language_system">시스템 기본값</string>
     <string name="vulkan_warn_title">여기서는 Vulkan이 작동하지 않을 수 있습니다</string>

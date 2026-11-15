@@ -59,10 +59,6 @@ Com "Limpar logs e crash reports recorrentemente" ligado (o padrão), ficam só 
 Em **Outros → Extras**, "Limpar lixo" apaga só caches (shaders e do app) e sobras de versões antigas. O Minecraft baixado,
 mundos, pacotes, mods, controles e configurações nunca são tocados.
 
-"Apagar arquivos ao desinstalar" (Outros → Extras) guarda tudo em `Android/data/com.wanderstest3.pojarush/files`, que o
-Android remove junto com o app. Desligado, usa a pasta compartilhada `Pojarush_Test3`, que permanece após desinstalar.
-Em instalações novas ele começa ligado; em quem já tem a pasta `Pojarush_Test3`, começa desligado. Ao trocar, os arquivos são movidos.
-
 O idioma do launcher é escolhido em **Outros → Interface → Idioma** (inglês, português do Brasil e de Portugal, espanhol,
 francês, alemão, italiano, russo, ucraniano, polonês, turco, árabe, chinês simplificado e tradicional, japonês, coreano,
 tailandês, vietnamita e indonésio). Nos idiomas além de inglês e português, os textos longos de ajuda ainda aparecem em inglês.
