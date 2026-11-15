@@ -118,7 +118,7 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         SettingSlider(stringResource(R.string.controls_opacity), settings.opacity, 0.10f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.opacity = it; onChange(Change.CONTROLS) }
         SettingSlider(stringResource(R.string.controls_size), settings.buttonScale, 0.50f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.buttonScale = it; onChange(Change.CONTROLS) }
         SettingSlider(stringResource(R.string.controls_sensitivity), settings.lookSensitivity, 0.10f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.lookSensitivity = it; onChange(Change.CONTROLS) }
-        SettingSlider(stringResource(R.string.controls_long_press), settings.longPressMs.toFloat(), 150f..800f, 50f, { "${it.toInt()} ms" }) { settings.longPressMs = it.toInt(); onChange(Change.CONTROLS) }
+        SettingSlider(stringResource(R.string.controls_long_press), settings.longPressMs.toFloat(), 0f..800f, 50f, { "${it.toInt()} ms" }) { settings.longPressMs = it.toInt(); onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_tap_use), settings.tapToUse) { settings.tapToUse = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_hotbar), settings.hotbarTouch) { settings.hotbarTouch = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_vibrate), settings.vibrate) { settings.vibrate = it; onChange(Change.CONTROLS) }
