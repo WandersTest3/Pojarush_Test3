@@ -144,6 +144,28 @@ private fun blurred(file: File, strength: Float): Bitmap? {
     return out
 }
 
+class LiveBlur(private val strength: Float) {
+    private val outs = arrayOfNulls<Bitmap>(2)
+    private var flip = 0
+    private var px = IntArray(0)
+
+    fun blur(src: Bitmap): Bitmap {
+        val w = src.width
+        val h = src.height
+        if (px.size != w * h) px = IntArray(w * h)
+        src.getPixels(px, 0, w, 0, 0, w, h)
+        val radius = max(1, (strength * 0.6f).roundToInt())
+        repeat(2) {
+            boxBlur(px, w, h, radius, true)
+            boxBlur(px, w, h, radius, false)
+        }
+        flip = 1 - flip
+        val out = outs[flip]?.takeIf { it.width == w && it.height == h } ?: Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { outs[flip] = it }
+        out.setPixels(px, 0, w, 0, 0, w, h)
+        return out
+    }
+}
+
 private fun boxBlur(px: IntArray, w: Int, h: Int, r: Int, horizontal: Boolean) {
     val lines = if (horizontal) h else w
     val len = if (horizontal) w else h

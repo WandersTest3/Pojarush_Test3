@@ -20,6 +20,7 @@ impl Worker {
         let mut child = java::command(&run.jdk.java)
             .args([
                 heap.as_str(),
+                "-XX:+DisplayVMOutputToStderr",
                 "-cp",
                 &format!(
                     "{}{}{}",
@@ -60,11 +61,23 @@ impl Worker {
         writeln!(self.input, "{}", pyjson::dumps(&task, &pyjson::COMPACT))
             .map_err(|e| e.to_string())?;
         self.input.flush().map_err(|e| e.to_string())?;
-        let reply = self
-            .replies
-            .recv_timeout(std::time::Duration::from_secs(3600))
-            .map_err(|e| format!("Exporter JVM stopped or timed out: {e}"))?
-            .map_err(|e| e.to_string())?;
+        let mut noise = Vec::new();
+        let reply = loop {
+            let line = self
+                .replies
+                .recv_timeout(std::time::Duration::from_secs(3600))
+                .map_err(|e| {
+                    let tail = noise.join(" | ");
+                    format!("Exporter JVM stopped or timed out: {e}{}{tail}", if tail.is_empty() { "" } else { ": " })
+                })?
+                .map_err(|e| e.to_string())?;
+            if line.trim_start().starts_with('"') {
+                break line;
+            }
+            if noise.len() < 8 && !line.trim().is_empty() {
+                noise.push(line);
+            }
+        };
         match pyjson::loads(&reply)?.as_str() {
             Some("") => Ok(()),
             _ => Err(format!("Exporter {main} failed: {reply}")),

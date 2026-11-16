@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">Licencje stron trzecich</string>
     <string name="third_party_licenses_desc">Ta wersja korzysta ze Starling (licencja MIT, © Ludovic Marie i współtwórcy Horizon) oraz innego otwartego kodu. Ich informacje są tutaj.</string>
+
+    <string name="accent_title">Kolory launchera</string>
+    <string name="accent_desc">Wybierz dowolny kolor RGB dla palety launchera.</string>
+    <string name="accent_reset">Przywróć domyślne</string>
+    <string name="controls_text_actions">Przyciski w polach tekstowych</string>
+    <string name="controls_text_actions_desc">Wirtualne przyciski nadal wysyłają klawisze, gdy pole tekstowe jest zaznaczone.</string>
+    <string name="game_date_title">Data w grze</string>
+    <string name="game_date_desc">Minecraft będzie myślał, że są Święta lub Halloween (świąteczne skrzynie, dynie na mobach, napisy startowe) bez zmiany daty telefonu. Zadziała przy następnym uruchomieniu gry.</string>
+    <string name="game_date_real">Prawdziwa data</string>
+    <string name="game_date_christmas">Boże Narodzenie</string>
+    <string name="game_date_halloween">Halloween</string>
+    <string name="nav_nbt">Edytor NBT</string>
+    <string name="nbt_title">Edytor NBT</string>
+    <string name="nbt_desc">Edytuj level.dat, dane graczy i inne pliki .dat swoich światów. Przy pierwszym zapisie zachowywana jest kopia .bak. Zamknij świat w grze przed edycją.</string>
+    <string name="nbt_empty">Nie znaleziono plików .dat w folderze gry.</string>
+    <string name="nbt_back">Wstecz</string>
+    <string name="nbt_save">Zapisz</string>
+    <string name="nbt_saved">Zapisano</string>
 </resources>

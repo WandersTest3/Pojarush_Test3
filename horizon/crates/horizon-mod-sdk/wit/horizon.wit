@@ -391,6 +391,23 @@ interface render {
     /// Draws the mod's HUD shapes `scale` times larger from the screen's top
     /// left (0.25 to 16; 1 is as given), the text included.
     set-hud-scale: func(scale: f32);
+    /// Draws the mod's HUD shapes over everything, menus and the title
+    /// screen included, and keeps them with the HUD hidden (true), or only
+    /// with the HUD (false, the default).
+    set-hud-always: func(on: bool);
+    /// A move of the mod's draggable area, in its HUD pixels (before
+    /// `set-hud-scale`).
+    record hud-drag {
+        dx: f32,
+        dy: f32,
+        /// The finger or the mouse let go.
+        done: bool,
+    }
+    /// The part of the mod's HUD the player can drag with a touch, in its
+    /// HUD pixels (before `set-hud-scale`); none ends it.
+    set-hud-drag: func(area: option<rect>);
+    /// The drag since the last call, if any.
+    take-hud-drag: func() -> option<hud-drag>;
     /// The screen's size in GUI pixels (width, height), as of this tick.
     gui-size: func() -> tuple<f32, f32>;
     /// Shakes the camera: a jolt of `strength` (0 to 1, 1 the hardest) that

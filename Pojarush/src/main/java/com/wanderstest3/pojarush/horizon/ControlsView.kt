@@ -251,6 +251,7 @@ class ControlsView(
     }.getOrNull()
 
     private sealed class Role {
+        class HudDrag(var lastX: Float, var lastY: Float) : Role()
         class Btn(var index: Int, var lastX: Float, var lastY: Float) : Role()
         class Stick(val index: Int) : Role()
         class Look(val startX: Float, val startY: Float, var lastX: Float, var lastY: Float, val downTime: Long) : Role() {
@@ -365,6 +366,7 @@ class ControlsView(
     fun reloadSettings() {
         images.clear()
         virtualMouse = settings.virtualMouse
+        textActions = settings.textActions
         relayout()
         loadCursor()
         loadMenuIcon()
@@ -447,6 +449,7 @@ class ControlsView(
                 is Role.Look -> role.longPress?.let(uiHandler::removeCallbacks)
                 is Role.Mouse -> role.longPress?.let(uiHandler::removeCallbacks)
                 is Role.Hotbar -> role.repeat?.let(uiHandler::removeCallbacks)
+                is Role.HudDrag -> HorizonBridge.hudDragMove(role.lastX, role.lastY, true)
                 else -> {}
             }
         }
@@ -568,13 +571,14 @@ class ControlsView(
     }
 
     var typing = false
+    private var textActions = settings.textActions
     private val charMap: android.view.KeyCharacterMap = android.view.KeyCharacterMap.load(android.view.KeyCharacterMap.VIRTUAL_KEYBOARD)
 
     private fun types(code: Int): Boolean = charMap.get(code, 0) >= 32
 
     private fun key(code: Int, down: Boolean) {
         val count = heldKeys[code] ?: 0
-        if (down && count == 0 && typing && !captured && types(code)) return
+        if (down && count == 0 && typing && !textActions && !captured && types(code)) return
         if (down) {
             heldKeys[code] = count + 1
             if (count == 0) host.sendKey(code, true)
@@ -894,6 +898,10 @@ class ControlsView(
             stickDown(s, x, y, time)
             return true
         }
+        if (HorizonBridge.hudDragStart(x, y)) {
+            roles[id] = Role.HudDrag(x, y)
+            return true
+        }
         if (captured) {
             if (settings.hotbarTouch) {
                 val slot = HorizonBridge.hotbarSlot(x, y)
@@ -1025,6 +1033,11 @@ class ControlsView(
 
     private fun pointerMove(id: Int, x: Float, y: Float) {
         when (val role = roles[id]) {
+            is Role.HudDrag -> {
+                role.lastX = x
+                role.lastY = y
+                HorizonBridge.hudDragMove(x, y, false)
+            }
             is Role.Handle -> {
                 if (!role.moved && hypot(x - role.startX, y - role.startY) > 8f * density) role.moved = true
                 if (role.moved) {
@@ -1106,6 +1119,7 @@ class ControlsView(
 
     private fun pointerUp(id: Int, time: Long, cancel: Boolean) {
         when (val role = roles.remove(id)) {
+            is Role.HudDrag -> HorizonBridge.hudDragMove(role.lastX, role.lastY, true)
             is Role.Handle -> {
                 if (role.moved) {
                     val w = width - menuRect.width()

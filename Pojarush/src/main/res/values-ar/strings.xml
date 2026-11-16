@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">تراخيص الجهات الخارجية</string>
     <string name="third_party_licenses_desc">يستخدم هذا الإصدار Starling (رخصة MIT، © Ludovic Marie ومساهمو Horizon) وأكوادًا مفتوحة المصدر أخرى. إشعاراتها مضمّنة هنا.</string>
+
+    <string name="accent_title">ألوان المشغّل</string>
+    <string name="accent_desc">اختر أي لون RGB للوحة ألوان المشغّل.</string>
+    <string name="accent_reset">استعادة الافتراضي</string>
+    <string name="controls_text_actions">الأزرار في حقول النص</string>
+    <string name="controls_text_actions_desc">تستمر الأزرار الافتراضية في إرسال مفاتيحها أثناء تحديد حقل نص.</string>
+    <string name="game_date_title">تاريخ اللعبة</string>
+    <string name="game_date_desc">يجعل Minecraft يظن أنه عيد الميلاد أو الهالوين (صناديق عيد الميلاد، قرع على رؤوس الوحوش، عبارات البداية) دون تغيير تاريخ هاتفك. يُطبَّق عند فتح اللعبة في المرة القادمة.</string>
+    <string name="game_date_real">التاريخ الحقيقي</string>
+    <string name="game_date_christmas">عيد الميلاد</string>
+    <string name="game_date_halloween">الهالوين</string>
+    <string name="nav_nbt">محرر NBT</string>
+    <string name="nbt_title">محرر NBT</string>
+    <string name="nbt_desc">عدّل level.dat وبيانات اللاعبين وملفات ‎.dat الأخرى لعوالمك. تُحفظ نسخة ‎.bak عند أول حفظ للملف. أغلق العالم في اللعبة قبل التعديل.</string>
+    <string name="nbt_empty">لم يتم العثور على ملفات ‎.dat في مجلد اللعبة.</string>
+    <string name="nbt_back">رجوع</string>
+    <string name="nbt_save">حفظ</string>
+    <string name="nbt_saved">تم الحفظ</string>
 </resources>

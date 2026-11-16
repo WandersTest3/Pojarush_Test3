@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">สัญญาอนุญาตของบุคคลที่สาม</string>
     <string name="third_party_licenses_desc">เวอร์ชันนี้ใช้ Starling (สัญญาอนุญาต MIT, © Ludovic Marie และผู้ร่วมพัฒนา Horizon) และโค้ดโอเพนซอร์สอื่น ๆ ประกาศของซอฟต์แวร์เหล่านั้นรวมไว้ที่นี่</string>
+
+    <string name="accent_title">สีของลันเชอร์</string>
+    <string name="accent_desc">เลือกสี RGB ใดก็ได้สำหรับชุดสีของลันเชอร์</string>
+    <string name="accent_reset">คืนค่าเริ่มต้น</string>
+    <string name="controls_text_actions">ปุ่มทำงานในช่องข้อความ</string>
+    <string name="controls_text_actions_desc">ปุ่มเสมือนยังคงส่งปุ่มกดขณะเลือกช่องข้อความ</string>
+    <string name="game_date_title">วันที่ในเกม</string>
+    <string name="game_date_desc">ทำให้ Minecraft คิดว่าเป็นคริสต์มาสหรือฮาโลวีน (หีบคริสต์มาส ฟักทองบนหัวม็อบ ข้อความหน้าแรก) โดยไม่เปลี่ยนวันที่ของโทรศัพท์ มีผลเมื่อเปิดเกมครั้งถัดไป</string>
+    <string name="game_date_real">วันที่จริง</string>
+    <string name="game_date_christmas">คริสต์มาส</string>
+    <string name="game_date_halloween">ฮาโลวีน</string>
+    <string name="nav_nbt">ตัวแก้ไข NBT</string>
+    <string name="nbt_title">ตัวแก้ไข NBT</string>
+    <string name="nbt_desc">แก้ไข level.dat ข้อมูลผู้เล่น และไฟล์ .dat อื่น ๆ ของโลก ระบบจะเก็บสำเนา .bak เมื่อบันทึกไฟล์ครั้งแรก ปิดโลกในเกมก่อนแก้ไข</string>
+    <string name="nbt_empty">ไม่พบไฟล์ .dat ในโฟลเดอร์เกม</string>
+    <string name="nbt_back">ย้อนกลับ</string>
+    <string name="nbt_save">บันทึก</string>
+    <string name="nbt_saved">บันทึกแล้ว</string>
 </resources>

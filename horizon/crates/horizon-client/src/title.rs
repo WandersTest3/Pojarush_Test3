@@ -420,8 +420,6 @@ fn choose_splash(text: &str, index: usize, date: (u32, u32)) -> Option<String> {
 
 impl Title {
     pub fn new(saves: PathBuf, resources: &Path) -> Self {
-        use chrono::Datelike;
-        let today = chrono::Local::now();
         let mode = Mode::Main;
         let now = std::time::Instant::now();
         Self {
@@ -451,7 +449,7 @@ impl Title {
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .subsec_nanos() as usize,
-                (today.month(), today.day()),
+                horizon_client_core::dates::today(),
             ),
             recent: std::cell::RefCell::new(None),
             rules: RefCell::new(None),

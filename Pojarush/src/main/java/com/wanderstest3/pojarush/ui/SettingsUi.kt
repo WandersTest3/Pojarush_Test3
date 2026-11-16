@@ -124,6 +124,7 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         SettingSwitch(stringResource(R.string.controls_vibrate), settings.vibrate) { settings.vibrate = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_hidden), settings.controlsHidden, stringResource(R.string.controls_hidden_desc)) { settings.controlsHidden = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_hotbar_swap), settings.hotbarSwap, stringResource(R.string.controls_hotbar_swap_desc)) { settings.hotbarSwap = it; onChange(Change.CONTROLS) }
+        SettingSwitch(stringResource(R.string.controls_text_actions), settings.textActions, stringResource(R.string.controls_text_actions_desc)) { settings.textActions = it; onChange(Change.CONTROLS) }
         var drop by remember { mutableStateOf(settings.bedrockDrop) }
         SettingSwitch(stringResource(R.string.controls_bedrock_drop), drop, stringResource(R.string.controls_bedrock_drop_desc)) {
             settings.bedrockDrop = it

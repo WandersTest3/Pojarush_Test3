@@ -13,6 +13,8 @@ object HorizonBridge {
     @JvmStatic external fun nativeSetMuted(muted: Boolean)
     @JvmStatic external fun nativeIsTyping(): Boolean
     @JvmStatic external fun nativeFieldBottom(): Float
+    @JvmStatic external fun nativeHudDragStart(x: Float, y: Float): Boolean
+    @JvmStatic external fun nativeHudDragMove(x: Float, y: Float, done: Boolean)
 
     fun command(line: String) = runCatching { nativeCommand(line) }
     fun look(dx: Float, dy: Float) = runCatching { nativeLook(dx, dy) }
@@ -25,5 +27,7 @@ object HorizonBridge {
     fun setMuted(muted: Boolean) { runCatching { nativeSetMuted(muted) } }
     fun fieldBottom(): Float = runCatching { nativeFieldBottom() }.getOrDefault(1f)
     fun isTyping(): Boolean = runCatching { nativeIsTyping() }.getOrDefault(false)
+    fun hudDragStart(x: Float, y: Float): Boolean = runCatching { nativeHudDragStart(x, y) }.getOrDefault(false)
+    fun hudDragMove(x: Float, y: Float, done: Boolean) { runCatching { nativeHudDragMove(x, y, done) } }
     fun isReady(): Boolean = runCatching { nativeIsReady() }.getOrDefault(false)
 }

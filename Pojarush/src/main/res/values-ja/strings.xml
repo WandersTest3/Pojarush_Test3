@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">サードパーティライセンス</string>
     <string name="third_party_licenses_desc">このバージョンは Starling（MIT ライセンス、© Ludovic Marie と Horizon の貢献者）およびその他のオープンソースコードを使用しています。それらの通知をここに含めています。</string>
+
+    <string name="accent_title">ランチャーの色</string>
+    <string name="accent_desc">ランチャーのパレットに任意のRGBカラーを選べます。</string>
+    <string name="accent_reset">デフォルトに戻す</string>
+    <string name="controls_text_actions">テキスト欄でもボタンを使う</string>
+    <string name="controls_text_actions_desc">テキスト欄を選択中も仮想ボタンがキーを送り続けます。</string>
+    <string name="game_date_title">ゲーム内の日付</string>
+    <string name="game_date_desc">スマホの日付を変えずに、Minecraft にクリスマスやハロウィンだと思わせます（クリスマスのチェスト、モブのカボチャ、タイトルのスプラッシュ）。次回ゲーム起動時に適用されます。</string>
+    <string name="game_date_real">実際の日付</string>
+    <string name="game_date_christmas">クリスマス</string>
+    <string name="game_date_halloween">ハロウィン</string>
+    <string name="nav_nbt">NBTエディター</string>
+    <string name="nbt_title">NBTエディター</string>
+    <string name="nbt_desc">ワールドの level.dat、プレイヤーデータ、その他の .dat ファイルを編集します。最初の保存時に .bak のコピーを残します。編集前にゲーム内でワールドを閉じてください。</string>
+    <string name="nbt_empty">ゲームフォルダーに .dat ファイルが見つかりません。</string>
+    <string name="nbt_back">戻る</string>
+    <string name="nbt_save">保存</string>
+    <string name="nbt_saved">保存しました</string>
 </resources>

@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">第三方许可</string>
     <string name="third_party_licenses_desc">此版本使用 Starling（MIT 许可，© Ludovic Marie 及 Horizon 贡献者）和其他开源代码。其声明包含于此。</string>
+
+    <string name="accent_title">启动器颜色</string>
+    <string name="accent_desc">为启动器调色板选择任意 RGB 颜色。</string>
+    <string name="accent_reset">恢复默认</string>
+    <string name="controls_text_actions">按钮在文本框中可用</string>
+    <string name="controls_text_actions_desc">选中文本框时，虚拟按钮仍会继续发送按键。</string>
+    <string name="game_date_title">游戏日期</string>
+    <string name="game_date_desc">在不更改手机日期的情况下，让 Minecraft 以为是圣诞节或万圣节（圣诞箱子、生物头戴南瓜、标题闪烁语）。下次打开游戏时生效。</string>
+    <string name="game_date_real">真实日期</string>
+    <string name="game_date_christmas">圣诞节</string>
+    <string name="game_date_halloween">万圣节</string>
+    <string name="nav_nbt">NBT 编辑器</string>
+    <string name="nbt_title">NBT 编辑器</string>
+    <string name="nbt_desc">编辑世界的 level.dat、玩家数据和其他 .dat 文件。首次保存时会保留一份 .bak 备份。编辑前请先在游戏中关闭世界。</string>
+    <string name="nbt_empty">游戏文件夹中未找到 .dat 文件。</string>
+    <string name="nbt_back">返回</string>
+    <string name="nbt_save">保存</string>
+    <string name="nbt_saved">已保存</string>
 </resources>

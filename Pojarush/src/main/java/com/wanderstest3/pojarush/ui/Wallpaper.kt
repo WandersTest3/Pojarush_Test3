@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -69,9 +70,14 @@ fun WallpaperBackground() {
     Box(Modifier.fillMaxSize().backdropArea()) {
         if (ControlLayouts.isVideo(file.name)) {
             androidx.compose.runtime.key(file.absolutePath, stamp) {
+                val backdrop = LocalBackdrop.current
+                val blur = UiPrefs.menuBlur
                 AndroidView(
                     factory = { WallpaperVideoView(it, file, volume) },
-                    update = { it.setVolume(volume) },
+                    update = {
+                        it.setVolume(volume)
+                        it.setLiveBlur(if (backdrop != null && blur >= 1f) blur else 0f) { frame -> backdrop?.image = frame.asImageBitmap() }
+                    },
                     modifier = media,
                     onRelease = { it.release() }
                 )
@@ -173,7 +179,32 @@ private class WallpaperVideoView(context: Context, private val file: File, priva
         return true
     }
 
-    override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {}
+    private var live: LiveBlur? = null
+    private var liveStrength = 0f
+    private var onFrame: ((android.graphics.Bitmap) -> Unit)? = null
+    private var grab: android.graphics.Bitmap? = null
+    private var lastGrab = 0L
+
+    fun setLiveBlur(strength: Float, sink: (android.graphics.Bitmap) -> Unit) {
+        onFrame = sink
+        if (strength != liveStrength) {
+            liveStrength = strength
+            live = if (strength >= 1f) LiveBlur(strength) else null
+        }
+    }
+
+    override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {
+        val blur = live ?: return
+        val sink = onFrame ?: return
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastGrab < 50L || videoW <= 0 || videoH <= 0) return
+        lastGrab = now
+        val w = 160
+        val h = (w * videoH / videoW).coerceIn(1, 320)
+        val target = grab?.takeIf { it.width == w && it.height == h }
+            ?: android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888).also { grab = it }
+        runCatching { getBitmap(target) }.getOrNull()?.let { sink(blur.blur(it)) }
+    }
 
     fun release() {
         runCatching { player?.release() }
@@ -255,7 +286,7 @@ fun InterfaceSettings(settings: ControlSettings) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
         }
-        SettingSlider(stringResource(R.string.menu_blur), settings.menuBlur, 0f..25f, 1f, { "${Math.round(it)}" }) {
+        SettingSlider(stringResource(R.string.menu_blur), settings.menuBlur, 0f..10f, 1f, { "${Math.round(it)}" }) {
             settings.menuBlur = it
             UiPrefs.menuBlur = it
         }
@@ -363,7 +394,25 @@ fun ExtrasSettings(settings: ControlSettings) {
         }
         Hint(stringResource(R.string.clean_junk_desc))
     }
+    GameDateCard(settings)
     if (com.wanderstest3.pojarush.BuildConfig.STARLING) LicensesCard()
+}
+
+@Composable
+private fun GameDateCard(settings: ControlSettings) {
+    var date by remember { mutableStateOf(settings.gameDate) }
+    PojarushCard {
+        CardTitle(stringResource(R.string.game_date_title))
+        Hint(stringResource(R.string.game_date_desc))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("" to R.string.game_date_real, "12-25" to R.string.game_date_christmas, "10-31" to R.string.game_date_halloween).forEach { (value, label) ->
+                androidx.compose.material3.FilterChip(selected = date == value, onClick = {
+                    date = value
+                    settings.gameDate = value
+                }, label = { Text(stringResource(label)) })
+            }
+        }
+    }
 }
 
 @Composable

@@ -164,6 +164,13 @@ impl Game<'_> {
     /// Once a frame, before the mods run: a screen that opened lets their
     /// held keys up.
     pub(super) fn mod_input_frame(&mut self) {
+        #[cfg(target_os = "android")]
+        {
+            crate::android::set_hud_drag_areas(self.mods.mods.hud_drag_areas());
+            for (i, dx, dy, done) in crate::android::take_hud_drag_moves() {
+                self.mods.mods.push_hud_drag(i, dx, dy, done);
+            }
+        }
         let playing = self.mod_playing();
         if self.mods.playing && !playing {
             self.mods.mods.release_keys();

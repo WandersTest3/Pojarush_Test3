@@ -7,13 +7,13 @@ use horizon_mod_sdk::{
 };
 
 const KEY: &str = "zoom";
-const MIN: f32 = 0.25;
-const MAX: f32 = 50.0;
+const MIN: f32 = 0.10;
+const MAX: f32 = 200.0;
 const LEVEL_MIN: u32 = 2;
 const LEVEL_MAX: u32 = 30;
 const SPEED_MIN: u32 = 1;
 const SPEED_MAX: u32 = 10;
-const STEPS: [f32; 4] = [1.10, 1.25, 1.50, 2.00];
+const STEPS: [f32; 6] = [1.10, 1.25, 1.50, 2.00, 3.00, 4.00];
 const LEVEL_DOWN: u32 = 1;
 const LEVEL_UP: u32 = 2;
 const SPEED_DOWN: u32 = 3;
@@ -224,7 +224,7 @@ impl Mod for Zoom {
         let zoom = Zoom {
             level: stored(&cfg, "level", 8, LEVEL_MIN, LEVEL_MAX),
             speed: stored(&cfg, "speed", 6, SPEED_MIN, SPEED_MAX),
-            step: stored(&cfg, "step", 1, 0, STEPS.len() as u32 - 1),
+            step: stored(&cfg, "step", 2, 0, STEPS.len() as u32 - 1),
             toggle: stored(&cfg, "toggle", 0, 0, 1) == 1,
             keep: stored(&cfg, "keep", 1, 0, 1) == 1,
             steady: stored(&cfg, "steady", 1, 0, 1) == 1,
@@ -306,7 +306,7 @@ impl Mod for Zoom {
             RESET => {
                 self.level = 8;
                 self.speed = 6;
-                self.step = 1;
+                self.step = 2;
                 self.toggle = false;
                 self.keep = true;
                 self.steady = true;

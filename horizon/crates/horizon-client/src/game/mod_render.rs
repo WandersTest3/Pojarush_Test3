@@ -77,6 +77,7 @@ impl Shake {
 #[cfg(not(feature = "mods"))]
 impl Game<'_> {
     pub(super) fn draw_mod_shapes(&self, _batch: &mut HudBatch) {}
+    pub(super) fn draw_mod_shapes_always(&self, _batch: &mut HudBatch) {}
     pub(super) fn shaken_view(&mut self, yaw: f32, pitch: f32) -> (f32, f32) {
         (yaw, pitch)
     }
@@ -86,7 +87,17 @@ impl Game<'_> {
 impl Game<'_> {
     /// The running mods' HUD shapes, in order, over the HUD.
     pub(super) fn draw_mod_shapes(&self, batch: &mut HudBatch) {
-        for (scale, shapes) in self.mods.mods.hud_layers() {
+        self.draw_mod_layers(batch, false);
+    }
+    /// The mods' HUD shapes that stay over everything (`set-hud-always`).
+    pub(super) fn draw_mod_shapes_always(&self, batch: &mut HudBatch) {
+        self.draw_mod_layers(batch, true);
+    }
+    fn draw_mod_layers(&self, batch: &mut HudBatch, always: bool) {
+        for (scale, shapes, on_top) in self.mods.mods.hud_layers_always() {
+            if on_top != always {
+                continue;
+            }
             let start = batch.vertices.len();
             for shape in shapes {
                 self.draw_shapes(batch, std::slice::from_ref(shape), (0.0, 0.0));

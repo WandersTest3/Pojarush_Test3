@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">Lizenzen von Drittanbietern</string>
     <string name="third_party_licenses_desc">Diese Version nutzt Starling (MIT-Lizenz, © Ludovic Marie und die Horizon-Mitwirkenden) und weiteren Open-Source-Code. Deren Hinweise sind hier enthalten.</string>
+
+    <string name="accent_title">Launcher-Farben</string>
+    <string name="accent_desc">Wähle eine beliebige RGB-Farbe für die Palette des Launchers.</string>
+    <string name="accent_reset">Standard wiederherstellen</string>
+    <string name="controls_text_actions">Tasten in Textfeldern</string>
+    <string name="controls_text_actions_desc">Virtuelle Tasten senden ihre Eingaben weiter, während ein Textfeld ausgewählt ist.</string>
+    <string name="game_date_title">Spieldatum</string>
+    <string name="game_date_desc">Lässt Minecraft glauben, es sei Weihnachten oder Halloween (Weihnachtstruhen, Kürbisköpfe bei Mobs, Startsprüche), ohne das Datum des Handys zu ändern. Gilt beim nächsten Spielstart.</string>
+    <string name="game_date_real">Echtes Datum</string>
+    <string name="game_date_christmas">Weihnachten</string>
+    <string name="game_date_halloween">Halloween</string>
+    <string name="nav_nbt">NBT-Editor</string>
+    <string name="nbt_title">NBT-Editor</string>
+    <string name="nbt_desc">Bearbeite level.dat, Spielerdaten und andere .dat-Dateien deiner Welten. Beim ersten Speichern wird eine .bak-Kopie angelegt. Schließe die Welt im Spiel vor dem Bearbeiten.</string>
+    <string name="nbt_empty">Keine .dat-Dateien im Spielordner gefunden.</string>
+    <string name="nbt_back">Zurück</string>
+    <string name="nbt_save">Speichern</string>
+    <string name="nbt_saved">Gespeichert</string>
 </resources>

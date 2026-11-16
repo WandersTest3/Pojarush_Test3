@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">Licences tierces</string>
     <string name="third_party_licenses_desc">Cette version utilise Starling (licence MIT, © Ludovic Marie et les contributeurs d\'Horizon) et d\'autres codes open source. Leurs mentions sont incluses ici.</string>
+
+    <string name="accent_title">Couleurs du launcher</string>
+    <string name="accent_desc">Choisissez n\'importe quelle couleur RVB pour la palette du launcher.</string>
+    <string name="accent_reset">Rétablir par défaut</string>
+    <string name="controls_text_actions">Boutons dans les champs de texte</string>
+    <string name="controls_text_actions_desc">Les boutons virtuels continuent d\'envoyer leurs touches quand un champ de texte est sélectionné.</string>
+    <string name="game_date_title">Date du jeu</string>
+    <string name="game_date_desc">Fait croire à Minecraft que c\'est Noël ou Halloween (coffres de Noël, citrouilles sur les mobs, phrases d\'accueil) sans changer la date du téléphone. Appliqué à la prochaine ouverture du jeu.</string>
+    <string name="game_date_real">Date réelle</string>
+    <string name="game_date_christmas">Noël</string>
+    <string name="game_date_halloween">Halloween</string>
+    <string name="nav_nbt">Éditeur NBT</string>
+    <string name="nbt_title">Éditeur NBT</string>
+    <string name="nbt_desc">Modifiez level.dat, les données des joueurs et les autres fichiers .dat de vos mondes. Une copie .bak est conservée lors du premier enregistrement. Fermez le monde dans le jeu avant de modifier.</string>
+    <string name="nbt_empty">Aucun fichier .dat trouvé dans le dossier du jeu.</string>
+    <string name="nbt_back">Retour</string>
+    <string name="nbt_save">Enregistrer</string>
+    <string name="nbt_saved">Enregistré</string>
 </resources>

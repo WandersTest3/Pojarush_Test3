@@ -97,7 +97,7 @@ pub use render_bindings::horizon::mods::input::{Event as InputEvent, HeldItem, I
 pub use render_bindings::horizon::mods::render::{
     Corner as RenderCorner, FarTerrain as ModFarTerrain, FillShape, FrameRate, ItemShape,
     Minimap as ModMinimap, Point as RenderPoint, QuadShape, Rect as RenderRect, Shape, SpriteShape,
-    TextShape, Zoom as ModZoom,
+    HudDrag, TextShape, Zoom as ModZoom,
 };
 use render_bindings::{RenderHost, horizon::mods::render};
 /// Capability `recipes`'s imports (docs/mods.md): the game's recipes and items.
@@ -426,6 +426,9 @@ struct State {
     /// Capability `render`'s HUD shapes, drawn until replaced.
     shapes: Vec<Shape>,
     hud_scale: f32,
+    hud_always: bool,
+    hud_drag: Option<RenderRect>,
+    drag: Option<(f32, f32, bool)>,
     /// Capability `render`'s corner panel.
     corner: Option<CornerPanel>,
     /// Capability `render`'s zoom, when the mod zooms.
@@ -634,6 +637,9 @@ impl Mods {
             ui: UiState::default(),
             shapes: Vec::new(),
             hud_scale: 1.0,
+            hud_always: false,
+            hud_drag: None,
+            drag: None,
             corner: None,
             zoom: None,
             minimap: None,
@@ -1219,6 +1225,37 @@ impl Mods {
             .filter_map(|e| e.run.as_ref())
             .map(|r| (r.store.data().hud_scale, r.store.data().shapes.as_slice()))
     }
+    /// Each running mod's HUD: (scale, shapes, drawn over everything).
+    pub fn hud_layers_always(&self) -> impl Iterator<Item = (f32, &[Shape], bool)> {
+        self.entries
+            .iter()
+            .filter_map(|e| e.run.as_ref())
+            .map(|r| {
+                let d = r.store.data();
+                (d.hud_scale, d.shapes.as_slice(), d.hud_always)
+            })
+    }
+    /// The draggable HUD areas in GUI pixels (after the mod's scale), by mod index.
+    pub fn hud_drag_areas(&self) -> Vec<(usize, [f32; 4])> {
+        self.entries
+            .iter()
+            .enumerate()
+            .filter_map(|(i, e)| {
+                let d = e.run.as_ref()?.store.data();
+                let r = d.hud_drag?;
+                let k = d.hud_scale;
+                Some((i, [r.x * k, r.y * k, r.w * k, r.h * k]))
+            })
+            .collect()
+    }
+    /// Adds a drag (GUI pixels) to mod `i`'s draggable area.
+    pub fn push_hud_drag(&mut self, i: usize, dx: f32, dy: f32, done: bool) {
+        let Some(run) = self.entries.get_mut(i).and_then(|e| e.run.as_mut()) else { return };
+        let d = run.store.data_mut();
+        let k = d.hud_scale.max(0.01);
+        let (ax, ay, _) = d.drag.unwrap_or((0.0, 0.0, false));
+        d.drag = Some((ax + dx / k, ay + dy / k, done));
+    }
     pub fn hud_shapes(&self) -> impl Iterator<Item = &Shape> {
         self.entries
             .iter()
@@ -1759,7 +1796,7 @@ const SHAPES: usize = 1024;
 const SHAKE_SECONDS: f32 = 10.0;
 /// `render.set-zoom`'s limits: `Camera.tickFov` keeps the modifier at 0.1
 /// or more, and turning never stops.
-const ZOOM_MAX: f32 = 50.0;
+const ZOOM_MAX: f32 = 200.0;
 const ZOOM_MIN: f32 = 0.25;
 const TURN_MIN: f32 = 0.05;
 /// `set-minimap`'s side in GUI pixels and its blocks per map pixel.
@@ -1812,6 +1849,20 @@ impl render::Host for State {
     }
     fn set_hud_scale(&mut self, scale: f32) {
         self.hud_scale = if scale.is_finite() { scale.clamp(0.25, 16.0) } else { 1.0 };
+    }
+    fn set_hud_always(&mut self, on: bool) {
+        self.hud_always = on;
+    }
+    fn set_hud_drag(&mut self, area: Option<RenderRect>) {
+        self.hud_drag = area.filter(|r| {
+            [r.x, r.y, r.w, r.h].iter().all(|v| v.is_finite()) && r.w > 0.0 && r.h > 0.0
+        });
+        if self.hud_drag.is_none() {
+            self.drag = None;
+        }
+    }
+    fn take_hud_drag(&mut self) -> Option<HudDrag> {
+        self.drag.take().map(|(dx, dy, done)| HudDrag { dx, dy, done })
     }
     fn set_corner(&mut self, corner: RenderCorner, width: f32, height: f32, shapes: Vec<Shape>) {
         let size = |v: f32| {

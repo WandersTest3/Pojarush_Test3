@@ -34,31 +34,39 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
-val Purple = Color(0xFF57197F)
+val DefaultAccent = Color(0xFF57197F)
 
-/// The Horizon site/launcher's background: near-black with a violet cast, not the
-/// flatter dark-purple the app used before.
-val BackgroundTop = Color(0xFF0B0712)
-val BackgroundBottom = Color(0xFF150A22)
-val CardBorder = Color(0xFF2E1E42)
+val Purple: Color get() = UiPrefs.accent
 
-val PojarushColors = darkColorScheme(
-    primary = Color(0xFFB98CF2),
-    onPrimary = Color(0xFF1A0A2A),
-    primaryContainer = Purple,
-    onPrimaryContainer = Color(0xFFF3E4FF),
+private fun mix(a: Color, b: Color, t: Float) = Color(
+    a.red + (b.red - a.red) * t,
+    a.green + (b.green - a.green) * t,
+    a.blue + (b.blue - a.blue) * t,
+    1f,
+)
+
+val BackgroundTop: Color get() = mix(Color(0xFF07070A), UiPrefs.accent, 0.06f)
+val BackgroundBottom: Color get() = mix(Color(0xFF0B0B10), UiPrefs.accent, 0.14f)
+val CardBorder: Color get() = mix(Color(0xFF1C1C22), UiPrefs.accent, 0.35f)
+
+fun pojarushColors(accent: Color) = darkColorScheme(
+    primary = mix(accent, Color.White, 0.45f),
+    onPrimary = mix(accent, Color.Black, 0.80f),
+    primaryContainer = accent,
+    onPrimaryContainer = mix(accent, Color.White, 0.90f),
     secondary = Color(0xFFFFC857),
-    secondaryContainer = Color(0xFF3B2050),
-    onSecondaryContainer = Color(0xFFF3E4FF),
-    background = BackgroundTop,
-    surface = Color(0xFF160D22),
-    surfaceVariant = Color(0xFF231433),
-    onSurface = Color(0xFFEDE0F5),
-    onSurfaceVariant = Color(0xFFA996BC),
+    secondaryContainer = mix(accent, Color(0xFF101014), 0.65f),
+    onSecondaryContainer = mix(accent, Color.White, 0.90f),
+    background = mix(Color(0xFF07070A), accent, 0.06f),
+    surface = mix(Color(0xFF0E0E12), accent, 0.12f),
+    surfaceVariant = mix(Color(0xFF16161B), accent, 0.18f),
+    onSurface = mix(Color.White, accent, 0.06f),
+    onSurfaceVariant = mix(Color(0xFFB0B0B8), accent, 0.15f),
     error = Color(0xFFFF8A80),
 )
 
 object UiPrefs {
+    var accent by androidx.compose.runtime.mutableStateOf(DefaultAccent)
     var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.60f)
     var menuBlur by androidx.compose.runtime.mutableFloatStateOf(12f)
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
@@ -70,6 +78,7 @@ object UiPrefs {
         val s = com.wanderstest3.pojarush.controls.ControlSettings(context)
         menuBackground = s.menuBackground
         menuBlur = s.menuBlur
+        accent = Color(s.accentColor)
         minecraftFont = s.minecraftFont
         customFont = s.customFont
         fontMode = s.fontMode
@@ -114,9 +123,10 @@ fun PojarushTheme(content: @Composable () -> Unit) {
     val density = remember(base, UiPrefs.fontScale) {
         androidx.compose.ui.unit.Density(base.density, base.fontScale * UiPrefs.fontScale)
     }
-    MaterialTheme(colorScheme = PojarushColors, typography = typography) {
+    val colors = remember(UiPrefs.accent) { pojarushColors(UiPrefs.accent) }
+    MaterialTheme(colorScheme = colors, typography = typography) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides PojarushColors.onSurface,
+            androidx.compose.material3.LocalContentColor provides colors.onSurface,
             androidx.compose.ui.platform.LocalDensity provides density,
         ) {
             androidx.compose.material3.ProvideTextStyle(androidx.compose.ui.text.TextStyle(fontFamily = family), content = content)

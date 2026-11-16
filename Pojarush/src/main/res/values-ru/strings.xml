@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">Лицензии сторонних компонентов</string>
     <string name="third_party_licenses_desc">Эта версия использует Starling (лицензия MIT, © Ludovic Marie и участники Horizon) и другой открытый код. Их уведомления приведены здесь.</string>
+
+    <string name="accent_title">Цвета лаунчера</string>
+    <string name="accent_desc">Выберите любой цвет RGB для палитры лаунчера.</string>
+    <string name="accent_reset">Сбросить</string>
+    <string name="controls_text_actions">Кнопки в текстовых полях</string>
+    <string name="controls_text_actions_desc">Виртуальные кнопки продолжают отправлять клавиши, пока выбрано текстовое поле.</string>
+    <string name="game_date_title">Дата в игре</string>
+    <string name="game_date_desc">Minecraft будет считать, что сейчас Рождество или Хэллоуин (рождественские сундуки, тыквы на мобах, фразы заставки), без изменения даты телефона. Применится при следующем запуске игры.</string>
+    <string name="game_date_real">Реальная дата</string>
+    <string name="game_date_christmas">Рождество</string>
+    <string name="game_date_halloween">Хэллоуин</string>
+    <string name="nav_nbt">Редактор NBT</string>
+    <string name="nbt_title">Редактор NBT</string>
+    <string name="nbt_desc">Редактируйте level.dat, данные игроков и другие файлы .dat ваших миров. При первом сохранении создаётся копия .bak. Закройте мир в игре перед редактированием.</string>
+    <string name="nbt_empty">Файлы .dat в папке игры не найдены.</string>
+    <string name="nbt_back">Назад</string>
+    <string name="nbt_save">Сохранить</string>
+    <string name="nbt_saved">Сохранено</string>
 </resources>

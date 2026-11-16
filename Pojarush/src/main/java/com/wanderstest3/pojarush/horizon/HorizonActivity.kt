@@ -67,6 +67,7 @@ class HorizonActivity : GameActivity() {
         Os.setenv("HORIZON_KEEP_LOG", "1", true)
         Os.setenv("HORIZON_ANDROID_ARGS", args.joinToString("\u001f"), true)
         Os.setenv("POJARUSH_GAME_DIR", gameDir, true)
+        com.wanderstest3.pojarush.controls.ControlSettings(this).gameDate.let { if (it.isEmpty()) Os.unsetenv("POJARUSH_DATE") else Os.setenv("POJARUSH_DATE", it, true) }
         Os.setenv("POJARUSH_EXIT_FILE", File(home, "exit-code").absolutePath, true)
         Os.setenv("HORIZON_HOME", home, true)
         intent.getStringExtra(EXTRA_CACHE)?.takeIf { it.isNotEmpty() }?.let {

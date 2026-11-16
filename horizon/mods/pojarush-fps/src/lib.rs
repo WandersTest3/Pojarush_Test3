@@ -53,6 +53,7 @@ struct Fps {
     color: u32,
     last: (u32, u32, u32, u32, u32),
     drawn: bool,
+    area: (f32, f32, f32, f32, f32, f32),
 }
 
 fn on_off(s: &[&'static str; 24], on: bool) -> &'static str {
@@ -265,6 +266,7 @@ impl Fps {
         if !self.show {
             if self.drawn {
                 render::set_hud(&[]);
+                render::set_hud_drag(None);
                 self.drawn = false;
             }
             return;
@@ -305,7 +307,28 @@ impl Fps {
             }));
         }
         render::set_hud_scale(scale);
+        render::set_hud_always(true);
         render::set_hud(&shapes);
+        render::set_hud_drag(Some(Rect { x: left, y: top, w: box_w, h: box_h }));
+        self.area = (left, top, box_w, box_h, w, h);
+    }
+
+    fn dragged(&mut self) {
+        let Some(d) = render::take_hud_drag() else { return };
+        let (left, top, box_w, box_h, w, h) = self.area;
+        let left = (left + d.dx).clamp(0.0, (w - box_w).max(0.0));
+        let top = (top + d.dy).clamp(0.0, (h - box_h).max(0.0));
+        let span_x = (w - box_w).max(1.0);
+        let span_y = (h - box_h).max(1.0);
+        self.x = ((left / span_x) * 1000.0).round().clamp(0.0, 1000.0) as u32;
+        self.y = ((top / span_y) * 1000.0).round().clamp(0.0, 1000.0) as u32;
+        self.x_off = 0;
+        self.y_off = 0;
+        self.drawn = false;
+        if d.done {
+            self.save();
+            self.page();
+        }
     }
 }
 
@@ -328,6 +351,7 @@ impl Mod for Fps {
             color: stored(&cfg, "color", 4, 0, COLORS.len() as u32 - 1),
             last: (0, 0, 0, 0, 0),
             drawn: false,
+            area: (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
         };
         fps.scale = fps.scale.max(SCALE_MIN);
         fps.save();
@@ -336,6 +360,7 @@ impl Mod for Fps {
     }
 
     fn frame(&mut self, _seconds: f32) {
+        self.dragged();
         self.draw();
     }
 

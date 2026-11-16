@@ -334,4 +334,22 @@
 
     <string name="third_party_licenses">Third-party licenses</string>
     <string name="third_party_licenses_desc">This version uses Starling (MIT License, © Ludovic Marie and the Horizon contributors) and other open-source code. Their notices are included here.</string>
+
+    <string name="accent_title">Launcher colors</string>
+    <string name="accent_desc">Pick any RGB color for the launcher\'s palette.</string>
+    <string name="accent_reset">Restore default</string>
+    <string name="controls_text_actions">Buttons work in text fields</string>
+    <string name="controls_text_actions_desc">Virtual buttons keep sending their keys while a text field is focused.</string>
+    <string name="game_date_title">Game date</string>
+    <string name="game_date_desc">Makes Minecraft think it is Christmas or Halloween (Christmas chests, pumpkin heads on mobs, splash texts) without changing your phone\'s date. Applied the next time the game opens.</string>
+    <string name="game_date_real">Real date</string>
+    <string name="game_date_christmas">Christmas</string>
+    <string name="game_date_halloween">Halloween</string>
+    <string name="nav_nbt">NBT editor</string>
+    <string name="nbt_title">NBT editor</string>
+    <string name="nbt_desc">Edit level.dat, player data and other .dat files of your worlds. A .bak copy is kept the first time a file is saved. Close the world in the game before editing.</string>
+    <string name="nbt_empty">No .dat files found in the game folder.</string>
+    <string name="nbt_back">Back</string>
+    <string name="nbt_save">Save</string>
+    <string name="nbt_saved">Saved</string>
 </resources>

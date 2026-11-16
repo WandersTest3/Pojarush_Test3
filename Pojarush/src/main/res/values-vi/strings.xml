@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">Giấy phép bên thứ ba</string>
     <string name="third_party_licenses_desc">Phiên bản này dùng Starling (Giấy phép MIT, © Ludovic Marie và những người đóng góp Horizon) cùng mã nguồn mở khác. Thông báo của chúng được kèm ở đây.</string>
+
+    <string name="accent_title">Màu launcher</string>
+    <string name="accent_desc">Chọn bất kỳ màu RGB nào cho bảng màu của launcher.</string>
+    <string name="accent_reset">Khôi phục mặc định</string>
+    <string name="controls_text_actions">Nút hoạt động trong ô văn bản</string>
+    <string name="controls_text_actions_desc">Nút ảo vẫn gửi phím khi đang chọn ô văn bản.</string>
+    <string name="game_date_title">Ngày trong game</string>
+    <string name="game_date_desc">Khiến Minecraft nghĩ là Giáng sinh hoặc Halloween (rương Giáng sinh, bí ngô trên đầu mob, câu chữ màn hình chính) mà không đổi ngày điện thoại. Áp dụng ở lần mở game tiếp theo.</string>
+    <string name="game_date_real">Ngày thật</string>
+    <string name="game_date_christmas">Giáng sinh</string>
+    <string name="game_date_halloween">Halloween</string>
+    <string name="nav_nbt">Trình sửa NBT</string>
+    <string name="nbt_title">Trình sửa NBT</string>
+    <string name="nbt_desc">Sửa level.dat, dữ liệu người chơi và các tệp .dat khác của thế giới. Lần lưu đầu tiên sẽ giữ một bản .bak. Hãy đóng thế giới trong game trước khi sửa.</string>
+    <string name="nbt_empty">Không tìm thấy tệp .dat trong thư mục game.</string>
+    <string name="nbt_back">Quay lại</string>
+    <string name="nbt_save">Lưu</string>
+    <string name="nbt_saved">Đã lưu</string>
 </resources>

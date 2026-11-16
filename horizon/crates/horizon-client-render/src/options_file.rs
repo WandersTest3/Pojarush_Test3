@@ -89,7 +89,7 @@ const GRAPHICS_BACKEND: &[&str] = &["default", "opengl", "vulkan"];
 const GRAPHICS_PRESET: &[&str] = &["fast", "fancy", "fabulous", "custom"];
 /// Horizon's render distance cap (vanilla stops at 32): the server protocol's
 /// view distance tops out at 127 anyway.
-pub const MAX_RENDER_DISTANCE: i32 = 128;
+pub const MAX_RENDER_DISTANCE: i32 = 1000;
 const INACTIVITY: &[&str] = &["minimized", "afk"];
 const CLOUDS: &[&str] = &["false", "fast", "true"];
 const MAIN_HAND: &[&str] = &["left", "right"];

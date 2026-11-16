@@ -73,6 +73,85 @@ pub(crate) fn set_surface(width: u32, height: u32) {
     SURFACE.store(u64::from(width) << 32 | u64::from(height), Ordering::Relaxed);
 }
 
+static HUD_DRAG_AREAS: std::sync::Mutex<Vec<(usize, [f32; 4])>> = std::sync::Mutex::new(Vec::new());
+static HUD_DRAG: std::sync::Mutex<Option<(usize, f64, f64)>> = std::sync::Mutex::new(None);
+static HUD_DRAG_MOVES: std::sync::Mutex<Vec<(usize, f32, f32, bool)>> = std::sync::Mutex::new(Vec::new());
+
+pub(crate) fn set_hud_drag_areas(areas: Vec<(usize, [f32; 4])>) {
+    if let Ok(mut a) = HUD_DRAG_AREAS.lock() {
+        *a = areas;
+    }
+}
+
+pub(crate) fn take_hud_drag_moves() -> Vec<(usize, f32, f32, bool)> {
+    HUD_DRAG_MOVES.lock().map(|mut m| std::mem::take(&mut *m)).unwrap_or_default()
+}
+
+fn gui_point(x: f64, y: f64) -> Option<(f64, f64)> {
+    let packed = SURFACE.load(Ordering::Relaxed);
+    let (w, h) = ((packed >> 32) as u32, packed as u32);
+    if w == 0 || h == 0 {
+        return None;
+    }
+    let k = f64::from(horizon_client::hud::HudBatch::new([w, h]).scale);
+    let (sx, sy) = scale();
+    Some((x * sx / k, y * sy / k))
+}
+
+fn hud_drag_start(x: f64, y: f64) -> bool {
+    let Some((gx, gy)) = gui_point(x, y) else { return false };
+    let hit = HUD_DRAG_AREAS.lock().ok().and_then(|a| {
+        a.iter().rev().find(|(_, r)| {
+            let (rx, ry, rw, rh) = (f64::from(r[0]), f64::from(r[1]), f64::from(r[2]), f64::from(r[3]));
+            gx >= rx - 4.0 && gx <= rx + rw + 4.0 && gy >= ry - 4.0 && gy <= ry + rh + 4.0
+        }).map(|(i, _)| *i)
+    });
+    let Some(i) = hit else { return false };
+    if let Ok(mut d) = HUD_DRAG.lock() {
+        *d = Some((i, gx, gy));
+    }
+    true
+}
+
+fn hud_drag_move(x: f64, y: f64, done: bool) {
+    let Ok(mut d) = HUD_DRAG.lock() else { return };
+    let Some((i, lx, ly)) = *d else { return };
+    let (gx, gy) = gui_point(x, y).unwrap_or((lx, ly));
+    *d = if done { None } else { Some((i, gx, gy)) };
+    if let Ok(mut m) = HUD_DRAG_MOVES.lock() {
+        m.push((i, (gx - lx) as f32, (gy - ly) as f32, done));
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeHudDragStart<
+    'local,
+>(
+    _env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    x: jfloat,
+    y: jfloat,
+) -> jboolean {
+    if hud_drag_start(f64::from(x), f64::from(y)) {
+        JNI_TRUE
+    } else {
+        JNI_FALSE
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeHudDragMove<
+    'local,
+>(
+    _env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    x: jfloat,
+    y: jfloat,
+    done: jboolean,
+) {
+    hud_drag_move(f64::from(x), f64::from(y), done != 0);
+}
+
 /// The hotbar slot (0-8) under a point of the view, as the HUD lays it out.
 fn hotbar_slot(x: f64, y: f64) -> i32 {
     let packed = SURFACE.load(Ordering::Relaxed);

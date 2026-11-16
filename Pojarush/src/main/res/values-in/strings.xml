@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">Lisensi pihak ketiga</string>
     <string name="third_party_licenses_desc">Versi ini memakai Starling (Lisensi MIT, © Ludovic Marie dan kontributor Horizon) serta kode sumber terbuka lainnya. Pemberitahuannya disertakan di sini.</string>
+
+    <string name="accent_title">Warna launcher</string>
+    <string name="accent_desc">Pilih warna RGB apa pun untuk palet launcher.</string>
+    <string name="accent_reset">Kembalikan bawaan</string>
+    <string name="controls_text_actions">Tombol berfungsi di kolom teks</string>
+    <string name="controls_text_actions_desc">Tombol virtual tetap mengirim tombolnya saat kolom teks dipilih.</string>
+    <string name="game_date_title">Tanggal game</string>
+    <string name="game_date_desc">Membuat Minecraft mengira sekarang Natal atau Halloween (peti Natal, labu di kepala mob, teks pembuka) tanpa mengubah tanggal ponsel. Berlaku saat game dibuka berikutnya.</string>
+    <string name="game_date_real">Tanggal asli</string>
+    <string name="game_date_christmas">Natal</string>
+    <string name="game_date_halloween">Halloween</string>
+    <string name="nav_nbt">Editor NBT</string>
+    <string name="nbt_title">Editor NBT</string>
+    <string name="nbt_desc">Edit level.dat, data pemain, dan file .dat lain dari dunia kamu. Salinan .bak disimpan saat file pertama kali disimpan. Tutup dunia di game sebelum mengedit.</string>
+    <string name="nbt_empty">Tidak ada file .dat di folder game.</string>
+    <string name="nbt_back">Kembali</string>
+    <string name="nbt_save">Simpan</string>
+    <string name="nbt_saved">Tersimpan</string>
 </resources>

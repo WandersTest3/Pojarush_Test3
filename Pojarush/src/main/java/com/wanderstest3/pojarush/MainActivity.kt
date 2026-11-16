@@ -55,6 +55,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -110,6 +111,7 @@ private enum class Section(val label: Int, val glyph: String, val launcher: Bool
     Mouse(R.string.nav_mouse, "➚$TEXT_STYLE"),
     Mods(R.string.nav_mods, "✚$TEXT_STYLE"),
     Graphics(R.string.nav_graphics, "▣$TEXT_STYLE"),
+    Nbt(R.string.nav_nbt, "⌘$TEXT_STYLE"),
     Interface(R.string.interface_title, "◐$TEXT_STYLE", true),
     Others(R.string.nav_others, "✦$TEXT_STYLE", true),
     Logs(R.string.nav_logs, "☰$TEXT_STYLE", true),
@@ -220,29 +222,24 @@ private fun PojarushScreen() {
             profile?.let { com.wanderstest3.pojarush.ui.PlayerBadge(it) }
         }
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = menuOpen,
-                enter = androidx.compose.animation.slideInHorizontally { -it } + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.Start),
-                exit = androidx.compose.animation.slideOutHorizontally { -it } + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.Start),
-            ) {
-                Column(modifier = Modifier.padding(end = 12.dp).width(176.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    NavItem(Section.Home, section == Section.Home) { section = Section.Home }
-                    NavGroup("Minecraft")
-                    Section.entries.filter { it != Section.Home && !it.launcher }.forEach { s ->
-                        NavItem(s, s == section) { section = s }
-                    }
-                    NavGroup("Launcher")
-                    Section.entries.filter { it.launcher }.forEach { s ->
-                        NavItem(s, s == section) { section = s }
-                    }
+            val railWidth by androidx.compose.animation.core.animateDpAsState(if (menuOpen) 176.dp else 54.dp, label = "rail")
+            Column(modifier = Modifier.padding(end = 12.dp).width(railWidth).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                NavItem(Section.Home, section == Section.Home, menuOpen) { section = Section.Home }
+                NavGroup("Minecraft", menuOpen)
+                Section.entries.filter { it != Section.Home && !it.launcher }.forEach { s ->
+                    NavItem(s, s == section, menuOpen) { section = s }
+                }
+                NavGroup("Launcher", menuOpen)
+                Section.entries.filter { it.launcher }.forEach { s ->
+                    NavItem(s, s == section, menuOpen) { section = s }
                 }
             }
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (section) {
-                    Section.Logs -> LogCard(modifier = Modifier.fillMaxSize().padding(bottom = 76.dp))
+                    Section.Logs -> LogCard(modifier = Modifier.fillMaxSize().padding(bottom = 56.dp))
                     else -> Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 84.dp),
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 64.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         when (section) {
@@ -264,6 +261,7 @@ private fun PojarushScreen() {
                                 com.wanderstest3.pojarush.ui.MenuButtonSettings(settings) {}
                             }
                             Section.Mods -> ModsPage()
+                            Section.Nbt -> com.wanderstest3.pojarush.ui.NbtPage()
                             Section.Mouse -> MouseSettings(remember { ControlSettings(context) }) {}
                             Section.Graphics -> {
                                 val settings = remember { ControlSettings(context) }
@@ -275,6 +273,7 @@ private fun PojarushScreen() {
                             Section.Interface -> {
                                 val settings = remember { ControlSettings(context) }
                                 com.wanderstest3.pojarush.ui.InterfaceSettings(settings)
+                                com.wanderstest3.pojarush.ui.AccentSettings(settings)
                                 com.wanderstest3.pojarush.ui.WallpaperSettings(settings)
                             }
                             Section.Others -> {
@@ -289,7 +288,7 @@ private fun PojarushScreen() {
             }
         }
         }
-        PlayButton(modifier = Modifier.align(Alignment.BottomEnd))
+        PlayButton(modifier = Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 6.dp))
     }
 }
 
@@ -335,7 +334,11 @@ private fun Header() {
 }
 
 @Composable
-private fun NavGroup(title: String) {
+private fun NavGroup(title: String, expanded: Boolean) {
+    if (!expanded) {
+        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+        return
+    }
     Text(
         title,
         style = MaterialTheme.typography.labelLarge,
@@ -346,20 +349,21 @@ private fun NavGroup(title: String) {
 }
 
 @Composable
-private fun NavItem(section: Section, selected: Boolean, onClick: () -> Unit) {
+private fun NavItem(section: Section, selected: Boolean, expanded: Boolean, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().liquidGlass(RoundedCornerShape(18.dp), selected = selected).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 11.dp),
+        modifier = Modifier.fillMaxWidth().liquidGlass(RoundedCornerShape(18.dp), selected = selected).clickable(onClick = onClick).padding(horizontal = if (expanded) 14.dp else 0.dp, vertical = 11.dp),
+        horizontalArrangement = if (expanded) Arrangement.Start else Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         val tint = if (selected) Color.White else MaterialTheme.colorScheme.primary
         if (section == Section.Home) {
-            Box(modifier = Modifier.width(26.dp)) {
+            Box(modifier = Modifier.width(26.dp), contentAlignment = Alignment.Center) {
                 androidx.compose.material3.Icon(painterResource(R.drawable.ic_play), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
             }
         } else {
-            Text(section.glyph, modifier = Modifier.width(26.dp), color = tint)
+            Text(section.glyph, modifier = Modifier.width(26.dp), color = tint, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
-        Text(
+        if (expanded) Text(
             stringResource(section.label),
             style = MaterialTheme.typography.bodyLarge,
             color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
@@ -510,12 +514,17 @@ private fun PlayButton(modifier: Modifier) {
     val busy = state is HorizonManager.State.Running
     val ready = remember(state) { HorizonManager.isSupported() && HorizonManager.isPrepared() }
     val enabled = ready && !busy && profile != null
-    ExtendedFloatingActionButton(
-        modifier = modifier.height(64.dp).clip(RoundedCornerShape(16.dp)),
-        containerColor = if (enabled) com.wanderstest3.pojarush.ui.Purple else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (enabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+    androidx.compose.material3.Button(
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(14.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp),
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = if (enabled) com.wanderstest3.pojarush.ui.Purple else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (enabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        elevation = androidx.compose.material3.ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
         onClick = {
-            if (!enabled) return@ExtendedFloatingActionButton
+            if (!enabled) return@Button
             scope.launch {
                 val current = profile?.let { p ->
                     runCatching { withContext(Dispatchers.IO) { MicrosoftAuth.refresh(p) } }
@@ -527,9 +536,9 @@ private fun PlayButton(modifier: Modifier) {
             }
         }
     ) {
-        androidx.compose.material3.Icon(painterResource(R.drawable.ic_play), contentDescription = null, modifier = Modifier.size(26.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(stringResource(R.string.play), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.Icon(painterResource(R.drawable.ic_play), contentDescription = null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.play), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }
 }
 

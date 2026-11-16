@@ -106,8 +106,17 @@ class ControlSettings(context: Context) {
         get() = prefs.getString("menu_icon", "").orEmpty()
         set(v) = prefs.edit().putString("menu_icon", v).apply()
     var menuBlur: Float
-        get() = prefs.getFloat("menu_blur", 12f).coerceIn(0f, 25f)
-        set(v) = prefs.edit().putFloat("menu_blur", v.coerceIn(0f, 25f)).apply()
+        get() = prefs.getFloat("menu_blur", 8f).coerceIn(0f, 10f)
+        set(v) = prefs.edit().putFloat("menu_blur", v.coerceIn(0f, 10f)).apply()
+    var accentColor: Int
+        get() = prefs.getInt("accent_color", 0xFF57197F.toInt())
+        set(v) = prefs.edit().putInt("accent_color", v or 0xFF000000.toInt()).apply()
+    var gameDate: String
+        get() = prefs.getString("game_date", "").orEmpty()
+        set(v) = prefs.edit().putString("game_date", v).apply()
+    var textActions: Boolean
+        get() = prefs.getBoolean("text_actions", false)
+        set(v) = prefs.edit().putBoolean("text_actions", v).apply()
 
     var menuBackground: Float
         get() = prefs.getFloat("menu_background", 0.60f).coerceIn(0f, 1.00f)

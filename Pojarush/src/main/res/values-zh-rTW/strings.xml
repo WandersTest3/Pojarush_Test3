@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">第三方授權</string>
     <string name="third_party_licenses_desc">此版本使用 Starling（MIT 授權，© Ludovic Marie 及 Horizon 貢獻者）和其他開放原始碼。其聲明包含於此。</string>
+
+    <string name="accent_title">啟動器顏色</string>
+    <string name="accent_desc">為啟動器調色盤選擇任何 RGB 顏色。</string>
+    <string name="accent_reset">還原預設</string>
+    <string name="controls_text_actions">按鈕在文字欄位中可用</string>
+    <string name="controls_text_actions_desc">選取文字欄位時，虛擬按鈕仍會繼續傳送按鍵。</string>
+    <string name="game_date_title">遊戲日期</string>
+    <string name="game_date_desc">在不更改手機日期的情況下，讓 Minecraft 以為是聖誕節或萬聖節（聖誕箱子、生物頭戴南瓜、標題閃爍語）。下次開啟遊戲時生效。</string>
+    <string name="game_date_real">真實日期</string>
+    <string name="game_date_christmas">聖誕節</string>
+    <string name="game_date_halloween">萬聖節</string>
+    <string name="nav_nbt">NBT 編輯器</string>
+    <string name="nbt_title">NBT 編輯器</string>
+    <string name="nbt_desc">編輯世界的 level.dat、玩家資料及其他 .dat 檔案。首次儲存時會保留一份 .bak 備份。編輯前請先在遊戲中關閉世界。</string>
+    <string name="nbt_empty">遊戲資料夾中找不到 .dat 檔案。</string>
+    <string name="nbt_back">返回</string>
+    <string name="nbt_save">儲存</string>
+    <string name="nbt_saved">已儲存</string>
 </resources>

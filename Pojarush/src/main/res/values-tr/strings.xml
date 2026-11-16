@@ -139,4 +139,22 @@
 
     <string name="third_party_licenses">Üçüncü taraf lisansları</string>
     <string name="third_party_licenses_desc">Bu sürüm Starling\'i (MIT Lisansı, © Ludovic Marie ve Horizon katkıda bulunanları) ve diğer açık kaynak kodları kullanır. Bildirimleri burada yer alır.</string>
+
+    <string name="accent_title">Başlatıcı renkleri</string>
+    <string name="accent_desc">Başlatıcı paleti için herhangi bir RGB rengi seç.</string>
+    <string name="accent_reset">Varsayılana dön</string>
+    <string name="controls_text_actions">Metin alanlarında butonlar</string>
+    <string name="controls_text_actions_desc">Bir metin alanı seçiliyken sanal butonlar tuş göndermeye devam eder.</string>
+    <string name="game_date_title">Oyun tarihi</string>
+    <string name="game_date_desc">Telefonunun tarihini değiştirmeden Minecraft\'ın Noel ya da Cadılar Bayramı olduğunu sanmasını sağlar (Noel sandıkları, moblarda balkabakları, açılış yazıları). Oyun bir sonraki açılışta uygulanır.</string>
+    <string name="game_date_real">Gerçek tarih</string>
+    <string name="game_date_christmas">Noel</string>
+    <string name="game_date_halloween">Cadılar Bayramı</string>
+    <string name="nav_nbt">NBT düzenleyici</string>
+    <string name="nbt_title">NBT düzenleyici</string>
+    <string name="nbt_desc">Dünyalarının level.dat, oyuncu verisi ve diğer .dat dosyalarını düzenle. Dosya ilk kaydedildiğinde .bak kopyası tutulur. Düzenlemeden önce dünyayı oyunda kapat.</string>
+    <string name="nbt_empty">Oyun klasöründe .dat dosyası bulunamadı.</string>
+    <string name="nbt_back">Geri</string>
+    <string name="nbt_save">Kaydet</string>
+    <string name="nbt_saved">Kaydedildi</string>
 </resources>
