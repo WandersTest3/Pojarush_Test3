@@ -39,8 +39,77 @@ struct Zoom {
     current: f32,
 }
 
-fn on_off(on: bool) -> &'static str {
-    if on { "On" } else { "Off" }
+const LANGS: [(&str, [&str; 11]); 19] = [
+    ("en", ["Zoom distance", "Zoom speed", "Wheel step", "Zoom key", "Toggle", "Hold", "Remember wheel zoom", "Slower camera while zoomed", "Reset to defaults", "On", "Off"]),
+    ("pt_br", ["Distância do zoom", "Velocidade do zoom", "Passo da roda", "Tecla de zoom", "Alternar", "Segurar", "Lembrar zoom da roda", "Câmera mais lenta com zoom", "Restaurar padrões", "Ligado", "Desligado"]),
+    ("pt_pt", ["Distância do zoom", "Velocidade do zoom", "Passo da roda", "Tecla de zoom", "Alternar", "Manter premida", "Lembrar zoom da roda", "Câmara mais lenta com zoom", "Repor predefinições", "Ligado", "Desligado"]),
+    ("es", ["Distancia del zoom", "Velocidad del zoom", "Paso de la rueda", "Tecla de zoom", "Alternar", "Mantener", "Recordar zoom de la rueda", "Cámara más lenta con zoom", "Restablecer valores", "Activado", "Desactivado"]),
+    ("fr", ["Distance du zoom", "Vitesse du zoom", "Pas de la molette", "Touche de zoom", "Basculer", "Maintenir", "Mémoriser le zoom de la molette", "Caméra plus lente en zoom", "Rétablir les valeurs", "Activé", "Désactivé"]),
+    ("de", ["Zoomweite", "Zoomgeschwindigkeit", "Mausrad-Schritt", "Zoomtaste", "Umschalten", "Halten", "Mausrad-Zoom merken", "Langsamere Kamera beim Zoomen", "Auf Standard zurücksetzen", "An", "Aus"]),
+    ("it", ["Distanza dello zoom", "Velocità dello zoom", "Passo della rotella", "Tasto zoom", "Alterna", "Tieni premuto", "Ricorda lo zoom della rotella", "Telecamera più lenta con lo zoom", "Ripristina predefiniti", "Attivo", "Disattivo"]),
+    ("ru", ["Дальность зума", "Скорость зума", "Шаг колёсика", "Клавиша зума", "Переключение", "Удержание", "Запоминать зум колёсиком", "Медленная камера при зуме", "Сбросить настройки", "Вкл.", "Выкл."]),
+    ("uk", ["Дальність зуму", "Швидкість зуму", "Крок коліщатка", "Клавіша зуму", "Перемикання", "Утримання", "Запам'ятовувати зум коліщатком", "Повільніша камера під час зуму", "Скинути налаштування", "Увімк.", "Вимк."]),
+    ("pl", ["Odległość zoomu", "Szybkość zoomu", "Krok kółka", "Klawisz zoomu", "Przełączanie", "Przytrzymanie", "Zapamiętaj zoom kółkiem", "Wolniejsza kamera przy zoomie", "Przywróć domyślne", "Wł.", "Wył."]),
+    ("tr", ["Yakınlaştırma mesafesi", "Yakınlaştırma hızı", "Tekerlek adımı", "Yakınlaştırma tuşu", "Aç/Kapat", "Basılı tut", "Tekerlek yakınlaştırmasını hatırla", "Yakınlaştırmada yavaş kamera", "Varsayılanlara dön", "Açık", "Kapalı"]),
+    ("ar", ["مسافة التكبير", "سرعة التكبير", "خطوة العجلة", "مفتاح التكبير", "تبديل", "ضغط مستمر", "تذكّر تكبير العجلة", "كاميرا أبطأ أثناء التكبير", "استعادة الإعدادات الافتراضية", "مفعّل", "معطّل"]),
+    ("zh_cn", ["缩放距离", "缩放速度", "滚轮步长", "缩放键", "切换", "按住", "记住滚轮缩放", "缩放时降低镜头速度", "恢复默认设置", "开", "关"]),
+    ("zh_tw", ["縮放距離", "縮放速度", "滾輪步長", "縮放鍵", "切換", "按住", "記住滾輪縮放", "縮放時降低鏡頭速度", "恢復預設值", "開", "關"]),
+    ("ja", ["ズーム距離", "ズーム速度", "ホイールの刻み", "ズームキー", "切り替え", "長押し", "ホイールズームを記憶", "ズーム中はカメラを遅く", "初期設定に戻す", "オン", "オフ"]),
+    ("ko", ["확대 거리", "확대 속도", "휠 단계", "확대 키", "전환", "누르고 있기", "휠 확대 기억", "확대 중 카메라 감속", "기본값 복원", "켜짐", "꺼짐"]),
+    ("th", ["ระยะซูม", "ความเร็วซูม", "ระดับล้อเมาส์", "ปุ่มซูม", "สลับ", "กดค้าง", "จำการซูมด้วยล้อเมาส์", "กล้องช้าลงขณะซูม", "คืนค่าเริ่มต้น", "เปิด", "ปิด"]),
+    ("vi", ["Khoảng cách phóng to", "Tốc độ phóng to", "Bước con lăn", "Phím phóng to", "Bật/tắt", "Giữ", "Nhớ mức phóng con lăn", "Camera chậm hơn khi phóng to", "Khôi phục mặc định", "Bật", "Tắt"]),
+    ("id", ["Jarak zoom", "Kecepatan zoom", "Langkah roda", "Tombol zoom", "Alihkan", "Tahan", "Ingat zoom roda", "Kamera lebih lambat saat zoom", "Kembalikan bawaan", "Nyala", "Mati"]),
+];
+
+fn strings() -> &'static [&'static str; 11] {
+    let code = ui::language().to_lowercase();
+    let find = |c: &str| LANGS.iter().find(|(l, _)| *l == c).map(|(_, s)| s);
+    find(&code)
+        .or_else(|| code.split('_').next().and_then(find))
+        .or_else(|| match code.split('_').next() {
+            Some("pt") => find("pt_br"),
+            Some("zh") => find("zh_cn"),
+            _ => None,
+        })
+        .unwrap_or(&LANGS[0].1)
+}
+
+fn on_off(t: &[&'static str; 11], on: bool) -> &'static str {
+    if on { t[9] } else { t[10] }
+}
+
+const FILE: &str = "pojarush_zoom.txt";
+const OLD_KEYS: [&str; 6] = ["level", "speed", "step", "toggle", "keep", "steady"];
+
+fn load_config() -> Vec<(String, String)> {
+    if let Some(text) = storage::get(FILE).and_then(|v| String::from_utf8(v).ok()) {
+        return text
+            .lines()
+            .filter_map(|l| {
+                let l = l.trim();
+                if l.is_empty() || l.starts_with('#') {
+                    return None;
+                }
+                let (k, v) = l.split_once('=')?;
+                Some((k.trim().to_owned(), v.trim().to_owned()))
+            })
+            .collect();
+    }
+    OLD_KEYS
+        .iter()
+        .filter_map(|k| {
+            storage::get(k)
+                .and_then(|v| String::from_utf8(v).ok())
+                .map(|v| ((*k).to_owned(), v.trim().to_owned()))
+        })
+        .collect()
+}
+
+fn stored(cfg: &[(String, String)], key: &str, default: u32, min: u32, max: u32) -> u32 {
+    cfg.iter()
+        .find(|(k, _)| k == key)
+        .and_then(|(_, v)| v.parse::<u32>().ok())
+        .map_or(default, |v| v.clamp(min, max))
 }
 
 impl Zoom {
@@ -68,12 +137,12 @@ impl Zoom {
     fn slider_label(&self, id: u32) -> (String, u32, u32) {
         match id {
             S_LEVEL => (
-                format!("Zoom distance: {}x", self.level),
+                format!("{}: {}x", strings()[0], self.level),
                 LEVEL_MAX - LEVEL_MIN,
                 self.level - LEVEL_MIN,
             ),
             _ => (
-                format!("Zoom speed: {}", self.speed),
+                format!("{}: {}", strings()[1], self.speed),
                 SPEED_MAX - SPEED_MIN,
                 self.speed - SPEED_MIN,
             ),
@@ -81,36 +150,42 @@ impl Zoom {
     }
 
     fn page(&self) {
+        let t = strings();
         ui::set_settings_v2(&[
             self.slider(S_LEVEL),
             self.slider(S_SPEED),
             Self::button(
                 WHEEL_STEP,
-                format!("Wheel step: {:.2}x", STEPS[self.step as usize]),
+                format!("{}: {:.2}x", t[2], STEPS[self.step as usize]),
             ),
             Self::button(
                 MODE,
-                format!("Zoom key: {}", if self.toggle { "Toggle" } else { "Hold" }),
+                format!("{}: {}", t[3], if self.toggle { t[4] } else { t[5] }),
             ),
-            Self::button(KEEP, format!("Remember wheel zoom: {}", on_off(self.keep))),
+            Self::button(KEEP, format!("{}: {}", t[6], on_off(t, self.keep))),
             Self::button(
                 STEADY,
-                format!("Slower camera while zoomed: {}", on_off(self.steady)),
+                format!("{}: {}", t[7], on_off(t, self.steady)),
             ),
-            Self::button(RESET, "Reset to defaults".into()),
+            Self::button(RESET, t[8].into()),
         ]);
     }
 
     fn save(&self) {
-        let put = |key: &str, value: u32| {
-            let _ = storage::set(key, value.to_string().as_bytes());
-        };
-        put("level", self.level);
-        put("speed", self.speed);
-        put("step", self.step);
-        put("toggle", u32::from(self.toggle));
-        put("keep", u32::from(self.keep));
-        put("steady", u32::from(self.steady));
+        let text = format!(
+            "level={}\nspeed={}\nstep={}\ntoggle={}\nkeep={}\nsteady={}\n",
+            self.level,
+            self.speed,
+            self.step,
+            u32::from(self.toggle),
+            u32::from(self.keep),
+            u32::from(self.steady),
+        );
+        if storage::set(FILE, text.as_bytes()).is_ok() {
+            for k in OLD_KEYS {
+                storage::delete(k);
+            }
+        }
     }
 
     fn rate(&self) -> f32 {
@@ -141,28 +216,24 @@ impl Zoom {
     }
 }
 
-fn stored(key: &str, default: u32, min: u32, max: u32) -> u32 {
-    storage::get(key)
-        .and_then(|v| String::from_utf8(v).ok())
-        .and_then(|v| v.trim().parse::<u32>().ok())
-        .map_or(default, |v| v.clamp(min, max))
-}
 
 impl Mod for Zoom {
     fn init() -> Result<(Self, Registration), String> {
         input::register_key(KEY, "Zoom", "key.keyboard.c")?;
+        let cfg = load_config();
         let zoom = Zoom {
-            level: stored("level", 5, LEVEL_MIN, LEVEL_MAX),
-            speed: stored("speed", 8, SPEED_MIN, SPEED_MAX),
-            step: stored("step", 1, 0, STEPS.len() as u32 - 1),
-            toggle: stored("toggle", 0, 0, 1) == 1,
-            keep: stored("keep", 0, 0, 1) == 1,
-            steady: stored("steady", 1, 0, 1) == 1,
+            level: stored(&cfg, "level", 8, LEVEL_MIN, LEVEL_MAX),
+            speed: stored(&cfg, "speed", 6, SPEED_MIN, SPEED_MAX),
+            step: stored(&cfg, "step", 1, 0, STEPS.len() as u32 - 1),
+            toggle: stored(&cfg, "toggle", 0, 0, 1) == 1,
+            keep: stored(&cfg, "keep", 1, 0, 1) == 1,
+            steady: stored(&cfg, "steady", 1, 0, 1) == 1,
             wheel: 1.0,
             active: false,
             target: 1.0,
             current: 1.0,
         };
+        zoom.save();
         zoom.page();
         Ok((zoom, Registration::new().on_frame()))
     }
@@ -233,11 +304,11 @@ impl Mod for Zoom {
             }
             STEADY => self.steady = !self.steady,
             RESET => {
-                self.level = 5;
-                self.speed = 8;
+                self.level = 8;
+                self.speed = 6;
                 self.step = 1;
                 self.toggle = false;
-                self.keep = false;
+                self.keep = true;
                 self.steady = true;
                 self.wheel = 1.0;
                 if self.active {

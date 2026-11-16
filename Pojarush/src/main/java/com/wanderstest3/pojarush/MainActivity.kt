@@ -130,9 +130,11 @@ class MainActivity : ComponentActivity() {
         com.wanderstest3.pojarush.ui.UiPrefs.load(this)
         setContent {
             PojarushTheme {
-                Box(modifier = Modifier.fillMaxSize().background(com.wanderstest3.pojarush.ui.pojarushBackgroundBrush())) {
-                    com.wanderstest3.pojarush.ui.WallpaperBackground()
-                    PojarushScreen()
+                com.wanderstest3.pojarush.ui.WithBackdrop {
+                    Box(modifier = Modifier.fillMaxSize().background(com.wanderstest3.pojarush.ui.pojarushBackgroundBrush())) {
+                        com.wanderstest3.pojarush.ui.WallpaperBackground()
+                        PojarushScreen()
+                    }
                 }
             }
         }

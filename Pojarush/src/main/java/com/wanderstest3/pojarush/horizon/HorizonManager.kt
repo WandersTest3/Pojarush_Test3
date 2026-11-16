@@ -160,8 +160,10 @@ object HorizonManager {
 
     fun prepare(context: Context, withSounds: Boolean) {
         if (isBusy()) return
-        javaHeapMb = com.wanderstest3.pojarush.controls.ControlSettings(context).javaHeapMb
+        val chosen = com.wanderstest3.pojarush.controls.ControlSettings(context).javaHeapMb
+        javaHeapMb = if (android.os.Process.is64Bit()) chosen else (if (chosen > 0) chosen else 768).coerceAtMost(1024)
         _log.value = emptyList()
+        deviceInfo(context).lines().filter { it.isNotBlank() }.forEach(::appendLog)
         runCatching { File(homeDir, "exit-code").delete() }
         val app = context.applicationContext
         com.wanderstest3.pojarush.KeepAliveService.start(app, com.wanderstest3.pojarush.PrepareKeepAliveService::class.java)
@@ -233,6 +235,17 @@ object HorizonManager {
         }
     }
 
+    fun deviceInfo(context: Context): String {
+        val bits = if (android.os.Process.is64Bit()) "64 bits" else "32 bits"
+        val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
+        return "Pojarush: $version\n" +
+            "Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\n" +
+            "Android: ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})\n" +
+            "App: $bits (${System.getProperty("os.arch")})\n" +
+            "Device ABIs: ${android.os.Build.SUPPORTED_ABIS.joinToString()}\n" +
+            "Memory: ${(context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).let { am -> android.app.ActivityManager.MemoryInfo().also(am::getMemoryInfo).totalMem / 1_048_576 }} MB\n"
+    }
+
     fun shareLogs(context: android.content.Context) {
         val dir = File(context.cacheDir, "shared").apply { mkdirs() }
         val zip = File(dir, "pojarush-logs.zip")
@@ -242,6 +255,14 @@ object HorizonManager {
                 out.write(bytes)
                 out.closeEntry()
             }
+            add("device.txt", deviceInfo(context).toByteArray())
+            prepareRoot.walkTopDown().maxDepth(5)
+                .filter { it.isFile && it.name.endsWith(".log") }
+                .sortedByDescending { it.lastModified() }.take(8)
+                .forEach { f ->
+                    val bytes = f.readBytes()
+                    add("prepare/${f.name}", if (bytes.size > 262_144) bytes.copyOfRange(bytes.size - 262_144, bytes.size) else bytes)
+                }
             for (file in listOf(gameLog, File(homeDir, "exit-code"))) {
                 if (file.isFile) add(file.name, file.readBytes())
             }

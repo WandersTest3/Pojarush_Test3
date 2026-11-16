@@ -33,6 +33,30 @@ class HorizonActivity : GameActivity() {
         const val EXTRA_PREWARM = "horizon_prewarm"
     }
 
+    private var imeHeight = 0
+    private var keyboardPush = true
+
+    var fieldBottom = 1f
+        set(v) {
+            if (field != v) {
+                field = v
+                updateShift()
+            }
+        }
+
+    private fun updateShift() {
+        val content = findViewById<View>(android.R.id.content) ?: return
+        val h = content.height
+        val shift = if (!keyboardPush || imeHeight <= 0 || h <= 0) {
+            0f
+        } else {
+            val margin = 12f * resources.displayMetrics.density
+            val need = fieldBottom * h + margin - (h - imeHeight)
+            -need.coerceIn(0f, imeHeight.toFloat())
+        }
+        if (content.translationY != shift) content.translationY = shift
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val args = intent.getStringArrayListExtra(EXTRA_ARGS).orEmpty()
         val gameDir = intent.getStringExtra(EXTRA_GAME_DIR).orEmpty()
@@ -67,10 +91,10 @@ class HorizonActivity : GameActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         super.onCreate(savedInstanceState)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { v, insets ->
-            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            val shift = if (ControlSettings(this).keyboardPush) -ime.toFloat() else 0f
-            if (v.translationY != shift) v.translationY = shift
+        keyboardPush = ControlSettings(this).keyboardPush
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { _, insets ->
+            imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            updateShift()
             insets
         }
         WindowInsetsControllerCompat(window, window.decorView).apply {

@@ -60,7 +60,7 @@ val PojarushColors = darkColorScheme(
 
 object UiPrefs {
     var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.60f)
-    var menuBlur by androidx.compose.runtime.mutableFloatStateOf(0f)
+    var menuBlur by androidx.compose.runtime.mutableFloatStateOf(12f)
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
     var customFont by androidx.compose.runtime.mutableStateOf("")
     var fontMode by androidx.compose.runtime.mutableStateOf("minecraft")
@@ -149,6 +149,7 @@ fun Modifier.liquidGlass(shape: androidx.compose.ui.graphics.Shape = RoundedCorn
     return this
         .glassShadow(shape, strength)
         .clip(shape)
+        .frostedBackdrop()
         .background(body)
         .background(sheen)
         .border(1.dp, rim, shape)

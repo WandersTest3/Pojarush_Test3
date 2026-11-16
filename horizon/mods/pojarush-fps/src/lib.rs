@@ -59,17 +59,49 @@ fn on_off(s: &[&'static str; 24], on: bool) -> &'static str {
     if on { s[13] } else { s[14] }
 }
 
-fn stored(key: &str, default: u32, min: u32, max: u32) -> u32 {
-    storage::get(key)
-        .and_then(|v| String::from_utf8(v).ok())
-        .and_then(|v| v.trim().parse::<u32>().ok())
+const FILE: &str = "pojarush_fps.txt";
+const OLD_KEYS: [&str; 15] = [
+    "show", "scale", "size", "x", "y", "xt", "yt", "xoff", "yoff", "pad", "opacity", "lows",
+    "background", "color", "corner",
+];
+
+fn load_config() -> Vec<(String, String)> {
+    if let Some(text) = storage::get(FILE).and_then(|v| String::from_utf8(v).ok()) {
+        return text
+            .lines()
+            .filter_map(|l| {
+                let l = l.trim();
+                if l.is_empty() || l.starts_with('#') {
+                    return None;
+                }
+                let (k, v) = l.split_once('=')?;
+                Some((k.trim().to_owned(), v.trim().to_owned()))
+            })
+            .collect();
+    }
+    OLD_KEYS
+        .iter()
+        .filter_map(|k| {
+            storage::get(k)
+                .and_then(|v| String::from_utf8(v).ok())
+                .map(|v| ((*k).to_owned(), v.trim().to_owned()))
+        })
+        .collect()
+}
+
+fn raw<'a>(cfg: &'a [(String, String)], key: &str) -> Option<&'a str> {
+    cfg.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
+}
+
+fn stored(cfg: &[(String, String)], key: &str, default: u32, min: u32, max: u32) -> u32 {
+    raw(cfg, key)
+        .and_then(|v| v.parse::<u32>().ok())
         .map_or(default, |v| v.clamp(min, max))
 }
 
-fn stored_i(key: &str, default: i32) -> i32 {
-    storage::get(key)
-        .and_then(|v| String::from_utf8(v).ok())
-        .and_then(|v| v.trim().parse::<i32>().ok())
+fn stored_i(cfg: &[(String, String)], key: &str, default: i32) -> i32 {
+    raw(cfg, key)
+        .and_then(|v| v.parse::<i32>().ok())
         .map_or(default, |v| v.clamp(-OFFSET_RANGE, OFFSET_RANGE))
 }
 
@@ -171,26 +203,31 @@ impl Fps {
     }
 
     fn save(&self) {
-        let put = |key: &str, value: i64| {
-            let _ = storage::set(key, value.to_string().as_bytes());
-        };
-        put("show", i64::from(self.show));
-        put("scale", i64::from(self.scale));
-        put("xt", i64::from(self.x));
-        put("yt", i64::from(self.y));
-        put("xoff", i64::from(self.x_off));
-        put("yoff", i64::from(self.y_off));
-        put("pad", i64::from(self.pad));
-        put("opacity", i64::from(self.opacity));
-        put("lows", i64::from(self.lows));
-        put("background", i64::from(self.background));
-        put("color", i64::from(self.color));
+        let text = format!(
+            "show={}\nscale={}\nx={}\ny={}\nxoff={}\nyoff={}\npad={}\nopacity={}\nlows={}\nbackground={}\ncolor={}\n",
+            u32::from(self.show),
+            self.scale,
+            self.x,
+            self.y,
+            self.x_off,
+            self.y_off,
+            self.pad,
+            self.opacity,
+            u32::from(self.lows),
+            u32::from(self.background),
+            self.color,
+        );
+        if storage::set(FILE, text.as_bytes()).is_ok() {
+            for k in OLD_KEYS {
+                storage::delete(k);
+            }
+        }
     }
 
     fn defaults(&mut self) {
         self.show = true;
-        self.scale = 150;
-        self.x = 500;
+        self.scale = 100;
+        self.x = 320;
         self.y = 0;
         self.x_off = 0;
         self.y_off = 0;
@@ -198,7 +235,7 @@ impl Fps {
         self.opacity = 50;
         self.lows = false;
         self.background = true;
-        self.color = 0;
+        self.color = 4;
     }
 
     fn tint(&self, fps: u32) -> u32 {
@@ -274,23 +311,26 @@ impl Fps {
 
 impl Mod for Fps {
     fn init() -> Result<(Self, Registration), String> {
-        let old_scale = stored("size", 3, 1, 16) * 50;
+        let cfg = load_config();
+        let txt = storage::get(FILE).is_some();
+        let (xk, yk) = if txt { ("x", "y") } else { ("xt", "yt") };
         let mut fps = Fps {
-            show: stored("show", 1, 0, 1) == 1,
-            scale: stored("scale", old_scale, SCALE_MIN, SCALE_MAX) / SCALE_STEP * SCALE_STEP,
-            x: stored("xt", stored("x", 50, 0, 100) * 10, 0, 1000),
-            y: stored("yt", stored("y", 0, 0, 100) * 10, 0, 1000),
-            x_off: stored_i("xoff", 0),
-            y_off: stored_i("yoff", 0),
-            pad: stored("pad", 4, 0, PAD_MAX),
-            opacity: stored("opacity", 50, 0, 100),
-            lows: stored("lows", 0, 0, 1) == 1,
-            background: stored("background", 1, 0, 1) == 1,
-            color: stored("color", 0, 0, COLORS.len() as u32 - 1),
+            show: stored(&cfg, "show", 1, 0, 1) == 1,
+            scale: stored(&cfg, "scale", 100, SCALE_MIN, SCALE_MAX) / SCALE_STEP * SCALE_STEP,
+            x: stored(&cfg, xk, 320, 0, 1000) / 5 * 5,
+            y: stored(&cfg, yk, 0, 0, 1000),
+            x_off: stored_i(&cfg, "xoff", 0),
+            y_off: stored_i(&cfg, "yoff", 0),
+            pad: stored(&cfg, "pad", 4, 0, PAD_MAX),
+            opacity: stored(&cfg, "opacity", 50, 0, 100),
+            lows: stored(&cfg, "lows", 0, 0, 1) == 1,
+            background: stored(&cfg, "background", 1, 0, 1) == 1,
+            color: stored(&cfg, "color", 4, 0, COLORS.len() as u32 - 1),
             last: (0, 0, 0, 0, 0),
             drawn: false,
         };
         fps.scale = fps.scale.max(SCALE_MIN);
+        fps.save();
         fps.page();
         Ok((fps, Registration::new().on_frame()))
     }

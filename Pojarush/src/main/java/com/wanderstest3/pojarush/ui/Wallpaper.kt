@@ -18,7 +18,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
@@ -60,11 +59,12 @@ fun WallpaperBackground() {
     val path = remember(version) { settings.wallpaper }
     val dim = remember(version) { settings.wallpaperDim }
     val volume = remember(version) { settings.wallpaperVolume }
-    val file = remember(path, version) { File(path).takeIf { path.isNotEmpty() && it.isFile } } ?: return
+    val found = remember(path, version) { File(path).takeIf { path.isNotEmpty() && it.isFile } }
+    BackdropSource(found, found?.lastModified() ?: 0L, dim, UiPrefs.menuBlur)
+    val file = found ?: return
     val stamp = file.lastModified()
-    val blur = UiPrefs.menuBlur
-    val media = if (blur > 0.1f) Modifier.fillMaxSize().blur(blur.dp) else Modifier.fillMaxSize()
-    Box(Modifier.fillMaxSize()) {
+    val media = Modifier.fillMaxSize()
+    Box(Modifier.fillMaxSize().backdropArea()) {
         if (ControlLayouts.isVideo(file.name)) {
             androidx.compose.runtime.key(file.absolutePath, stamp) {
                 AndroidView(

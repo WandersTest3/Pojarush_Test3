@@ -31,6 +31,14 @@ pub(crate) fn set_typing(on: bool) {
     TYPING.store(on, Ordering::Relaxed);
 }
 
+static FIELD: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+/// Where the focused field ends, as a fraction of the window's height from
+/// its top: the launcher lifts the game just enough to show it.
+pub(crate) fn set_field(fraction: f32) {
+    FIELD.store(fraction.clamp(0.0, 1.0).to_bits(), Ordering::Relaxed);
+}
+
 pub(crate) fn muted() -> bool {
     MUTED.load(Ordering::Relaxed)
 }
@@ -300,6 +308,16 @@ pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nati
     muted: jboolean,
 ) {
     MUTED.store(muted != 0, Ordering::Relaxed);
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeFieldBottom<
+    'local,
+>(
+    _env: JNIEnv<'local>,
+    _class: JClass<'local>,
+) -> jni::sys::jfloat {
+    f32::from_bits(FIELD.load(Ordering::Relaxed))
 }
 
 #[unsafe(no_mangle)]

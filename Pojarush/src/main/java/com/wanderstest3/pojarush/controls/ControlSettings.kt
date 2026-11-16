@@ -106,7 +106,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getString("menu_icon", "").orEmpty()
         set(v) = prefs.edit().putString("menu_icon", v).apply()
     var menuBlur: Float
-        get() = prefs.getFloat("menu_blur", 0f).coerceIn(0f, 25f)
+        get() = prefs.getFloat("menu_blur", 12f).coerceIn(0f, 25f)
         set(v) = prefs.edit().putFloat("menu_blur", v.coerceIn(0f, 25f)).apply()
 
     var menuBackground: Float

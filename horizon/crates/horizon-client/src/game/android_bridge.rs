@@ -21,6 +21,7 @@ struct TouchPointer {
 thread_local! {
     static POINTER: Cell<TouchPointer> = Cell::new(TouchPointer::default());
     static SMOOTH: Cell<(Option<Instant>, u32)> = const { Cell::new((None, 0)) };
+    static FIELD: Cell<Option<f32>> = const { Cell::new(None) };
 }
 
 const READY_FRAMES: u32 = 12;
@@ -35,6 +36,30 @@ impl Game<'_> {
             || self.mod_browser_typing()
             || self.title.as_mut().is_some_and(|t| t.has_caret_field());
         android::set_typing(typing);
+        let drawn = match horizon_client_render::ui::take_field() {
+            Some(b) if typing => {
+                FIELD.set(Some(b));
+                Some(b)
+            }
+            _ if typing => FIELD.get(),
+            _ => {
+                FIELD.set(None);
+                None
+            }
+        };
+        let (_, gui_h) = self.gui_size();
+        let bottom = if !typing {
+            0.0
+        } else if self.screen == Screen::Chat {
+            gui_h
+        } else if self.sign_edit.is_some() {
+            drawn.unwrap_or(135.0)
+        } else if matches!(self.book, Some(super::books::BookScreen::Edit { .. })) {
+            drawn.unwrap_or(170.0)
+        } else {
+            drawn.unwrap_or(gui_h)
+        };
+        android::set_field(if gui_h > 0.0 { bottom / gui_h } else { 1.0 });
         let master = if android::muted() { 0.0 } else { self.settings.master_volume };
         if self.audio.master != master {
             self.audio.master = master;
