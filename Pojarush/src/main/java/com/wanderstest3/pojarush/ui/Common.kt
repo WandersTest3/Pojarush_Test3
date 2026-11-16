@@ -187,7 +187,7 @@ fun Hint(text: String) {
 fun fmt(v: Float): String = String.format(Locale.ROOT, "%.2f", v)
 
 fun stepsFor(range: ClosedFloatingPointRange<Float>, step: Float): Int =
-    (((range.endInclusive - range.start) / step).toInt() - 1).coerceAtLeast(0)
+    (Math.round((range.endInclusive - range.start) / step) - 1).coerceAtLeast(0)
 
 @Composable
 fun SettingSlider(
@@ -206,7 +206,10 @@ fun SettingSlider(
         }
         Slider(
             value = current,
-            onValueChange = { current = it },
+            onValueChange = { v ->
+                val snapped = range.start + Math.round((v - range.start) / step) * step
+                current = Math.round(snapped * 10000f) / 10000f
+            },
             onValueChangeFinished = { onDone(current) },
             valueRange = range,
             steps = stepsFor(range, step)

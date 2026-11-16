@@ -6845,6 +6845,10 @@ impl Game<'_> {
             self.draw_options(&mut batch);
             return batch;
         }
+        if self.screen == Screen::Mod && self.title.is_some() {
+            self.draw_mod_screen(&mut batch);
+            return batch;
+        }
         if let Some(title) = &mut self.title {
             title.poll_backup();
             if let Some(sound) = title.update_toast(self.settings.notification_display_time) {
@@ -14158,7 +14162,9 @@ impl ApplicationHandler for Game<'_> {
                         if matches!(self.screen, Screen::Inventory | Screen::Creative) {
                             self.inventory_drag_move();
                         }
-                        if let Some(title) = &mut self.title {
+                        if self.screen != Screen::Mod
+                            && let Some(title) = &mut self.title
+                        {
                             title.drag(self.cursor, (b.width, b.height));
                             title.drag_field(&self.gui.atlas, self.cursor.0);
                         }

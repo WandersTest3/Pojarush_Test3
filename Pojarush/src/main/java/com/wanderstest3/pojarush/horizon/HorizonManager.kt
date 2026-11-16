@@ -198,7 +198,9 @@ object HorizonManager {
     /// resources of versions that are no longer used. Never worlds, packs, mods, controls,
     /// options or accounts.
     private fun junkPaths(context: android.content.Context): List<File> {
-        val list = mutableListOf(cacheRoot, context.cacheDir, context.codeCacheDir)
+        val list = mutableListOf<File>()
+        context.cacheDir.listFiles()?.filter { it.name != "shared" }?.let { list += it }
+        context.codeCacheDir.listFiles()?.let { list += it }
         list += File(Paths.cache, "horizon-tmp")
         runCatching { context.externalCacheDirs?.filterNotNull()?.let { list += it } }
         File(prepareRoot, ".local/horizon-client").listFiles()?.forEach { if (it.name != VERSION) list += it }
@@ -214,6 +216,7 @@ object HorizonManager {
 
     fun clearJunk(context: android.content.Context): Long {
         if (isBusy()) return 0L
+        if (isGameRunning(context)) stopRunningGame(context)
         var removed = 0L
         junkPaths(context).forEach { file ->
             val size = runCatching { sizeOf(file) }.getOrDefault(0L)

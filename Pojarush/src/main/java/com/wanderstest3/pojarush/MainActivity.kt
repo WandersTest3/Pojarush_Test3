@@ -103,15 +103,16 @@ import java.util.Locale
 
 private const val TEXT_STYLE = "\uFE0E"
 
-private enum class Section(val label: Int, val glyph: String) {
+private enum class Section(val label: Int, val glyph: String, val launcher: Boolean = false) {
     Home(R.string.nav_home, ""),
     Accounts(R.string.nav_accounts, "⚉$TEXT_STYLE"),
     Controls(R.string.nav_controls, "✥$TEXT_STYLE"),
     Mouse(R.string.nav_mouse, "➚$TEXT_STYLE"),
     Mods(R.string.nav_mods, "✚$TEXT_STYLE"),
     Graphics(R.string.nav_graphics, "▣$TEXT_STYLE"),
-    Others(R.string.nav_others, "✦$TEXT_STYLE"),
-    Logs(R.string.nav_logs, "☰$TEXT_STYLE"),
+    Interface(R.string.interface_title, "◐$TEXT_STYLE", true),
+    Others(R.string.nav_others, "✦$TEXT_STYLE", true),
+    Logs(R.string.nav_logs, "☰$TEXT_STYLE", true),
 }
 
 class MainActivity : ComponentActivity() {
@@ -211,7 +212,13 @@ private fun PojarushScreen() {
                 exit = androidx.compose.animation.slideOutHorizontally { -it } + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.Start),
             ) {
                 Column(modifier = Modifier.padding(end = 12.dp).width(176.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Section.entries.forEach { s ->
+                    NavItem(Section.Home, section == Section.Home) { section = Section.Home }
+                    NavGroup("Minecraft")
+                    Section.entries.filter { it != Section.Home && !it.launcher }.forEach { s ->
+                        NavItem(s, s == section) { section = s }
+                    }
+                    NavGroup("Launcher")
+                    Section.entries.filter { it.launcher }.forEach { s ->
                         NavItem(s, s == section) { section = s }
                     }
                 }
@@ -240,6 +247,7 @@ private fun PojarushScreen() {
                                 }
                                 com.wanderstest3.pojarush.ui.HudImagesSettings()
                                 ControlsSettings(settings) {}
+                                com.wanderstest3.pojarush.ui.MenuButtonSettings(settings) {}
                             }
                             Section.Mods -> ModsPage()
                             Section.Mouse -> MouseSettings(remember { ControlSettings(context) }) {}
@@ -250,11 +258,13 @@ private fun PojarushScreen() {
                                 com.wanderstest3.pojarush.ui.LodSettings()
                                 MemorySettings(settings)
                             }
-                            Section.Others -> {
+                            Section.Interface -> {
                                 val settings = remember { ControlSettings(context) }
                                 com.wanderstest3.pojarush.ui.InterfaceSettings(settings)
                                 com.wanderstest3.pojarush.ui.WallpaperSettings(settings)
-                                com.wanderstest3.pojarush.ui.MenuButtonSettings(settings) {}
+                            }
+                            Section.Others -> {
+                                val settings = remember { ControlSettings(context) }
                                 com.wanderstest3.pojarush.ui.ExtrasSettings(settings)
                             }
                             Section.Logs -> {}
@@ -308,6 +318,17 @@ private fun Header() {
             softWrap = false,
         )
     }
+}
+
+@Composable
+private fun NavGroup(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 2.dp)
+    )
 }
 
 @Composable

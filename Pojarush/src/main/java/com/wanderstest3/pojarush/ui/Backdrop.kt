@@ -93,7 +93,14 @@ private fun frame(file: File): Bitmap? {
         val r = MediaMetadataRetriever()
         return try {
             r.setDataSource(file.absolutePath)
-            r.getFrameAtTime(0)
+            val us = (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) * 1000L
+            var fallback: Bitmap? = null
+            for (f in listOf(0.5, 0.25, 0.75, 0.1)) {
+                val b = r.getFrameAtTime((us * f).toLong(), MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: continue
+                if (brightness(b) > 0.06f) return b
+                if (fallback == null) fallback = b
+            }
+            fallback
         } finally {
             r.release()
         }
@@ -105,8 +112,19 @@ private fun frame(file: File): Bitmap? {
     return BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
 }
 
+private fun brightness(b: Bitmap): Float {
+    val s = Bitmap.createScaledBitmap(b, 16, 16, true)
+    var sum = 0L
+    for (y in 0 until 16) for (x in 0 until 16) {
+        val c = s.getPixel(x, y)
+        sum += ((c shr 16) and 0xFF) + ((c shr 8) and 0xFF) + (c and 0xFF)
+    }
+    return sum / (256f * 3f * 255f)
+}
+
 private fun blurred(file: File, strength: Float): Bitmap? {
-    val source = frame(file) ?: return null
+    val decoded = frame(file) ?: return null
+    val source = if (decoded.config == Bitmap.Config.HARDWARE || decoded.config == null) decoded.copy(Bitmap.Config.ARGB_8888, false) ?: return null else decoded
     val target = 160
     val ratio = target.toFloat() / max(source.width, source.height)
     val w = max(1, (source.width * ratio).roundToInt())

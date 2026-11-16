@@ -253,7 +253,7 @@ fun InterfaceSettings(settings: ControlSettings) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
         }
-        SettingSlider(stringResource(R.string.menu_blur), settings.menuBlur, 0f..25f, 1f, { "${it.toInt()}" }) {
+        SettingSlider(stringResource(R.string.menu_blur), settings.menuBlur, 0f..25f, 1f, { "${Math.round(it)}" }) {
             settings.menuBlur = it
             UiPrefs.menuBlur = it
         }
