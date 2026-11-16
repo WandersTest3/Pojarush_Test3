@@ -24,6 +24,52 @@ pub unsafe extern "C" fn starling_on_create(
     unsafe { horizon_client::android::on_create(activity, saved, saved_size) }
 }
 
+/// Pojarush's Starling mode: Starling's NativeActivity runs a build with native mods that it loaded
+/// before this library (`STARLING_GAME_LIBRARY`); this library only hands over to it.
+///
+/// # Safety
+///
+/// NativeActivity's call: an `ANativeActivity` and its saved state.
+#[cfg(feature = "pojarush")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn starling_on_create(
+    activity: *mut std::ffi::c_void,
+    saved: *mut std::ffi::c_void,
+    saved_size: usize,
+) {
+    unsafe extern "C" {
+        fn dlopen(name: *const std::ffi::c_char, flags: std::ffi::c_int) -> *mut std::ffi::c_void;
+        fn dlsym(
+            handle: *mut std::ffi::c_void,
+            name: *const std::ffi::c_char,
+        ) -> *mut std::ffi::c_void;
+        fn ANativeActivity_finish(activity: *mut std::ffi::c_void);
+    }
+    type OnCreate = unsafe extern "C" fn(*mut std::ffi::c_void, *mut std::ffi::c_void, usize);
+    if let Some(path) = std::env::var_os("STARLING_GAME_LIBRARY") {
+        use std::os::unix::ffi::OsStrExt;
+        if let Ok(path) = std::ffi::CString::new(path.as_bytes()) {
+            // SAFETY: NUL-terminated names; RTLD_NOW (2). The symbol is android-activity's
+            // NativeActivity entry point in Starling's build, with the signature above.
+            let entry = unsafe {
+                let build = dlopen(path.as_ptr(), 2);
+                if build.is_null() {
+                    std::ptr::null_mut()
+                } else {
+                    dlsym(build, c"ANativeActivity_onCreate".as_ptr())
+                }
+            };
+            if !entry.is_null() {
+                // SAFETY: see above.
+                let entry = unsafe { std::mem::transmute::<*mut std::ffi::c_void, OnCreate>(entry) };
+                return unsafe { entry(activity, saved, saved_size) };
+            }
+        }
+    }
+    // SAFETY: NativeActivity's own activity.
+    unsafe { ANativeActivity_finish(activity) }
+}
+
 /// android-activity's entry point calls it on the game's thread.
 #[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {

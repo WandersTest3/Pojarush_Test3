@@ -140,6 +140,20 @@ class MainActivity : ComponentActivity() {
             }
         }
         askNotifications()
+        playIfAsked(intent)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        playIfAsked(intent)
+    }
+
+    private fun playIfAsked(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra("com.wanderstest3.pojarush.PLAY", false) != true) return
+        intent.removeExtra("com.wanderstest3.pojarush.PLAY")
+        if (!HorizonManager.isSupported() || !HorizonManager.isPrepared()) return
+        Thread { HorizonManager.play(this, Accounts.profile.value) }.start()
     }
 
     private fun askNotifications() {
@@ -594,7 +608,7 @@ private fun GameCard(storageVersion: Int) {
             Text(stringResource(R.string.last_exit, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             val reason = remember(state, refresh) { HorizonManager.lastCrashReason() }
             if (reason != null) Text(stringResource(R.string.last_exit_reason, reason), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { scope.launch(Dispatchers.IO) { runCatching { HorizonManager.shareLogs(context) } } }) {
+            TextButton(onClick = { scope.launch(Dispatchers.IO) { runCatching { HorizonManager.shareLogs(context) }.onFailure { e -> withContext(Dispatchers.Main) { Toast.makeText(context, e.message ?: e.toString(), Toast.LENGTH_LONG).show() } } } }) {
                 Text(stringResource(R.string.share_logs))
             }
         }
@@ -634,7 +648,7 @@ private fun LogCard(modifier: Modifier) {
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { refresh++ }) { Text(stringResource(R.string.refresh), maxLines = 1, modifier = Modifier.basicMarquee()) }
                 TextButton(onClick = {
-                    scope.launch(Dispatchers.IO) { runCatching { HorizonManager.shareLogs(context) } }
+                    scope.launch(Dispatchers.IO) { runCatching { HorizonManager.shareLogs(context) }.onFailure { e -> withContext(Dispatchers.Main) { Toast.makeText(context, e.message ?: e.toString(), Toast.LENGTH_LONG).show() } } }
                 }) { Text(stringResource(R.string.share_logs), maxLines = 1, modifier = Modifier.basicMarquee()) }
             }
             val listState = rememberLazyListState()

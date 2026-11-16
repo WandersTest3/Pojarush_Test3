@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">Przygotowywanie Minecrafta</string>
     <string name="onboarding_wallpaper_skip">Pomiń</string>
     <string name="account_type_offline">Offline</string>
+
+    <string name="mods_tab_create">Utwórz mod</string>
+    <string name="modcreator_desc">Eksperymentalne. Tworzy projekt natywnego moda (.hnmod), który edytujesz w dowolnym edytorze tekstu. Kompiluje go usługa budowania Starling (wymaga internetu, tylko 64 bity): po instalacji otwórz grę, przejdź do Opcje &gt; Mods i dotknij Compile.</string>
+    <string name="modcreator_id">ID moda (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Nazwa</string>
+    <string name="modcreator_description">Opis</string>
+    <string name="modcreator_create">Utwórz projekt</string>
+    <string name="modcreator_pack">Spakuj i zainstaluj</string>
+    <string name="modcreator_installed">%1$s wysłano do gry. Otwórz grę i skompiluj go w Opcje &gt; Mods.</string>
+    <string name="modcreator_exists">Projekt o tym ID już istnieje</string>
+    <string name="modcreator_invalid">Nieprawidłowe ID</string>
+    <string name="modcreator_empty">Brak projektów.</string>
+    <string name="modcreator_folder">Projekty: %1$s</string>
+    <string name="starling_import_started">Wysyłanie pliku do gry…</string>
+    <string name="starling_import_done">Plik odebrany. Zostanie zainstalowany po otwarciu gry.</string>
+    <string name="mods_inbox">%1$s zostanie zainstalowany po otwarciu gry.</string>
+
+    <string name="third_party_licenses">Licencje stron trzecich</string>
+    <string name="third_party_licenses_desc">Ta wersja korzysta ze Starling (licencja MIT, © Ludovic Marie i współtwórcy Horizon) oraz innego otwartego kodu. Ich informacje są tutaj.</string>
 </resources>

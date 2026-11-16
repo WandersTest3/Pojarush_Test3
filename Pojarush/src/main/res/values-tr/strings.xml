@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">Minecraft hazırlanıyor</string>
     <string name="onboarding_wallpaper_skip">Atla</string>
     <string name="account_type_offline">Çevrimdışı</string>
+
+    <string name="mods_tab_create">Mod oluştur</string>
+    <string name="modcreator_desc">Deneysel. Herhangi bir metin düzenleyiciyle düzenleyeceğin yerel bir mod (.hnmod) projesi oluşturur. Starling\'in derleme hizmeti derler (internet gerekir, yalnızca 64 bit): kurduktan sonra oyunu aç, Seçenekler &gt; Mods\'a git ve Compile\'a dokun.</string>
+    <string name="modcreator_id">Mod kimliği (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Ad</string>
+    <string name="modcreator_description">Açıklama</string>
+    <string name="modcreator_create">Proje oluştur</string>
+    <string name="modcreator_pack">Paketle ve kur</string>
+    <string name="modcreator_installed">%1$s oyuna gönderildi. Oyunu aç ve Seçenekler &gt; Mods\'ta derle.</string>
+    <string name="modcreator_exists">Bu kimlikle bir proje zaten var</string>
+    <string name="modcreator_invalid">Geçersiz kimlik</string>
+    <string name="modcreator_empty">Henüz proje yok.</string>
+    <string name="modcreator_folder">Projeler: %1$s</string>
+    <string name="starling_import_started">Dosya oyuna gönderiliyor…</string>
+    <string name="starling_import_done">Dosya alındı. Oyun açıldığında kurulur.</string>
+    <string name="mods_inbox">%1$s oyun açıldığında kurulacak.</string>
+
+    <string name="third_party_licenses">Üçüncü taraf lisansları</string>
+    <string name="third_party_licenses_desc">Bu sürüm Starling\'i (MIT Lisansı, © Ludovic Marie ve Horizon katkıda bulunanları) ve diğer açık kaynak kodları kullanır. Bildirimleri burada yer alır.</string>
 </resources>

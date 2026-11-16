@@ -253,7 +253,9 @@ object HorizonManager {
         val dir = File(context.cacheDir, "shared").apply { mkdirs() }
         val zip = File(dir, "pojarush-logs.zip")
         java.util.zip.ZipOutputStream(zip.outputStream().buffered()).use { out ->
+            val names = HashSet<String>()
             fun add(name: String, bytes: ByteArray) {
+                if (!names.add(name)) return
                 out.putNextEntry(java.util.zip.ZipEntry(name))
                 out.write(bytes)
                 out.closeEntry()
@@ -264,7 +266,7 @@ object HorizonManager {
                 .sortedByDescending { it.lastModified() }.take(8)
                 .forEach { f ->
                     val bytes = f.readBytes()
-                    add("prepare/${f.name}", if (bytes.size > 262_144) bytes.copyOfRange(bytes.size - 262_144, bytes.size) else bytes)
+                    add("prepare/${f.relativeTo(prepareRoot).invariantSeparatorsPath}", if (bytes.size > 262_144) bytes.copyOfRange(bytes.size - 262_144, bytes.size) else bytes)
                 }
             for (file in listOf(gameLog, File(homeDir, "exit-code"))) {
                 if (file.isFile) add(file.name, file.readBytes())
@@ -397,7 +399,8 @@ object HorizonManager {
     private fun installBundle(context: Context) {
         step("Installing Horizon's preparation files")
         val marker = File(prepareRoot, ".bundle-version")
-        val version = "${BuildConfig.VERSION_CODE}-${BuildConfig.VERSION_NAME}"
+        val installed = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime }.getOrDefault(0L)
+        val version = "${BuildConfig.VERSION_CODE}-${BuildConfig.VERSION_NAME}-$installed"
         if (marker.isFile && marker.readText() == version) return
         listOf("exporters", "mods", "crates").forEach { File(prepareRoot, it).deleteRecursively() }
         fun copy(path: String) {
@@ -613,6 +616,7 @@ object HorizonManager {
 
     fun prewarm(context: Context, profile: Profile?, force: Boolean = false) {
         if (!isSupported() || !isPrepared()) return
+        if (nativeBuildReady(context)) return
         val now = android.os.SystemClock.uptimeMillis()
         if (!force && now - lastPrewarm < 700) return
         if (isGameRunning(context)) return
@@ -691,6 +695,12 @@ object HorizonManager {
         }
     }
 
+    fun nativeBuildReady(context: Context): Boolean = BuildConfig.STARLING && runCatching {
+        Class.forName("io.github.juanluci.starling.PojarushHooks")
+            .getMethod("nativeBuildReady", Context::class.java)
+            .invoke(null, context) as Boolean
+    }.getOrDefault(false)
+
     fun launchIntent(context: Context, profile: Profile?): Intent {
         ensureFolders()
         removeLegacyBundledMods(context)
@@ -719,6 +729,18 @@ object HorizonManager {
             session.writeText(json.toString())
             runCatching { Os.chmod(session.absolutePath, "600".toInt(8)) }
             args += listOf("--session-file", session.absolutePath)
+        }
+        if (BuildConfig.STARLING && nativeBuildReady(context)) {
+            val link = File(context.filesDir, "resources")
+            runCatching {
+                val current = runCatching { Os.readlink(link.absolutePath) }.getOrNull()
+                if (current != resources.absolutePath) {
+                    if (current != null || link.exists()) link.delete()
+                    Os.symlink(resources.absolutePath, link.absolutePath)
+                }
+            }
+            return Intent().setClassName(context, "io.github.juanluci.starling.GameActivity")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return Intent(context, HorizonActivity::class.java)
             .putStringArrayListExtra(HorizonActivity.EXTRA_ARGS, args)

@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">Підготовка Minecraft</string>
     <string name="onboarding_wallpaper_skip">Пропустити</string>
     <string name="account_type_offline">Офлайн</string>
+
+    <string name="mods_tab_create">Створити мод</string>
+    <string name="modcreator_desc">Експериментально. Створює проєкт нативного мода (.hnmod), який можна редагувати в будь-якому текстовому редакторі. Його компілює сервіс збирання Starling (потрібен інтернет, лише 64 біти): після встановлення відкрийте гру, перейдіть у Налаштування &gt; Mods і натисніть Compile.</string>
+    <string name="modcreator_id">ID мода (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Назва</string>
+    <string name="modcreator_description">Опис</string>
+    <string name="modcreator_create">Створити проєкт</string>
+    <string name="modcreator_pack">Запакувати й установити</string>
+    <string name="modcreator_installed">%1$s надіслано в гру. Відкрийте гру й скомпілюйте його в Налаштування &gt; Mods.</string>
+    <string name="modcreator_exists">Проєкт із таким ID уже існує</string>
+    <string name="modcreator_invalid">Неправильний ID</string>
+    <string name="modcreator_empty">Проєктів ще немає.</string>
+    <string name="modcreator_folder">Проєкти: %1$s</string>
+    <string name="starling_import_started">Надсилання файлу в гру…</string>
+    <string name="starling_import_done">Файл отримано. Його буде встановлено під час запуску гри.</string>
+    <string name="mods_inbox">%1$s буде встановлено під час запуску гри.</string>
+
+    <string name="third_party_licenses">Ліцензії сторонніх компонентів</string>
+    <string name="third_party_licenses_desc">Ця версія використовує Starling (ліцензія MIT, © Ludovic Marie та учасники Horizon) та інший відкритий код. Їхні повідомлення наведено тут.</string>
 </resources>

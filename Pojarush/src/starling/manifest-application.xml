@@ -1,0 +1,89 @@
+        <activity
+            android:name="com.wanderstest3.pojarush.starling.ImportActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.starling" />
+                <data android:pathPattern=".*\\..*\\.starling" />
+                <data android:pathPattern=".*\\..*\\..*\\.starling" />
+                <data android:pathPattern=".*\\.hmod" />
+                <data android:pathPattern=".*\\..*\\.hmod" />
+                <data android:pathPattern=".*\\..*\\..*\\.hmod" />
+                <data android:pathPattern=".*\\.hnmod" />
+                <data android:pathPattern=".*\\..*\\.hnmod" />
+                <data android:pathPattern=".*\\..*\\..*\\.hnmod" />
+                <data android:pathPattern=".*\\.hshader" />
+                <data android:pathPattern=".*\\..*\\.hshader" />
+                <data android:pathPattern=".*\\..*\\..*\\.hshader" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="io.github.juanluci.starling.LauncherActivity"
+            android:exported="false"
+            android:process=":launcher"
+            android:taskAffinity="${applicationId}.launcher"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="io.github.juanluci.starling.GameActivity"
+            android:exported="false"
+            android:process=":starling"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:resizeableActivity="false"
+            android:theme="@style/Starling.Game"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|density|screenSize|smallestScreenSize|layoutDirection|colorMode">
+            <meta-data android:name="android.app.lib_name" android:value="horizon_android" />
+            <meta-data android:name="android.app.func_name" android:value="starling_on_create" />
+        </activity>
+        <activity
+            android:name="io.github.juanluci.starling.DiagnosticsActivity"
+            android:exported="false"
+            android:process=":diagnostics"
+            android:theme="@style/Starling.Game"
+            android:hardwareAccelerated="false" />
+        <service
+            android:name="io.github.juanluci.starling.WorkService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <provider
+            android:name="io.github.juanluci.starling.UpdateProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+        <provider
+            android:name="io.github.juanluci.starling.GameFolderProvider"
+            android:authorities="${applicationId}.documents"
+            android:exported="true"
+            android:process=":documents"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>

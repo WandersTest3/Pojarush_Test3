@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">Đang chuẩn bị Minecraft</string>
     <string name="onboarding_wallpaper_skip">Bỏ qua</string>
     <string name="account_type_offline">Ngoại tuyến</string>
+
+    <string name="mods_tab_create">Tạo mod</string>
+    <string name="modcreator_desc">Thử nghiệm. Tạo một dự án mod gốc (.hnmod) để bạn chỉnh sửa bằng bất kỳ trình soạn thảo văn bản nào. Dịch vụ biên dịch của Starling sẽ biên dịch nó (cần internet, chỉ 64-bit): sau khi cài, mở trò chơi, vào Tùy chọn &gt; Mods và chạm Compile.</string>
+    <string name="modcreator_id">ID mod (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Tên</string>
+    <string name="modcreator_description">Mô tả</string>
+    <string name="modcreator_create">Tạo dự án</string>
+    <string name="modcreator_pack">Đóng gói và cài đặt</string>
+    <string name="modcreator_installed">Đã gửi %1$s tới trò chơi. Mở trò chơi và biên dịch trong Tùy chọn &gt; Mods.</string>
+    <string name="modcreator_exists">Đã có dự án với ID này</string>
+    <string name="modcreator_invalid">ID không hợp lệ</string>
+    <string name="modcreator_empty">Chưa có dự án nào.</string>
+    <string name="modcreator_folder">Dự án: %1$s</string>
+    <string name="starling_import_started">Đang gửi tệp tới trò chơi…</string>
+    <string name="starling_import_done">Đã nhận tệp. Tệp sẽ được cài khi mở trò chơi.</string>
+    <string name="mods_inbox">%1$s sẽ được cài khi mở trò chơi.</string>
+
+    <string name="third_party_licenses">Giấy phép bên thứ ba</string>
+    <string name="third_party_licenses_desc">Phiên bản này dùng Starling (Giấy phép MIT, © Ludovic Marie và những người đóng góp Horizon) cùng mã nguồn mở khác. Thông báo của chúng được kèm ở đây.</string>
 </resources>

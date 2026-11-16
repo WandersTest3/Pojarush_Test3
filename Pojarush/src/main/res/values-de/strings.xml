@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">Minecraft wird vorbereitet</string>
     <string name="onboarding_wallpaper_skip">Überspringen</string>
     <string name="account_type_offline">Offline</string>
+
+    <string name="mods_tab_create">Mod erstellen</string>
+    <string name="modcreator_desc">Experimentell. Erstellt ein natives Mod-Projekt (.hnmod), das du mit jedem Texteditor bearbeitest. Der Build-Dienst von Starling kompiliert es (Internet und nur 64 Bit): Öffne nach der Installation das Spiel, gehe zu Optionen &gt; Mods und tippe auf Compile.</string>
+    <string name="modcreator_id">Mod-ID (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Name</string>
+    <string name="modcreator_description">Beschreibung</string>
+    <string name="modcreator_create">Projekt erstellen</string>
+    <string name="modcreator_pack">Packen und installieren</string>
+    <string name="modcreator_installed">%1$s wurde an das Spiel gesendet. Öffne das Spiel und kompiliere es unter Optionen &gt; Mods.</string>
+    <string name="modcreator_exists">Ein Projekt mit dieser ID existiert bereits</string>
+    <string name="modcreator_invalid">Ungültige ID</string>
+    <string name="modcreator_empty">Noch keine Projekte.</string>
+    <string name="modcreator_folder">Projekte: %1$s</string>
+    <string name="starling_import_started">Datei wird an das Spiel gesendet…</string>
+    <string name="starling_import_done">Datei empfangen. Sie wird beim Öffnen des Spiels installiert.</string>
+    <string name="mods_inbox">%1$s wird beim Öffnen des Spiels installiert.</string>
+
+    <string name="third_party_licenses">Lizenzen von Drittanbietern</string>
+    <string name="third_party_licenses_desc">Diese Version nutzt Starling (MIT-Lizenz, © Ludovic Marie und die Horizon-Mitwirkenden) und weiteren Open-Source-Code. Deren Hinweise sind hier enthalten.</string>
 </resources>

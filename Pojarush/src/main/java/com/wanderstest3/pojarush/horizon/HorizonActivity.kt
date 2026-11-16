@@ -77,6 +77,10 @@ class HorizonActivity : GameActivity() {
         Os.setenv("HOME", home, true)
         Os.setenv("TMPDIR", cacheDir.absolutePath, true)
         File(home, "exit-code").delete()
+        if (com.wanderstest3.pojarush.BuildConfig.STARLING) {
+            runCatching { Os.setenv("STARLING_APK", packageManager.getPackageInfo(packageName, 0).lastUpdateTime.toString(), true) }
+            runCatching { Os.setenv("RUST_MIN_STACK", if (Process.is64Bit()) "16777216" else "8388608", false) }
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (ControlSettings(this).keepAlive) KeepAliveService.start(this, GameKeepAliveService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -201,6 +205,23 @@ class HorizonActivity : GameActivity() {
     fun dispatchKeyToGame(event: KeyEvent) {
         if (event.action == KeyEvent.ACTION_DOWN) super.onKeyDown(event.keyCode, event)
         else super.onKeyUp(event.keyCode, event)
+    }
+
+    fun versionName(): String = com.wanderstest3.pojarush.BuildConfig.STARLING_VERSION
+
+    fun releaseBuild(): Boolean = false
+
+    fun restart() {
+        runOnUiThread {
+            if (com.wanderstest3.pojarush.BuildConfig.STARLING) {
+                startActivity(
+                    android.content.Intent().setClassName(this, "io.github.juanluci.starling.LauncherActivity")
+                        .putExtra("io.github.juanluci.starling.AFTER", Process.myPid())
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+            finish()
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

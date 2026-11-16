@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">جارٍ تجهيز Minecraft</string>
     <string name="onboarding_wallpaper_skip">تخطي</string>
     <string name="account_type_offline">دون اتصال</string>
+
+    <string name="mods_tab_create">إنشاء مود</string>
+    <string name="modcreator_desc">تجريبي. ينشئ مشروع مود أصلي (.hnmod) تعدّله بأي محرر نصوص. تقوم خدمة البناء في Starling بتجميعه (يتطلب الإنترنت و64 بت فقط): بعد التثبيت افتح اللعبة وانتقل إلى الخيارات &gt; Mods واضغط Compile.</string>
+    <string name="modcreator_id">معرّف المود (a-z، 0-9، _)</string>
+    <string name="modcreator_name">الاسم</string>
+    <string name="modcreator_description">الوصف</string>
+    <string name="modcreator_create">إنشاء مشروع</string>
+    <string name="modcreator_pack">حزم وتثبيت</string>
+    <string name="modcreator_installed">تم إرسال %1$s إلى اللعبة. افتح اللعبة وقم بتجميعه من الخيارات &gt; Mods.</string>
+    <string name="modcreator_exists">يوجد مشروع بهذا المعرّف بالفعل</string>
+    <string name="modcreator_invalid">معرّف غير صالح</string>
+    <string name="modcreator_empty">لا توجد مشاريع بعد.</string>
+    <string name="modcreator_folder">المشاريع: %1$s</string>
+    <string name="starling_import_started">جارٍ إرسال الملف إلى اللعبة…</string>
+    <string name="starling_import_done">تم استلام الملف. سيتم تثبيته عند فتح اللعبة.</string>
+    <string name="mods_inbox">سيتم تثبيت %1$s عند فتح اللعبة.</string>
+
+    <string name="third_party_licenses">تراخيص الجهات الخارجية</string>
+    <string name="third_party_licenses_desc">يستخدم هذا الإصدار Starling (رخصة MIT، © Ludovic Marie ومساهمو Horizon) وأكوادًا مفتوحة المصدر أخرى. إشعاراتها مضمّنة هنا.</string>
 </resources>

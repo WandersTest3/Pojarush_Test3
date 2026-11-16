@@ -314,4 +314,23 @@
     <string name="keyboard_push_desc">Ao abrir o teclado, o jogo sobe para cima dele sem mudar a resolução: a parte de cima fica cortada e o chat continua visível.</string>
     <string name="language">Idioma</string>
     <string name="language_system">Padrão do sistema</string>
+
+    <string name="mods_tab_create">Criar mod</string>
+    <string name="modcreator_desc">Experimental. Cria um projeto de mod nativo (.hnmod) para você editar com qualquer editor de texto. O serviço de compilação do Starling compila (precisa de internet e só 64 bits): depois de instalar, abra o jogo, vá em Opções &gt; Mods e toque em Compile.</string>
+    <string name="modcreator_id">ID do mod (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Nome</string>
+    <string name="modcreator_description">Descrição</string>
+    <string name="modcreator_create">Criar projeto</string>
+    <string name="modcreator_pack">Empacotar e instalar</string>
+    <string name="modcreator_installed">%1$s foi enviado ao jogo. Abra o jogo e compile em Opções &gt; Mods.</string>
+    <string name="modcreator_exists">Já existe um projeto com esse ID</string>
+    <string name="modcreator_invalid">ID inválido</string>
+    <string name="modcreator_empty">Nenhum projeto ainda.</string>
+    <string name="modcreator_folder">Projetos: %1$s</string>
+    <string name="starling_import_started">Enviando o arquivo ao jogo…</string>
+    <string name="starling_import_done">Arquivo recebido. Ele é instalado quando o jogo abrir.</string>
+    <string name="mods_inbox">%1$s será instalado quando o jogo abrir.</string>
+
+    <string name="third_party_licenses">Licenças de terceiros</string>
+    <string name="third_party_licenses_desc">Esta versão usa o Starling (Licença MIT, © Ludovic Marie e colaboradores do Horizon) e outros códigos abertos. Os avisos deles estão incluídos aqui.</string>
 </resources>

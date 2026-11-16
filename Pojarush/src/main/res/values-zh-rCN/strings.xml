@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">正在准备 Minecraft</string>
     <string name="onboarding_wallpaper_skip">跳过</string>
     <string name="account_type_offline">离线</string>
+
+    <string name="mods_tab_create">创建模组</string>
+    <string name="modcreator_desc">实验性功能。创建一个原生模组（.hnmod）项目，可用任意文本编辑器编辑。由 Starling 的构建服务编译（需要联网，仅限 64 位）：安装后打开游戏，进入 选项 &gt; Mods 并点击 Compile。</string>
+    <string name="modcreator_id">模组 ID（a-z、0-9、_）</string>
+    <string name="modcreator_name">名称</string>
+    <string name="modcreator_description">描述</string>
+    <string name="modcreator_create">创建项目</string>
+    <string name="modcreator_pack">打包并安装</string>
+    <string name="modcreator_installed">%1$s 已发送到游戏。打开游戏并在 选项 &gt; Mods 中编译。</string>
+    <string name="modcreator_exists">已存在使用此 ID 的项目</string>
+    <string name="modcreator_invalid">无效的 ID</string>
+    <string name="modcreator_empty">还没有项目。</string>
+    <string name="modcreator_folder">项目：%1$s</string>
+    <string name="starling_import_started">正在将文件发送到游戏…</string>
+    <string name="starling_import_done">已收到文件。打开游戏时将会安装。</string>
+    <string name="mods_inbox">%1$s 将在打开游戏时安装。</string>
+
+    <string name="third_party_licenses">第三方许可</string>
+    <string name="third_party_licenses_desc">此版本使用 Starling（MIT 许可，© Ludovic Marie 及 Horizon 贡献者）和其他开源代码。其声明包含于此。</string>
 </resources>

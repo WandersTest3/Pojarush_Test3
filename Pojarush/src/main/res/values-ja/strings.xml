@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">Minecraft を準備中</string>
     <string name="onboarding_wallpaper_skip">スキップ</string>
     <string name="account_type_offline">オフライン</string>
+
+    <string name="mods_tab_create">MODを作成</string>
+    <string name="modcreator_desc">実験的機能。任意のテキストエディターで編集できるネイティブMOD（.hnmod）プロジェクトを作成します。Starlingのビルドサービスがコンパイルします（インターネット必須、64ビットのみ）。インストール後、ゲームを開いてオプション &gt; Mods で Compile をタップしてください。</string>
+    <string name="modcreator_id">MOD ID（a-z、0-9、_）</string>
+    <string name="modcreator_name">名前</string>
+    <string name="modcreator_description">説明</string>
+    <string name="modcreator_create">プロジェクトを作成</string>
+    <string name="modcreator_pack">パッケージ化してインストール</string>
+    <string name="modcreator_installed">%1$s をゲームに送りました。ゲームを開いてオプション &gt; Mods でコンパイルしてください。</string>
+    <string name="modcreator_exists">このIDのプロジェクトはすでに存在します</string>
+    <string name="modcreator_invalid">無効なID</string>
+    <string name="modcreator_empty">プロジェクトはまだありません。</string>
+    <string name="modcreator_folder">プロジェクト: %1$s</string>
+    <string name="starling_import_started">ファイルをゲームに送信中…</string>
+    <string name="starling_import_done">ファイルを受け取りました。ゲームを開くとインストールされます。</string>
+    <string name="mods_inbox">%1$s はゲームを開くとインストールされます。</string>
+
+    <string name="third_party_licenses">サードパーティライセンス</string>
+    <string name="third_party_licenses_desc">このバージョンは Starling（MIT ライセンス、© Ludovic Marie と Horizon の貢献者）およびその他のオープンソースコードを使用しています。それらの通知をここに含めています。</string>
 </resources>

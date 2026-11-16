@@ -6,6 +6,8 @@ plugins {
 }
 
 val starling = (project.findProperty("starling") as String?) == "true"
+val starlingVersion: String = if (!starling) "" else Regex("^VERSION_NAME = \"([^\"]+)\"", RegexOption.MULTILINE)
+    .find(rootProject.file("horizon-starling/packaging/android/build_apk.py").readText())!!.groupValues[1]
 
 fun secret(env: String, file: String): String =
     System.getenv(env) ?: rootProject.file(file).takeIf { it.isFile }?.readText()?.trim() ?: ""
@@ -33,6 +35,7 @@ android {
         }
         manifestPlaceholders["appLabel"] = if (starling) "Pojarush Starling" else "@string/app_name"
         buildConfigField("Boolean", "STARLING", starling.toString())
+        buildConfigField("String", "STARLING_VERSION", "\"$starlingVersion\"")
         buildConfigField("String", "OAUTH_CLIENT_ID", "\"${secret("OAUTH_CLIENT_ID", ".oauth_client_id.txt")}\"")
     }
 
@@ -73,6 +76,16 @@ android {
     if (starling) {
         sourceSets.getByName("main").jniLibs.setSrcDirs(listOf("src/starling/jniLibs"))
         sourceSets.getByName("main").assets.setSrcDirs(listOf(layout.buildDirectory.dir("starling-assets").get().asFile))
+        sourceSets.getByName("main").java.srcDir("src/starling/java")
+        sourceSets.getByName("main").res.srcDir("src/starling/res")
+        val merged = layout.buildDirectory.file("starling-manifest/AndroidManifest.xml").get().asFile
+        merged.parentFile.mkdirs()
+        merged.writeText(
+            file("src/main/AndroidManifest.xml").readText()
+                .replaceFirst("    <queries>", file("src/starling/manifest-permissions.xml").readText() + "\n    <queries>")
+                .replaceFirst("    </application>", file("src/starling/manifest-application.xml").readText() + "    </application>")
+        )
+        sourceSets.getByName("main").manifest.srcFile(merged)
     }
 
     packaging {
@@ -144,6 +157,10 @@ if (starling) {
             from(base) {
                 include("research-lock.json", "crates/horizon-prepare/src/exporters.rs", "mods/horizon/src/test/java/**/*.java", "exporters/**")
             }
+        }
+        into("licenses") {
+            from(base) { include("LICENSE", "THIRD_PARTY_NOTICES.md") }
+            from(base.resolve("licenses"))
         }
     }
     tasks.named("preBuild") { dependsOn(stageStarlingAssets) }

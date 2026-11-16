@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">Menyiapkan Minecraft</string>
     <string name="onboarding_wallpaper_skip">Lewati</string>
     <string name="account_type_offline">Offline</string>
+
+    <string name="mods_tab_create">Buat mod</string>
+    <string name="modcreator_desc">Eksperimental. Membuat proyek mod native (.hnmod) yang bisa kamu edit dengan editor teks apa pun. Layanan build Starling yang mengompilasinya (perlu internet, hanya 64-bit): setelah dipasang, buka game, masuk ke Opsi &gt; Mods dan ketuk Compile.</string>
+    <string name="modcreator_id">ID mod (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Nama</string>
+    <string name="modcreator_description">Deskripsi</string>
+    <string name="modcreator_create">Buat proyek</string>
+    <string name="modcreator_pack">Kemas dan pasang</string>
+    <string name="modcreator_installed">%1$s telah dikirim ke game. Buka game dan kompilasi di Opsi &gt; Mods.</string>
+    <string name="modcreator_exists">Proyek dengan ID ini sudah ada</string>
+    <string name="modcreator_invalid">ID tidak valid</string>
+    <string name="modcreator_empty">Belum ada proyek.</string>
+    <string name="modcreator_folder">Proyek: %1$s</string>
+    <string name="starling_import_started">Mengirim file ke game…</string>
+    <string name="starling_import_done">File diterima. Akan dipasang saat game dibuka.</string>
+    <string name="mods_inbox">%1$s akan dipasang saat game dibuka.</string>
+
+    <string name="third_party_licenses">Lisensi pihak ketiga</string>
+    <string name="third_party_licenses_desc">Versi ini memakai Starling (Lisensi MIT, © Ludovic Marie dan kontributor Horizon) serta kode sumber terbuka lainnya. Pemberitahuannya disertakan di sini.</string>
 </resources>

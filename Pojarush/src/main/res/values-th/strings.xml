@@ -120,4 +120,23 @@
     <string name="keep_alive_prepare_title">กำลังเตรียม Minecraft</string>
     <string name="onboarding_wallpaper_skip">ข้าม</string>
     <string name="account_type_offline">ออฟไลน์</string>
+
+    <string name="mods_tab_create">สร้างม็อด</string>
+    <string name="modcreator_desc">ทดลอง สร้างโปรเจกต์ม็อดเนทีฟ (.hnmod) ที่แก้ไขได้ด้วยโปรแกรมแก้ไขข้อความใดก็ได้ บริการคอมไพล์ของ Starling จะคอมไพล์ให้ (ต้องใช้อินเทอร์เน็ต เฉพาะ 64 บิต): หลังติดตั้ง ให้เปิดเกม ไปที่ ตัวเลือก &gt; Mods แล้วแตะ Compile</string>
+    <string name="modcreator_id">ID ม็อด (a-z, 0-9, _)</string>
+    <string name="modcreator_name">ชื่อ</string>
+    <string name="modcreator_description">คำอธิบาย</string>
+    <string name="modcreator_create">สร้างโปรเจกต์</string>
+    <string name="modcreator_pack">แพ็กและติดตั้ง</string>
+    <string name="modcreator_installed">ส่ง %1$s ไปยังเกมแล้ว เปิดเกมแล้วคอมไพล์ใน ตัวเลือก &gt; Mods</string>
+    <string name="modcreator_exists">มีโปรเจกต์ที่ใช้ ID นี้อยู่แล้ว</string>
+    <string name="modcreator_invalid">ID ไม่ถูกต้อง</string>
+    <string name="modcreator_empty">ยังไม่มีโปรเจกต์</string>
+    <string name="modcreator_folder">โปรเจกต์: %1$s</string>
+    <string name="starling_import_started">กำลังส่งไฟล์ไปยังเกม…</string>
+    <string name="starling_import_done">ได้รับไฟล์แล้ว จะติดตั้งเมื่อเปิดเกม</string>
+    <string name="mods_inbox">%1$s จะถูกติดตั้งเมื่อเปิดเกม</string>
+
+    <string name="third_party_licenses">สัญญาอนุญาตของบุคคลที่สาม</string>
+    <string name="third_party_licenses_desc">เวอร์ชันนี้ใช้ Starling (สัญญาอนุญาต MIT, © Ludovic Marie และผู้ร่วมพัฒนา Horizon) และโค้ดโอเพนซอร์สอื่น ๆ ประกาศของซอฟต์แวร์เหล่านั้นรวมไว้ที่นี่</string>
 </resources>

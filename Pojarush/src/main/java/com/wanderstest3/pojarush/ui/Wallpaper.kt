@@ -37,6 +37,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -360,6 +362,36 @@ fun ExtrasSettings(settings: ControlSettings) {
             )
         }
         Hint(stringResource(R.string.clean_junk_desc))
+    }
+    if (com.wanderstest3.pojarush.BuildConfig.STARLING) LicensesCard()
+}
+
+@Composable
+private fun LicensesCard() {
+    val context = LocalContext.current
+    var text by remember { mutableStateOf<String?>(null) }
+    PojarushCard {
+        CardTitle(stringResource(R.string.third_party_licenses))
+        Hint(stringResource(R.string.third_party_licenses_desc))
+        androidx.compose.material3.OutlinedButton(onClick = {
+            text = runCatching {
+                context.assets.list("licenses").orEmpty().sorted().joinToString("\n\n") { name ->
+                    "== $name ==\n" + context.assets.open("licenses/$name").bufferedReader().use { it.readText() }
+                }
+            }.getOrNull()
+        }) { Text(stringResource(R.string.third_party_licenses)) }
+    }
+    text?.let { t ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { text = null },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { text = null }) { Text("OK") } },
+            title = { Text(stringResource(R.string.third_party_licenses)) },
+            text = {
+                androidx.compose.foundation.layout.Box(Modifier.heightIn(max = 420.dp)) {
+                    Text(t, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()))
+                }
+            },
+        )
     }
 }
 

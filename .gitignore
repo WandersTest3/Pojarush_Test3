@@ -26,4 +26,4 @@ Thumbs.db
 # Rust build artifacts
 target/
 horizon/target/
-Pojarush/src/starling/
+Pojarush/src/starling/jniLibs/

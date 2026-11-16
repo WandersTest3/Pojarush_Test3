@@ -315,4 +315,23 @@
     <string name="keyboard_push_desc">When the keyboard opens, the game slides up above it without changing its resolution: the top is cut off and the chat stays visible.</string>
     <string name="language">Language</string>
     <string name="language_system">System default</string>
+
+    <string name="mods_tab_create">Create mod</string>
+    <string name="modcreator_desc">Experimental. Creates a native mod (.hnmod) project that you edit with any text editor. Starling\'s build service compiles it (internet and 64-bit only): after installing, open the game, go to Options &gt; Mods and tap Compile.</string>
+    <string name="modcreator_id">Mod ID (a-z, 0-9, _)</string>
+    <string name="modcreator_name">Name</string>
+    <string name="modcreator_description">Description</string>
+    <string name="modcreator_create">Create project</string>
+    <string name="modcreator_pack">Pack and install</string>
+    <string name="modcreator_installed">%1$s was sent to the game. Open the game and compile it in Options &gt; Mods.</string>
+    <string name="modcreator_exists">A project with this ID already exists</string>
+    <string name="modcreator_invalid">Invalid ID</string>
+    <string name="modcreator_empty">No projects yet.</string>
+    <string name="modcreator_folder">Projects: %1$s</string>
+    <string name="starling_import_started">Sending the file to the game…</string>
+    <string name="starling_import_done">File received. It is installed when the game opens.</string>
+    <string name="mods_inbox">%1$s will be installed when the game opens.</string>
+
+    <string name="third_party_licenses">Third-party licenses</string>
+    <string name="third_party_licenses_desc">This version uses Starling (MIT License, © Ludovic Marie and the Horizon contributors) and other open-source code. Their notices are included here.</string>
 </resources>
