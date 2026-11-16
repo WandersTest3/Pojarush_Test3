@@ -72,6 +72,7 @@ android {
 
     if (starling) {
         sourceSets.getByName("main").jniLibs.setSrcDirs(listOf("src/starling/jniLibs"))
+        sourceSets.getByName("main").assets.setSrcDirs(listOf(layout.buildDirectory.dir("starling-assets").get().asFile))
     }
 
     packaging {
@@ -132,4 +133,18 @@ dependencies {
     implementation(libs.xz)
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+}
+
+if (starling) {
+    val stageStarlingAssets = tasks.register<Sync>("stageStarlingAssets") {
+        val base = rootProject.file("horizon-starling")
+        into(layout.buildDirectory.dir("starling-assets"))
+        from("src/main/assets") { exclude("horizon/**") }
+        into("horizon") {
+            from(base) {
+                include("research-lock.json", "crates/horizon-prepare/src/exporters.rs", "mods/horizon/src/test/java/**/*.java", "exporters/**")
+            }
+        }
+    }
+    tasks.named("preBuild") { dependsOn(stageStarlingAssets) }
 }
