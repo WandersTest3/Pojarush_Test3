@@ -83,6 +83,7 @@
     <string name="keep_alive">Tiếp tục chạy nền</string>
     <string name="interface_title">Giao diện</string>
     <string name="menu_background">Độ mờ nền menu</string>
+    <string name="menu_blur">Làm mờ nền menu</string>
     <string name="minecraft_font">Phông chữ Minecraft</string>
     <string name="system_font">Phông chữ hệ thống</string>
     <string name="font_size">Cỡ chữ</string>

@@ -83,6 +83,7 @@
     <string name="keep_alive">Im Hintergrund weiterlaufen lassen</string>
     <string name="interface_title">Oberfläche</string>
     <string name="menu_background">Deckkraft des Menühintergrunds</string>
+    <string name="menu_blur">Hintergrund-Unschärfe der Menüs</string>
     <string name="minecraft_font">Minecraft-Schrift</string>
     <string name="system_font">Systemschrift</string>
     <string name="font_size">Schriftgröße</string>

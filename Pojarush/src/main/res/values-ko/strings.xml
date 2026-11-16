@@ -83,6 +83,7 @@
     <string name="keep_alive">백그라운드에서 계속 실행</string>
     <string name="interface_title">인터페이스</string>
     <string name="menu_background">메뉴 배경 투명도</string>
+    <string name="menu_blur">메뉴 배경 블러</string>
     <string name="minecraft_font">Minecraft 글꼴</string>
     <string name="system_font">시스템 글꼴</string>
     <string name="font_size">글꼴 크기</string>

@@ -60,6 +60,7 @@ val PojarushColors = darkColorScheme(
 
 object UiPrefs {
     var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.60f)
+    var menuBlur by androidx.compose.runtime.mutableFloatStateOf(0f)
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
     var customFont by androidx.compose.runtime.mutableStateOf("")
     var fontMode by androidx.compose.runtime.mutableStateOf("minecraft")
@@ -68,6 +69,7 @@ object UiPrefs {
     fun load(context: android.content.Context) {
         val s = com.wanderstest3.pojarush.controls.ControlSettings(context)
         menuBackground = s.menuBackground
+        menuBlur = s.menuBlur
         minecraftFont = s.minecraftFont
         customFont = s.customFont
         fontMode = s.fontMode

@@ -83,6 +83,7 @@
     <string name="keep_alive">ทำงานต่อในพื้นหลัง</string>
     <string name="interface_title">อินเทอร์เฟซ</string>
     <string name="menu_background">ความโปร่งใสของพื้นหลังเมนู</string>
+    <string name="menu_blur">เบลอพื้นหลังเมนู</string>
     <string name="minecraft_font">ฟอนต์ Minecraft</string>
     <string name="system_font">ฟอนต์ระบบ</string>
     <string name="font_size">ขนาดฟอนต์</string>

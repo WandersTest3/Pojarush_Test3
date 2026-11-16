@@ -83,6 +83,7 @@
     <string name="keep_alive">الاستمرار في الخلفية</string>
     <string name="interface_title">الواجهة</string>
     <string name="menu_background">شفافية خلفية القائمة</string>
+    <string name="menu_blur">تمويه خلفية القوائم</string>
     <string name="minecraft_font">خط Minecraft</string>
     <string name="system_font">خط النظام</string>
     <string name="font_size">حجم الخط</string>

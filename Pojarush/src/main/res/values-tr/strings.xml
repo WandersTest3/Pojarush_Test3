@@ -83,6 +83,7 @@
     <string name="keep_alive">Arka planda çalışmaya devam et</string>
     <string name="interface_title">Arayüz</string>
     <string name="menu_background">Menü arka planı şeffaflığı</string>
+    <string name="menu_blur">Menü arka plan bulanıklığı</string>
     <string name="minecraft_font">Minecraft yazı tipi</string>
     <string name="system_font">Sistem yazı tipi</string>
     <string name="font_size">Yazı tipi boyutu</string>

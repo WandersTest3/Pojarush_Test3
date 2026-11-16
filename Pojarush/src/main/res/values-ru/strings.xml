@@ -83,6 +83,7 @@
     <string name="keep_alive">Работать в фоновом режиме</string>
     <string name="interface_title">Интерфейс</string>
     <string name="menu_background">Прозрачность фона меню</string>
+    <string name="menu_blur">Размытие фона меню</string>
     <string name="minecraft_font">Шрифт Minecraft</string>
     <string name="system_font">Системный шрифт</string>
     <string name="font_size">Размер шрифта</string>

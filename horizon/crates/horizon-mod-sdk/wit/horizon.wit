@@ -187,6 +187,18 @@ interface ui {
         item(item-widget),
         /// Rows the player picks from.
         %list(list-widget),
+    }
+    /// `widget` with the kinds added since: what new mods send, while
+    /// `widget` stays as the mods built before them linked it.
+    variant widget-v2 {
+        /// Text the player reads.
+        text(text-widget),
+        /// A button.
+        button(button-widget),
+        /// An item's icon and name.
+        item(item-widget),
+        /// Rows the player picks from.
+        %list(list-widget),
         /// A slider.
         slider(slider-widget),
     }
@@ -209,6 +221,11 @@ interface ui {
     /// opening the page is `ui-events::settings-opened`: push fresh widgets
     /// then; later calls update the page while it shows.
     set-settings: func(widgets: list<widget>);
+    /// `set-settings` taking the newer widget kinds too.
+    set-settings-v2: func(widgets: list<widget-v2>);
+    /// The game's selected language code, lowercase (`en_us`, `pt_br`), for
+    /// mods that translate their widgets.
+    language: func() -> string;
     /// Move the handle and change the label of the slider `id` on the
     /// screen and the settings page without sending every widget again.
     set-slider: func(id: u32, position: u32, label: string);

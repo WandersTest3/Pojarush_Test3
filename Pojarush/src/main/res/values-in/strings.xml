@@ -83,6 +83,7 @@
     <string name="keep_alive">Tetap berjalan di latar belakang</string>
     <string name="interface_title">Antarmuka</string>
     <string name="menu_background">Opasitas latar menu</string>
+    <string name="menu_blur">Buram latar menu</string>
     <string name="minecraft_font">Font Minecraft</string>
     <string name="system_font">Font sistem</string>
     <string name="font_size">Ukuran font</string>

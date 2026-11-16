@@ -83,6 +83,7 @@
     <string name="keep_alive">Działaj w tle</string>
     <string name="interface_title">Interfejs</string>
     <string name="menu_background">Przezroczystość tła menu</string>
+    <string name="menu_blur">Rozmycie tła menu</string>
     <string name="minecraft_font">Czcionka Minecrafta</string>
     <string name="system_font">Czcionka systemowa</string>
     <string name="font_size">Rozmiar czcionki</string>

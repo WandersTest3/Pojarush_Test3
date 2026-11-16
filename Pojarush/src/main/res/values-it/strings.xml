@@ -83,6 +83,7 @@
     <string name="keep_alive">Mantieni attivo in background</string>
     <string name="interface_title">Interfaccia</string>
     <string name="menu_background">Opacità dello sfondo del menu</string>
+    <string name="menu_blur">Sfocatura dello sfondo dei menu</string>
     <string name="minecraft_font">Font di Minecraft</string>
     <string name="system_font">Font di sistema</string>
     <string name="font_size">Dimensione del font</string>

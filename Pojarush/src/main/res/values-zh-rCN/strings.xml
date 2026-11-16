@@ -83,6 +83,7 @@
     <string name="keep_alive">在后台保持运行</string>
     <string name="interface_title">界面</string>
     <string name="menu_background">菜单背景不透明度</string>
+    <string name="menu_blur">菜单背景模糊</string>
     <string name="minecraft_font">Minecraft 字体</string>
     <string name="system_font">系统字体</string>
     <string name="font_size">字体大小</string>

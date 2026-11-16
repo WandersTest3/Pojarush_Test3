@@ -83,6 +83,7 @@
     <string name="keep_alive">バックグラウンドで実行を維持</string>
     <string name="interface_title">インターフェース</string>
     <string name="menu_background">メニュー背景の不透明度</string>
+    <string name="menu_blur">メニュー背景のぼかし</string>
     <string name="minecraft_font">Minecraft フォント</string>
     <string name="system_font">システムフォント</string>
     <string name="font_size">フォントサイズ</string>

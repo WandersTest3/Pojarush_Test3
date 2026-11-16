@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
@@ -61,13 +62,15 @@ fun WallpaperBackground() {
     val volume = remember(version) { settings.wallpaperVolume }
     val file = remember(path, version) { File(path).takeIf { path.isNotEmpty() && it.isFile } } ?: return
     val stamp = file.lastModified()
+    val blur = UiPrefs.menuBlur
+    val media = if (blur > 0.1f) Modifier.fillMaxSize().blur(blur.dp) else Modifier.fillMaxSize()
     Box(Modifier.fillMaxSize()) {
         if (ControlLayouts.isVideo(file.name)) {
             androidx.compose.runtime.key(file.absolutePath, stamp) {
                 AndroidView(
                     factory = { WallpaperVideoView(it, file, volume) },
                     update = { it.setVolume(volume) },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = media,
                     onRelease = { it.release() }
                 )
             }
@@ -80,7 +83,7 @@ fun WallpaperBackground() {
                             setImageDrawable(loadDrawable(ctx, file))
                         }
                     },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = media,
                     onRelease = { (it.drawable as? AnimatedImageDrawable)?.stop() }
                 )
             }
@@ -249,6 +252,10 @@ fun InterfaceSettings(settings: ControlSettings) {
         SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
+        }
+        SettingSlider(stringResource(R.string.menu_blur), settings.menuBlur, 0f..25f, 1f, { "${it.toInt()}" }) {
+            settings.menuBlur = it
+            UiPrefs.menuBlur = it
         }
         SettingSlider(stringResource(R.string.font_size), settings.fontScale, 0.70f..1.60f, 0.05f, { "${Math.round(it * 100)}%" }) {
             settings.fontScale = it

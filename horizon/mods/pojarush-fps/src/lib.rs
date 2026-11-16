@@ -2,7 +2,7 @@ use horizon_mod_sdk::{
     Mod, Registration,
     render::{self, FillShape, Point, Rect, Shape, TextShape},
     storage,
-    ui::{self, ButtonWidget, SliderWidget, Widget},
+    ui::{self, ButtonWidget, SliderWidget, WidgetV2 as Widget},
 };
 
 const COLORS: [(&str, u32); 5] = [
@@ -21,7 +21,7 @@ const CORNERS: [(&str, u32, u32); 5] = [
 ];
 
 const SCALE_MIN: u32 = 25;
-const SCALE_MAX: u32 = 1600;
+const SCALE_MAX: u32 = 200;
 const SCALE_STEP: u32 = 5;
 const OFFSET_RANGE: i32 = 500;
 const PAD_MAX: u32 = 32;
@@ -55,8 +55,8 @@ struct Fps {
     drawn: bool,
 }
 
-fn on_off(on: bool) -> &'static str {
-    if on { "On" } else { "Off" }
+fn on_off(s: &[&'static str; 24], on: bool) -> &'static str {
+    if on { s[13] } else { s[14] }
 }
 
 fn stored(key: &str, default: u32, min: u32, max: u32) -> u32 {
@@ -73,6 +73,41 @@ fn stored_i(key: &str, default: i32) -> i32 {
         .map_or(default, |v| v.clamp(-OFFSET_RANGE, OFFSET_RANGE))
 }
 
+const LANGS: [(&str, [&str; 24]); 19] = [
+    ("en", ["FPS counter", "Minimum and 1% low", "Background", "Color", "Move to the next corner", "Reset to defaults", "Size", "Horizontal position", "Vertical position", "Horizontal offset", "Vertical offset", "Background padding", "Background opacity", "On", "Off", "White", "Purple", "Green", "Yellow", "By FPS", "Top left", "Top right", "Bottom left", "Bottom right"]),
+    ("pt_br", ["Contador de FPS", "Mínimo e 1% low", "Fundo", "Cor", "Mover para o próximo canto", "Restaurar padrões", "Tamanho", "Posição horizontal", "Posição vertical", "Deslocamento horizontal", "Deslocamento vertical", "Margem do fundo", "Opacidade do fundo", "Ligado", "Desligado", "Branco", "Roxo", "Verde", "Amarelo", "Pelo FPS", "Canto superior esquerdo", "Canto superior direito", "Canto inferior esquerdo", "Canto inferior direito"]),
+    ("pt_pt", ["Contador de FPS", "Mínimo e 1% low", "Fundo", "Cor", "Mover para o canto seguinte", "Repor predefinições", "Tamanho", "Posição horizontal", "Posição vertical", "Deslocamento horizontal", "Deslocamento vertical", "Margem do fundo", "Opacidade do fundo", "Ligado", "Desligado", "Branco", "Roxo", "Verde", "Amarelo", "Pelo FPS", "Canto superior esquerdo", "Canto superior direito", "Canto inferior esquerdo", "Canto inferior direito"]),
+    ("es", ["Contador de FPS", "Mínimo y 1% low", "Fondo", "Color", "Mover a la esquina siguiente", "Restablecer valores", "Tamaño", "Posición horizontal", "Posición vertical", "Desplazamiento horizontal", "Desplazamiento vertical", "Margen del fondo", "Opacidad del fondo", "Activado", "Desactivado", "Blanco", "Morado", "Verde", "Amarillo", "Según FPS", "Arriba a la izquierda", "Arriba a la derecha", "Abajo a la izquierda", "Abajo a la derecha"]),
+    ("fr", ["Compteur de FPS", "Minimum et 1% low", "Fond", "Couleur", "Aller au coin suivant", "Rétablir les valeurs", "Taille", "Position horizontale", "Position verticale", "Décalage horizontal", "Décalage vertical", "Marge du fond", "Opacité du fond", "Activé", "Désactivé", "Blanc", "Violet", "Vert", "Jaune", "Selon les FPS", "En haut à gauche", "En haut à droite", "En bas à gauche", "En bas à droite"]),
+    ("de", ["FPS-Anzeige", "Minimum und 1% low", "Hintergrund", "Farbe", "Zur nächsten Ecke", "Auf Standard zurücksetzen", "Größe", "Horizontale Position", "Vertikale Position", "Horizontaler Versatz", "Vertikaler Versatz", "Hintergrundrand", "Hintergrunddeckkraft", "An", "Aus", "Weiß", "Lila", "Grün", "Gelb", "Nach FPS", "Oben links", "Oben rechts", "Unten links", "Unten rechts"]),
+    ("it", ["Contatore FPS", "Minimo e 1% low", "Sfondo", "Colore", "Vai all'angolo successivo", "Ripristina predefiniti", "Dimensione", "Posizione orizzontale", "Posizione verticale", "Scostamento orizzontale", "Scostamento verticale", "Margine dello sfondo", "Opacità dello sfondo", "Attivo", "Disattivo", "Bianco", "Viola", "Verde", "Giallo", "In base agli FPS", "In alto a sinistra", "In alto a destra", "In basso a sinistra", "In basso a destra"]),
+    ("ru", ["Счётчик FPS", "Минимум и 1% low", "Фон", "Цвет", "В следующий угол", "Сбросить настройки", "Размер", "Горизонтальная позиция", "Вертикальная позиция", "Горизонтальный сдвиг", "Вертикальный сдвиг", "Отступ фона", "Непрозрачность фона", "Вкл.", "Выкл.", "Белый", "Фиолетовый", "Зелёный", "Жёлтый", "По FPS", "Сверху слева", "Сверху справа", "Снизу слева", "Снизу справа"]),
+    ("uk", ["Лічильник FPS", "Мінімум і 1% low", "Тло", "Колір", "До наступного кута", "Скинути налаштування", "Розмір", "Горизонтальна позиція", "Вертикальна позиція", "Горизонтальний зсув", "Вертикальний зсув", "Відступ тла", "Непрозорість тла", "Увімк.", "Вимк.", "Білий", "Фіолетовий", "Зелений", "Жовтий", "За FPS", "Вгорі ліворуч", "Вгорі праворуч", "Внизу ліворуч", "Внизу праворуч"]),
+    ("pl", ["Licznik FPS", "Minimum i 1% low", "Tło", "Kolor", "Do następnego rogu", "Przywróć domyślne", "Rozmiar", "Pozycja pozioma", "Pozycja pionowa", "Przesunięcie poziome", "Przesunięcie pionowe", "Margines tła", "Krycie tła", "Wł.", "Wył.", "Biały", "Fioletowy", "Zielony", "Żółty", "Według FPS", "Lewy górny", "Prawy górny", "Lewy dolny", "Prawy dolny"]),
+    ("tr", ["FPS sayacı", "Minimum ve 1% low", "Arka plan", "Renk", "Sonraki köşeye taşı", "Varsayılanlara dön", "Boyut", "Yatay konum", "Dikey konum", "Yatay kaydırma", "Dikey kaydırma", "Arka plan boşluğu", "Arka plan opaklığı", "Açık", "Kapalı", "Beyaz", "Mor", "Yeşil", "Sarı", "FPS'ye göre", "Sol üst", "Sağ üst", "Sol alt", "Sağ alt"]),
+    ("ar", ["عداد FPS", "الحد الأدنى و1% low", "الخلفية", "اللون", "الانتقال إلى الزاوية التالية", "استعادة الإعدادات الافتراضية", "الحجم", "الموضع الأفقي", "الموضع العمودي", "الإزاحة الأفقية", "الإزاحة العمودية", "هامش الخلفية", "شفافية الخلفية", "مفعّل", "معطّل", "أبيض", "بنفسجي", "أخضر", "أصفر", "حسب FPS", "أعلى اليسار", "أعلى اليمين", "أسفل اليسار", "أسفل اليمين"]),
+    ("zh_cn", ["FPS 计数器", "最低值与 1% low", "背景", "颜色", "移到下一个角落", "恢复默认设置", "大小", "水平位置", "垂直位置", "水平偏移", "垂直偏移", "背景边距", "背景不透明度", "开", "关", "白色", "紫色", "绿色", "黄色", "按 FPS", "左上", "右上", "左下", "右下"]),
+    ("zh_tw", ["FPS 計數器", "最低值與 1% low", "背景", "顏色", "移到下一個角落", "恢復預設值", "大小", "水平位置", "垂直位置", "水平偏移", "垂直偏移", "背景邊距", "背景不透明度", "開", "關", "白色", "紫色", "綠色", "黃色", "依 FPS", "左上", "右上", "左下", "右下"]),
+    ("ja", ["FPS カウンター", "最小値と 1% low", "背景", "色", "次の角へ移動", "初期設定に戻す", "サイズ", "水平位置", "垂直位置", "水平オフセット", "垂直オフセット", "背景の余白", "背景の不透明度", "オン", "オフ", "白", "紫", "緑", "黄", "FPS に応じて", "左上", "右上", "左下", "右下"]),
+    ("ko", ["FPS 카운터", "최소값과 1% low", "배경", "색상", "다음 모서리로 이동", "기본값 복원", "크기", "가로 위치", "세로 위치", "가로 오프셋", "세로 오프셋", "배경 여백", "배경 불투명도", "켜짐", "꺼짐", "흰색", "보라색", "초록색", "노란색", "FPS에 따라", "왼쪽 위", "오른쪽 위", "왼쪽 아래", "오른쪽 아래"]),
+    ("th", ["ตัวนับ FPS", "ค่าต่ำสุดและ 1% low", "พื้นหลัง", "สี", "ย้ายไปมุมถัดไป", "คืนค่าเริ่มต้น", "ขนาด", "ตำแหน่งแนวนอน", "ตำแหน่งแนวตั้ง", "ระยะเลื่อนแนวนอน", "ระยะเลื่อนแนวตั้ง", "ขอบพื้นหลัง", "ความทึบพื้นหลัง", "เปิด", "ปิด", "ขาว", "ม่วง", "เขียว", "เหลือง", "ตาม FPS", "ซ้ายบน", "ขวาบน", "ซ้ายล่าง", "ขวาล่าง"]),
+    ("vi", ["Bộ đếm FPS", "Tối thiểu và 1% low", "Nền", "Màu", "Chuyển sang góc tiếp theo", "Khôi phục mặc định", "Kích thước", "Vị trí ngang", "Vị trí dọc", "Dịch ngang", "Dịch dọc", "Lề nền", "Độ mờ nền", "Bật", "Tắt", "Trắng", "Tím", "Xanh lá", "Vàng", "Theo FPS", "Trên trái", "Trên phải", "Dưới trái", "Dưới phải"]),
+    ("id", ["Penghitung FPS", "Minimum dan 1% low", "Latar", "Warna", "Pindah ke sudut berikutnya", "Kembalikan bawaan", "Ukuran", "Posisi horizontal", "Posisi vertikal", "Geser horizontal", "Geser vertikal", "Margin latar", "Opasitas latar", "Nyala", "Mati", "Putih", "Ungu", "Hijau", "Kuning", "Menurut FPS", "Kiri atas", "Kanan atas", "Kiri bawah", "Kanan bawah"]),
+];
+
+fn strings() -> &'static [&'static str; 24] {
+    let code = ui::language().to_lowercase();
+    let find = |c: &str| LANGS.iter().find(|(l, _)| *l == c).map(|(_, s)| s);
+    find(&code)
+        .or_else(|| code.split('_').next().and_then(find))
+        .or_else(|| match code.split('_').next() {
+            Some("pt") => find("pt_br"),
+            Some("zh") => find("zh_cn"),
+            _ => None,
+        })
+        .unwrap_or(&LANGS[0].1)
+}
+
 fn button(id: u32, label: String) -> Widget {
     Widget::Button(ButtonWidget { id, label })
 }
@@ -87,30 +122,27 @@ impl Fps {
     }
 
     fn slider_label(&self, id: u32) -> (String, u32, u32) {
+        let t = strings();
         match id {
             S_SIZE => (
-                format!("Size: {:.2}x", self.scale()),
+                format!("{}: {:.2}x", t[6], self.scale()),
                 (SCALE_MAX - SCALE_MIN) / SCALE_STEP,
                 (self.scale - SCALE_MIN) / SCALE_STEP,
             ),
-            S_X => (format!("Horizontal position: {:.1}%", self.x as f32 / 10.0), 1000, self.x),
-            S_Y => (format!("Vertical position: {:.1}%", self.y as f32 / 10.0), 1000, self.y),
+            S_X => (format!("{}: {:.1}%", t[7], self.x as f32 / 10.0), 200, self.x / 5),
+            S_Y => (format!("{}: {:.1}%", t[8], self.y as f32 / 10.0), 1000, self.y),
             S_XOFF => (
-                format!("Horizontal offset: {} px", self.x_off),
+                format!("{}: {} px", t[9], self.x_off),
                 OFFSET_RANGE as u32 * 2,
                 (self.x_off + OFFSET_RANGE) as u32,
             ),
             S_YOFF => (
-                format!("Vertical offset: {} px", self.y_off),
+                format!("{}: {} px", t[10], self.y_off),
                 OFFSET_RANGE as u32 * 2,
                 (self.y_off + OFFSET_RANGE) as u32,
             ),
-            S_PAD => (format!("Background padding: {:.1}", self.pad as f32 / 2.0), PAD_MAX, self.pad),
-            _ => (
-                format!("Background opacity: {}%", self.opacity),
-                100,
-                self.opacity,
-            ),
+            S_PAD => (format!("{}: {:.1}", t[11], self.pad as f32 / 2.0), PAD_MAX, self.pad),
+            _ => (format!("{}: {}%", t[12], self.opacity), 100, self.opacity),
         }
     }
 
@@ -120,12 +152,13 @@ impl Fps {
     }
 
     fn page(&self) {
-        ui::set_settings(&[
-            button(SHOW, format!("FPS counter: {}", on_off(self.show))),
-            button(LOWS, format!("Minimum and 1% low: {}", on_off(self.lows))),
-            button(BACKGROUND, format!("Background: {}", on_off(self.background))),
-            button(COLOR, format!("Color: {}", COLORS[self.color as usize].0)),
-            button(CORNER, "Move to the next corner".into()),
+        let t = strings();
+        ui::set_settings_v2(&[
+            button(SHOW, format!("{}: {}", t[0], on_off(t, self.show))),
+            button(LOWS, format!("{}: {}", t[1], on_off(t, self.lows))),
+            button(BACKGROUND, format!("{}: {}", t[2], on_off(t, self.background))),
+            button(COLOR, format!("{}: {}", t[3], t[15 + self.color as usize])),
+            button(CORNER, t[4].into()),
             self.slider_widget(S_SIZE),
             self.slider_widget(S_X),
             self.slider_widget(S_Y),
@@ -133,7 +166,7 @@ impl Fps {
             self.slider_widget(S_YOFF),
             self.slider_widget(S_PAD),
             self.slider_widget(S_OPACITY),
-            button(RESET, "Reset to defaults".into()),
+            button(RESET, strings()[5].into()),
         ]);
     }
 
@@ -273,7 +306,7 @@ impl Mod for Fps {
                 true
             }
             S_X => {
-                self.x = row.min(1000);
+                self.x = (row * 5).min(1000);
                 true
             }
             S_Y => {

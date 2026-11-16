@@ -232,6 +232,7 @@
     <string name="nav_others">Outros</string>
     <string name="interface_title">Interface</string>
     <string name="menu_background">Opacidade do fundo dos menus</string>
+    <string name="menu_blur">Desfoque do fundo dos menus</string>
     <string name="minecraft_font">Fonte do Minecraft</string>
     <string name="minecraft_font_desc">Usa a fonte pixelada no estilo do Minecraft no launcher.</string>
     <string name="lod_title">Terreno distante (LOD)</string>

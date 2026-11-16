@@ -83,6 +83,7 @@
     <string name="keep_alive">Garder actif en arrière-plan</string>
     <string name="interface_title">Interface</string>
     <string name="menu_background">Opacité du fond du menu</string>
+    <string name="menu_blur">Flou du fond des menus</string>
     <string name="minecraft_font">Police Minecraft</string>
     <string name="system_font">Police du système</string>
     <string name="font_size">Taille de la police</string>

@@ -3,7 +3,7 @@ use horizon_mod_sdk::{
     input::{self, Event},
     render::{self, Zoom as ZoomView},
     storage,
-    ui::{self, ButtonWidget, Widget},
+    ui::{self, ButtonWidget, SliderWidget, WidgetV2 as Widget},
 };
 
 const KEY: &str = "zoom";
@@ -18,6 +18,8 @@ const LEVEL_DOWN: u32 = 1;
 const LEVEL_UP: u32 = 2;
 const SPEED_DOWN: u32 = 3;
 const SPEED_UP: u32 = 4;
+const S_LEVEL: u32 = 20;
+const S_SPEED: u32 = 21;
 const WHEEL_STEP: u32 = 5;
 const MODE: u32 = 6;
 const KEEP: u32 = 7;
@@ -58,18 +60,30 @@ impl Zoom {
         Widget::Button(ButtonWidget { id, label })
     }
 
+    fn slider(&self, id: u32) -> Widget {
+        let (label, steps, position) = self.slider_label(id);
+        Widget::Slider(SliderWidget { id, label, steps, position })
+    }
+
+    fn slider_label(&self, id: u32) -> (String, u32, u32) {
+        match id {
+            S_LEVEL => (
+                format!("Zoom distance: {}x", self.level),
+                LEVEL_MAX - LEVEL_MIN,
+                self.level - LEVEL_MIN,
+            ),
+            _ => (
+                format!("Zoom speed: {}", self.speed),
+                SPEED_MAX - SPEED_MIN,
+                self.speed - SPEED_MIN,
+            ),
+        }
+    }
+
     fn page(&self) {
-        ui::set_settings(&[
-            Self::button(LEVEL_DOWN, format!("Zoom distance: - ({}x)", self.level)),
-            Self::button(LEVEL_UP, format!("Zoom distance: + ({}x)", self.level)),
-            Self::button(
-                SPEED_DOWN,
-                format!("Animation speed: - ({}/{})", self.speed, SPEED_MAX),
-            ),
-            Self::button(
-                SPEED_UP,
-                format!("Animation speed: + ({}/{})", self.speed, SPEED_MAX),
-            ),
+        ui::set_settings_v2(&[
+            self.slider(S_LEVEL),
+            self.slider(S_SPEED),
             Self::button(
                 WHEEL_STEP,
                 format!("Wheel step: {:.2}x", STEPS[self.step as usize]),
@@ -189,7 +203,18 @@ impl Mod for Zoom {
         self.show();
     }
 
-    fn ui_select(&mut self, id: u32, _row: u32) {
+    fn ui_select(&mut self, id: u32, row: u32) {
+        if id == S_LEVEL || id == S_SPEED {
+            if id == S_LEVEL {
+                self.level = (LEVEL_MIN + row).min(LEVEL_MAX);
+            } else {
+                self.speed = (SPEED_MIN + row).min(SPEED_MAX);
+            }
+            let (label, _, position) = self.slider_label(id);
+            ui::set_slider(id, position, &label);
+            self.save();
+            return;
+        }
         match id {
             LEVEL_DOWN => self.level = self.level.saturating_sub(1).max(LEVEL_MIN),
             LEVEL_UP => self.level = (self.level + 1).min(LEVEL_MAX),

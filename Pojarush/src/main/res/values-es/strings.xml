@@ -83,6 +83,7 @@
     <string name="keep_alive">Mantener en segundo plano</string>
     <string name="interface_title">Interfaz</string>
     <string name="menu_background">Opacidad del fondo del menú</string>
+    <string name="menu_blur">Desenfoque del fondo de los menús</string>
     <string name="minecraft_font">Fuente de Minecraft</string>
     <string name="system_font">Fuente del sistema</string>
     <string name="font_size">Tamaño de fuente</string>

@@ -63,10 +63,26 @@ type ServerEvents = server_bindings::exports::horizon::mods::server_events::Gues
 /// The widget model a `ui` screen or settings page shows (WIT `interface
 /// ui`), for the game to draw with its menus' own widgets.
 pub use ui_bindings::horizon::mods::ui::{
-    ButtonWidget, ItemWidget, ListWidget, Screen as UiScreen, SliderWidget, TextWidget,
-    Widget as UiWidget,
+    ButtonWidget, ItemWidget, ListWidget, SliderWidget, TextWidget, WidgetV2 as UiWidget,
 };
+use ui_bindings::horizon::mods::ui::{Screen as ScreenV1, Widget as WidgetV1};
 use ui_bindings::{UiHost, horizon::mods::ui};
+
+/// A mod's screen as the game stores it: `ui.open-screen`'s `screen`, its
+/// widgets upgraded to the newest widget kind.
+pub struct UiScreen {
+    pub title: String,
+    pub widgets: Vec<UiWidget>,
+}
+
+fn widget_v2(w: WidgetV1) -> UiWidget {
+    match w {
+        WidgetV1::Text(t) => UiWidget::Text(t),
+        WidgetV1::Button(b) => UiWidget::Button(b),
+        WidgetV1::Item(i) => UiWidget::Item(i),
+        WidgetV1::List(l) => UiWidget::List(l),
+    }
+}
 /// Capability `render`'s imports (docs/mods.md): the game draws the shapes.
 mod render_bindings {
     wasmtime::component::bindgen!({
@@ -1922,18 +1938,25 @@ impl hud::Host for State {
     }
 }
 impl ui::Host for State {
-    fn open_screen(&mut self, mut screen: ui::Screen) {
-        screen.title = clip(screen.title);
-        screen.widgets = clip_widgets(screen.widgets);
-        self.ui.screen = Some(screen);
+    fn open_screen(&mut self, screen: ScreenV1) {
+        self.ui.screen = Some(UiScreen {
+            title: clip(screen.title),
+            widgets: clip_widgets(screen.widgets.into_iter().map(widget_v2).collect()),
+        });
         self.ui.open = true;
     }
     fn close_screen(&mut self) {
         self.ui.screen = None;
         self.ui.close = true;
     }
-    fn set_settings(&mut self, widgets: Vec<ui::Widget>) {
+    fn set_settings(&mut self, widgets: Vec<WidgetV1>) {
+        self.ui.settings = clip_widgets(widgets.into_iter().map(widget_v2).collect());
+    }
+    fn set_settings_v2(&mut self, widgets: Vec<UiWidget>) {
         self.ui.settings = clip_widgets(widgets);
+    }
+    fn language(&mut self) -> String {
+        horizon_client_core::lang::code()
     }
     fn set_slider(&mut self, id: u32, position: u32, label: String) {
         let label = clip(label);

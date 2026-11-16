@@ -86,11 +86,23 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         }
     )
 
+    private var autoKeyboard = false
+
     private val poll = object : Runnable {
         override fun run() {
             if (panel != Panel.EDITOR) controls.setCaptured(HorizonBridge.isCaptured())
             controls.menuHold = panel != Panel.NONE
-            controls.typing = HorizonBridge.isTyping()
+            val typing = HorizonBridge.isTyping()
+            if (typing != controls.typing) {
+                controls.typing = typing
+                if (typing && !textInput.hasFocus()) {
+                    autoKeyboard = true
+                    toggleKeyboard()
+                } else if (!typing && autoKeyboard && textInput.hasFocus()) {
+                    autoKeyboard = false
+                    hideKeyboard()
+                }
+            }
             controls.resumeIfPossible()
             uiHandler.postDelayed(this, 100)
         }
