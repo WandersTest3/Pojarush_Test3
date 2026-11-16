@@ -113,6 +113,9 @@ fn density(w: f32, h: f32) -> f32 {
 impl Game<'_> {
     /// Once at start, then while the player is away in the setting.
     pub(super) fn poll_files_offer(&mut self) {
+        if super::input_mode::pojarush() {
+            return;
+        }
         let offer = &mut self.files_offer;
         if !offer.started {
             offer.started = true;

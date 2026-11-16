@@ -12,11 +12,29 @@ use winit::{
     event::{DeviceId, ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
 };
 
+/// Whether Pojarush_Test3's overlay drives the game (horizon_client::pojarush): Starling's own
+/// touch controls stay hidden and the input mode stays the keyboard and mouse.
+pub(crate) fn pojarush() -> bool {
+    #[cfg(all(target_os = "android", feature = "pojarush"))]
+    {
+        horizon_client::pojarush::active()
+    }
+    #[cfg(not(all(target_os = "android", feature = "pojarush")))]
+    {
+        false
+    }
+}
+
 impl Game<'_> {
     /// The player used `input`. Off the touch screen the fingers let go of what they held and the
     /// on-screen keyboard goes (touch_frame); any input but a controller takes the menus back
     /// from the pad's pointer.
     pub(super) fn input_used(&mut self, input: InputMode) {
+        let input = if pojarush() && input == InputMode::Touch {
+            InputMode::KeyboardMouse
+        } else {
+            input
+        };
         let mode = self
             .settings
             .touch
@@ -36,7 +54,7 @@ impl Game<'_> {
 
     /// The touch controls, the chat's bar and the on-screen keyboard show.
     pub(super) fn touch_shown(&self) -> bool {
-        self.input_mode == InputMode::Touch
+        !pojarush() && self.input_mode == InputMode::Touch
     }
 
     /// Once per loop iteration, before the touch frame: the pointer capture Android took back,
@@ -44,6 +62,13 @@ impl Game<'_> {
     /// events (its captured motion turns the view as a computer's raw motion does).
     #[cfg(target_os = "android")]
     pub(super) fn android_input_frame(&mut self, event_loop: &dyn EventLoopCtl) {
+        #[cfg(feature = "pojarush")]
+        if pojarush() {
+            if self.input_mode == InputMode::Touch {
+                self.input_mode = InputMode::KeyboardMouse;
+            }
+            self.pojarush_frame(event_loop);
+        }
         if crate::android::pointer_capture_lost() && self.captured {
             self.capture(false);
         }

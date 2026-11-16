@@ -312,7 +312,7 @@ impl Game<'_> {
         Ok(())
     }
 
-    fn control_command(
+    pub(super) fn control_command(
         &mut self,
         line: &str,
         reply: &Sender<String>,

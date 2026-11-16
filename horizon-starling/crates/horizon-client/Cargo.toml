@@ -103,7 +103,6 @@ rustix = { version = "1", default-features = false, features = ["std", "time", "
 [target.'cfg(target_os = "android")'.dependencies]
 # The NativeActivity glue (android-activity) and the calls into the activity (android.rs): the
 # file manager, the file picker, the clipboard (cpal's version of jni).
-winit = { version = "0.30.13", features = ["android-native-activity"] }
 jni = "0.21.1"
 # The mods, resource packs and shader packs catalog (game/mod_catalog.rs).
 starling-catalog = { path = "../starling-catalog" }
@@ -163,6 +162,8 @@ alloc-census = ["horizon-threads/alloc-census"]
 windows-mimalloc = []
 # Opt-in Windows heap experiment; see docs/windows-allocators.md.
 windows-segment-heap = []
+starling-native = ["winit/android-native-activity"]
+pojarush = ["winit/android-game-activity"]
 
 [[test]]
 name = "datapack_biome_sync"

@@ -13,6 +13,7 @@ use winit::platform::android::activity::AndroidApp;
 /// # Safety
 ///
 /// NativeActivity's call: an `ANativeActivity` and its saved state.
+#[cfg(not(feature = "pojarush"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn starling_on_create(
     activity: *mut std::ffi::c_void,
@@ -146,5 +147,133 @@ extern "system" fn Java_io_github_juanluci_starling_DiagnosticsActivity_makeRepo
             let _ = env.throw_new("java/io/IOException", error);
             std::ptr::null_mut()
         }
+    }
+}
+
+#[cfg(feature = "pojarush")]
+mod pojarush_bridge {
+    use horizon_client::pojarush::{self as p, Input};
+    use jni::{
+        JNIEnv,
+        objects::{JClass, JString},
+        sys::{JNI_FALSE, JNI_TRUE, jboolean, jfloat, jint},
+    };
+
+    fn flag(on: bool) -> jboolean {
+        if on { JNI_TRUE } else { JNI_FALSE }
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeCommand(
+        mut env: JNIEnv,
+        _class: JClass,
+        line: JString,
+    ) {
+        if let Ok(line) = env.get_string(&line) {
+            let line: String = line.into();
+            if !line.trim().is_empty() {
+                p::push(Input::Command(line));
+            }
+        }
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeLook(
+        _env: JNIEnv,
+        _class: JClass,
+        dx: jfloat,
+        dy: jfloat,
+    ) {
+        p::push(Input::Look(f64::from(dx), f64::from(dy)));
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeWheel(
+        _env: JNIEnv,
+        _class: JClass,
+        lines: jfloat,
+    ) {
+        p::push(Input::Wheel(lines));
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeCursor(
+        _env: JNIEnv,
+        _class: JClass,
+        x: jfloat,
+        y: jfloat,
+    ) {
+        p::push(Input::Cursor(f64::from(x), f64::from(y)));
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeButton(
+        _env: JNIEnv,
+        _class: JClass,
+        button: jint,
+        down: jboolean,
+    ) {
+        p::push(Input::Button(button.clamp(0, 2) as u8, down != JNI_FALSE));
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeSetScale(
+        _env: JNIEnv,
+        _class: JClass,
+        x: jfloat,
+        y: jfloat,
+    ) {
+        p::set_scale(f64::from(x), f64::from(y));
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeHotbarSlot(
+        _env: JNIEnv,
+        _class: JClass,
+        x: jfloat,
+        y: jfloat,
+    ) -> jint {
+        p::hotbar_slot(f64::from(x), f64::from(y))
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeIsCaptured(
+        _env: JNIEnv,
+        _class: JClass,
+    ) -> jboolean {
+        flag(p::captured())
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeIsReady(
+        _env: JNIEnv,
+        _class: JClass,
+    ) -> jboolean {
+        flag(p::ready())
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeSetMuted(
+        _env: JNIEnv,
+        _class: JClass,
+        muted: jboolean,
+    ) {
+        p::set_muted(muted != JNI_FALSE);
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeFieldBottom(
+        _env: JNIEnv,
+        _class: JClass,
+    ) -> jfloat {
+        p::field()
+    }
+
+    #[unsafe(no_mangle)]
+    extern "system" fn Java_com_wanderstest3_pojarush_horizon_HorizonBridge_nativeIsTyping(
+        _env: JNIEnv,
+        _class: JClass,
+    ) -> jboolean {
+        flag(p::typing())
     }
 }

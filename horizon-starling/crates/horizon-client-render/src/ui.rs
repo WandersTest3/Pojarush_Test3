@@ -1531,6 +1531,24 @@ impl Caret {
 /// field took the focus (`TextCursorUtils.isCursorVisible`): an underscore,
 /// or a bar once the value is `max_chars` long. `shadow` is `setTextShadow`.
 #[allow(clippy::too_many_arguments)]
+static FIELD_BOTTOM: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+/// A focused text field was drawn with its bottom edge at GUI `bottom`: the lowest one of the
+/// frame is where an on-screen keyboard must not cover (Pojarush lifts the game to it).
+pub fn note_field(bottom: f32) {
+    use std::sync::atomic::Ordering;
+    let bits = bottom.max(1.0).to_bits();
+    let _ = FIELD_BOTTOM.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |old| {
+        (old == 0 || f32::from_bits(old) < bottom).then_some(bits)
+    });
+}
+
+/// The lowest focused field drawn since the last call, in GUI units.
+pub fn take_field() -> Option<f32> {
+    let bits = FIELD_BOTTOM.swap(0, std::sync::atomic::Ordering::Relaxed);
+    (bits != 0).then(|| f32::from_bits(bits))
+}
+
 pub fn append_field(
     batch: &mut HudBatch,
     atlas: &HudAtlas,
@@ -1542,6 +1560,7 @@ pub fn append_field(
     invert_text: bool,
     focused_ms: u128,
 ) {
+    note_field(y + 10.0);
     let mut cursor_x = x;
     if !value.is_empty() {
         batch.text(atlas, value, x, y, color, shadow);
@@ -1857,6 +1876,9 @@ impl EditBox {
         format: Option<&Text>,
         caret: bool,
     ) {
+        if self.focused {
+            note_field(self.y + self.height);
+        }
         self.draw_skinned_caret(batch, atlas, format, caret, None);
     }
     /// Draw with a custom nine-slice background and the field's own caret blink.

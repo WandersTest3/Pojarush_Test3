@@ -735,6 +735,11 @@ impl Game<'_> {
         let WindowEvent::Touch(t) = event else {
             return false;
         };
+        #[cfg(all(target_os = "android", feature = "pojarush"))]
+        if super::input_mode::pojarush() {
+            self.pojarush_touch(event_loop, id, t);
+            return true;
+        }
         self.touch.seen = true;
         // The touch controls come back with a touch after a keyboard, a mouse or a controller.
         self.input_used(InputMode::Touch);

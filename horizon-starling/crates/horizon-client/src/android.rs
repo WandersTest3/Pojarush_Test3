@@ -35,6 +35,7 @@ pub fn set_shared_folder(folder: PathBuf) {
 /// # Safety
 ///
 /// NativeActivity's call: an `ANativeActivity` and its saved state.
+#[cfg(not(feature = "pojarush"))]
 pub unsafe fn on_create(
     activity: *mut std::ffi::c_void,
     saved: *mut std::ffi::c_void,
@@ -1254,8 +1255,23 @@ pub fn main(app: AndroidApp) {
         .unwrap_or_else(|| PathBuf::from("/data/local/tmp/horizon"));
     let _ = std::fs::create_dir_all(&private);
     let mut notes = Vec::new();
-    let home = game_folder(&private, &mut notes);
-    let (args, env) = command_line(&private);
+    #[cfg(feature = "pojarush")]
+    let pojarush = crate::pojarush::active();
+    #[cfg(not(feature = "pojarush"))]
+    let pojarush = false;
+    let (home, args, env) = if pojarush {
+        let home = PathBuf::from(std::env::var_os("POJARUSH_GAME_DIR").unwrap_or_default());
+        let _ = std::fs::create_dir_all(&home);
+        #[cfg(feature = "pojarush")]
+        let args = crate::pojarush::args();
+        #[cfg(not(feature = "pojarush"))]
+        let args = Vec::new();
+        (home, args, Vec::new())
+    } else {
+        let home = game_folder(&private, &mut notes);
+        let (args, env) = command_line(&private);
+        (home, args, env)
+    };
     // SAFETY: no other thread of ours runs yet; the game reads these from its threads afterwards.
     unsafe {
         std::env::set_var("HORIZON_HOME", &home);
@@ -1341,6 +1357,8 @@ pub fn main(app: AndroidApp) {
 /// again an app whose process ends under its top activity, as after a crash: finish it, and its
 /// onDestroy ends the process.
 pub fn finish_and_exit() -> ! {
+    #[cfg(feature = "pojarush")]
+    crate::pojarush::finished(0);
     crate::performance::stop();
     crate::diagnostics::finish();
     with_activity(|env, activity| env.call_method(activity, "finish", "()V", &[]).map(drop));

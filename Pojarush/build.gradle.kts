@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val starling = (project.findProperty("starling") as String?) == "true"
+
 fun secret(env: String, file: String): String =
     System.getenv(env) ?: rootProject.file(file).takeIf { it.isFile }?.readText()?.trim() ?: ""
 
@@ -25,6 +27,12 @@ android {
         targetSdk = 34
         versionCode = (project.property("pojarush_version_code") as String).toInt()
         versionName = project.property("pojarush_version_name") as String
+        if (starling) {
+            applicationIdSuffix = ".starling"
+            versionNameSuffix = "-starling"
+        }
+        manifestPlaceholders["appLabel"] = if (starling) "Pojarush Starling" else "@string/app_name"
+        buildConfigField("Boolean", "STARLING", starling.toString())
         buildConfigField("String", "OAUTH_CLIENT_ID", "\"${secret("OAUTH_CLIENT_ID", ".oauth_client_id.txt")}\"")
     }
 
@@ -57,9 +65,13 @@ android {
         abi {
             isEnable = true
             reset()
-            include("arm64-v8a", "armeabi-v7a")
+            if (starling) include("arm64-v8a") else include("arm64-v8a", "armeabi-v7a")
             isUniversalApk = false
         }
+    }
+
+    if (starling) {
+        sourceSets.getByName("main").jniLibs.setSrcDirs(listOf("src/starling/jniLibs"))
     }
 
     packaging {

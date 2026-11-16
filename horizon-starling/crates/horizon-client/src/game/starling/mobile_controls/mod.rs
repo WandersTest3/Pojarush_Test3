@@ -88,7 +88,7 @@ impl Game<'_> {
                 })
     }
     pub(in crate::game) fn mobile_controls_enabled(&self) -> bool {
-        cfg!(target_os = "android")
+        cfg!(target_os = "android") && !super::input_mode::pojarush()
     }
     pub(in crate::game) fn mobile_pad_end(&mut self, released: bool) {
         if released {

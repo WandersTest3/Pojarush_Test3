@@ -19,12 +19,14 @@ path = "../horizon-client/src/android_lib.rs"
 # and the cosmetics, which 0.8.0 had before Horizon put them behind the feature.
 horizon-client = { path = "../horizon-client", default-features = false, features = ["horizon-extras"] }
 # The NativeActivity glue (android-activity): `android_main` gets the app.
-winit = { version = "0.30.13", features = ["android-native-activity"] }
+winit = "0.30.13"
 jni = "0.21.1"
 
 [features]
-default = ["audio"]
+default = ["audio", "starling-native"]
 audio = ["horizon-client/audio"]
+starling-native = ["horizon-client/starling-native", "winit/android-native-activity"]
+pojarush = ["horizon-client/pojarush", "winit/android-game-activity"]
 
 [lints]
 workspace = true

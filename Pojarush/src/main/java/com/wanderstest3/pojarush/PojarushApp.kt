@@ -20,7 +20,7 @@ class PojarushApp : Application() {
 }
 
 object Paths {
-    const val FOLDER = "Pojarush_Test3"
+    val FOLDER = if (BuildConfig.STARLING) "Pojarush_Starling" else "Pojarush_Test3"
     lateinit var privateRoot: File
         private set
     lateinit var publicRoot: File

@@ -170,6 +170,9 @@ fn density(w: f32, h: f32) -> f32 {
 impl Game<'_> {
     /// Once at start (the check, in the background), then the download while it runs.
     pub(super) fn poll_update_offer(&mut self) {
+        if super::input_mode::pojarush() {
+            return;
+        }
         let offer = &mut self.update_offer;
         if !offer.started {
             offer.started = true;
