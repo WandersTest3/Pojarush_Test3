@@ -157,4 +157,14 @@
     <string name="nbt_back">Kembali</string>
     <string name="nbt_save">Simpan</string>
     <string name="nbt_saved">Tersimpan</string>
+    <string name="controls_gyro">Giroskop</string>
+    <string name="controls_gyro_desc">Memiringkan ponsel memutar kamera saat bermain.</string>
+    <string name="controls_gyro_sensitivity">Sensitivitas giroskop</string>
+    <string name="controls_gyro_invert">Balik sumbu vertikal giroskop</string>
+    <string name="mod_menu_by">oleh %s</string>
+    <string name="mod_menu_capabilities">Memakai: %s</string>
+    <string name="mod_menu_homepage">Situs web</string>
+    <string name="mod_menu_sources">Sumber</string>
+    <string name="mod_menu_issues">Masalah</string>
+    <string name="mod_menu_license">Lisensi</string>
 </resources>

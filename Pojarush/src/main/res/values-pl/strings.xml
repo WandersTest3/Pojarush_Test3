@@ -157,4 +157,14 @@
     <string name="nbt_back">Wstecz</string>
     <string name="nbt_save">Zapisz</string>
     <string name="nbt_saved">Zapisano</string>
+    <string name="controls_gyro">Żyroskop</string>
+    <string name="controls_gyro_desc">Przechylanie telefonu obraca kamerę w grze.</string>
+    <string name="controls_gyro_sensitivity">Czułość żyroskopu</string>
+    <string name="controls_gyro_invert">Odwróć oś pionową żyroskopu</string>
+    <string name="mod_menu_by">autor: %s</string>
+    <string name="mod_menu_capabilities">Używa: %s</string>
+    <string name="mod_menu_homepage">Strona</string>
+    <string name="mod_menu_sources">Źródło</string>
+    <string name="mod_menu_issues">Zgłoszenia</string>
+    <string name="mod_menu_license">Licencja</string>
 </resources>

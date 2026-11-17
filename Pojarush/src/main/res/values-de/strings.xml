@@ -157,4 +157,14 @@
     <string name="nbt_back">Zurück</string>
     <string name="nbt_save">Speichern</string>
     <string name="nbt_saved">Gespeichert</string>
+    <string name="controls_gyro">Gyroskop</string>
+    <string name="controls_gyro_desc">Das Neigen des Handys dreht die Kamera im Spiel.</string>
+    <string name="controls_gyro_sensitivity">Gyroskop-Empfindlichkeit</string>
+    <string name="controls_gyro_invert">Gyroskop vertikal umkehren</string>
+    <string name="mod_menu_by">von %s</string>
+    <string name="mod_menu_capabilities">Nutzt: %s</string>
+    <string name="mod_menu_homepage">Webseite</string>
+    <string name="mod_menu_sources">Quellcode</string>
+    <string name="mod_menu_issues">Probleme</string>
+    <string name="mod_menu_license">Lizenz</string>
 </resources>

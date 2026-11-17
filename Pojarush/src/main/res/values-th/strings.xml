@@ -157,4 +157,14 @@
     <string name="nbt_back">ย้อนกลับ</string>
     <string name="nbt_save">บันทึก</string>
     <string name="nbt_saved">บันทึกแล้ว</string>
+    <string name="controls_gyro">ไจโรสโคป</string>
+    <string name="controls_gyro_desc">เอียงโทรศัพท์เพื่อหมุนกล้องขณะเล่น</string>
+    <string name="controls_gyro_sensitivity">ความไวไจโรสโคป</string>
+    <string name="controls_gyro_invert">กลับแกนแนวตั้งของไจโรสโคป</string>
+    <string name="mod_menu_by">โดย %s</string>
+    <string name="mod_menu_capabilities">ใช้: %s</string>
+    <string name="mod_menu_homepage">เว็บไซต์</string>
+    <string name="mod_menu_sources">ซอร์ส</string>
+    <string name="mod_menu_issues">ปัญหา</string>
+    <string name="mod_menu_license">สัญญาอนุญาต</string>
 </resources>

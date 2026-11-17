@@ -157,4 +157,14 @@
     <string name="nbt_back">رجوع</string>
     <string name="nbt_save">حفظ</string>
     <string name="nbt_saved">تم الحفظ</string>
+    <string name="controls_gyro">الجيروسكوب</string>
+    <string name="controls_gyro_desc">إمالة الهاتف تدير الكاميرا أثناء اللعب.</string>
+    <string name="controls_gyro_sensitivity">حساسية الجيروسكوب</string>
+    <string name="controls_gyro_invert">عكس المحور العمودي للجيروسكوب</string>
+    <string name="mod_menu_by">بواسطة %s</string>
+    <string name="mod_menu_capabilities">يستخدم: %s</string>
+    <string name="mod_menu_homepage">الموقع</string>
+    <string name="mod_menu_sources">المصدر</string>
+    <string name="mod_menu_issues">المشكلات</string>
+    <string name="mod_menu_license">الترخيص</string>
 </resources>

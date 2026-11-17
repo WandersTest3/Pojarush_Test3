@@ -10,6 +10,19 @@ import org.json.JSONArray
 
 enum class PackKind { MOD, RESOURCE, SHADER }
 
+data class ModInfo(
+    val id: String,
+    val name: String,
+    val version: String,
+    val description: String,
+    val authors: List<String>,
+    val side: String,
+    val api: String,
+    val capabilities: List<String>,
+    val links: List<Pair<String, String>>,
+    val icon: ByteArray?,
+)
+
 data class PackEntry(
     val file: File,
     val name: String,
@@ -104,6 +117,44 @@ object GameFiles {
                 if (entry == null) null else zip.getInputStream(entry).bufferedReader().use { it.readText() }
             }
         }
+
+    private fun tomlString(text: String, key: String): String? =
+        Regex("""(?m)^\s*${Regex.escape(key)}\s*=\s*"((?:[^"\\]|\\.)*)"""").find(text)?.groupValues?.get(1)
+            ?.replace("\\\"", "\"")?.replace("\\n", "\n")?.replace("\\\\", "\\")
+
+    private fun tomlList(text: String, key: String): List<String> {
+        val body = Regex("""(?m)^\s*${Regex.escape(key)}\s*=\s*\[([^\]]*)\]""").find(text)?.groupValues?.get(1) ?: return emptyList()
+        return Regex(""""((?:[^"\\]|\\.)*)"""").findAll(body).map { it.groupValues[1] }.toList()
+    }
+
+    private fun entryBytes(file: File, names: List<String>): ByteArray? = runCatching {
+        if (file.isDirectory) {
+            names.map { File(file, it) }.firstOrNull { it.isFile }?.readBytes()
+        } else {
+            ZipFile(file).use { zip ->
+                names.firstNotNullOfOrNull { n -> zip.getEntry(n)?.let { e -> zip.getInputStream(e).use { it.readBytes() } } }
+            }
+        }
+    }.getOrNull()
+
+    fun modInfo(file: File): ModInfo? {
+        val text = runCatching { manifestText(file) }.getOrNull() ?: return null
+        val id = idPattern.find(text)?.groupValues?.get(1) ?: return null
+        val links = listOf("homepage", "sources", "issues", "license").mapNotNull { k -> tomlString(text, k)?.takeIf { it.isNotBlank() }?.let { k to it } }
+        val iconNames = listOfNotNull(tomlString(text, "icon")?.trimStart('/')) + listOf("icon.png", "assets/$id/icon.png", "pack.png")
+        return ModInfo(
+            id = id,
+            name = tomlString(text, "name") ?: file.nameWithoutExtension,
+            version = tomlString(text, "version").orEmpty(),
+            description = tomlString(text, "description").orEmpty(),
+            authors = tomlList(text, "authors"),
+            side = tomlString(text, "side").orEmpty(),
+            api = tomlString(text, "api").orEmpty(),
+            capabilities = tomlList(text, "capabilities"),
+            links = links,
+            icon = entryBytes(file, iconNames),
+        )
+    }
 
     private fun readManifest(file: File): Pair<String, String?>? {
         val text = runCatching { manifestText(file) }.getOrNull() ?: return null

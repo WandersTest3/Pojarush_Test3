@@ -157,4 +157,14 @@
     <string name="nbt_back">戻る</string>
     <string name="nbt_save">保存</string>
     <string name="nbt_saved">保存しました</string>
+    <string name="controls_gyro">ジャイロ</string>
+    <string name="controls_gyro_desc">プレイ中にスマホを傾けるとカメラが回ります。</string>
+    <string name="controls_gyro_sensitivity">ジャイロ感度</string>
+    <string name="controls_gyro_invert">ジャイロの上下を反転</string>
+    <string name="mod_menu_by">作者: %s</string>
+    <string name="mod_menu_capabilities">使用: %s</string>
+    <string name="mod_menu_homepage">ウェブサイト</string>
+    <string name="mod_menu_sources">ソース</string>
+    <string name="mod_menu_issues">問題</string>
+    <string name="mod_menu_license">ライセンス</string>
 </resources>

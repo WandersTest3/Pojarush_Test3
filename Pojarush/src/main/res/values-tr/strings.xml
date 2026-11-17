@@ -157,4 +157,14 @@
     <string name="nbt_back">Geri</string>
     <string name="nbt_save">Kaydet</string>
     <string name="nbt_saved">Kaydedildi</string>
+    <string name="controls_gyro">Jiroskop</string>
+    <string name="controls_gyro_desc">Telefonu eğmek oyunda kamerayı döndürür.</string>
+    <string name="controls_gyro_sensitivity">Jiroskop hassasiyeti</string>
+    <string name="controls_gyro_invert">Jiroskop dikey eksenini ters çevir</string>
+    <string name="mod_menu_by">yapımcı: %s</string>
+    <string name="mod_menu_capabilities">Kullanır: %s</string>
+    <string name="mod_menu_homepage">Web sitesi</string>
+    <string name="mod_menu_sources">Kaynak</string>
+    <string name="mod_menu_issues">Sorunlar</string>
+    <string name="mod_menu_license">Lisans</string>
 </resources>

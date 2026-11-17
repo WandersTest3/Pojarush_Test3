@@ -157,4 +157,14 @@
     <string name="nbt_back">返回</string>
     <string name="nbt_save">保存</string>
     <string name="nbt_saved">已保存</string>
+    <string name="controls_gyro">陀螺仪</string>
+    <string name="controls_gyro_desc">游戏中倾斜手机即可转动视角。</string>
+    <string name="controls_gyro_sensitivity">陀螺仪灵敏度</string>
+    <string name="controls_gyro_invert">反转陀螺仪垂直方向</string>
+    <string name="mod_menu_by">作者：%s</string>
+    <string name="mod_menu_capabilities">使用：%s</string>
+    <string name="mod_menu_homepage">网站</string>
+    <string name="mod_menu_sources">源代码</string>
+    <string name="mod_menu_issues">问题</string>
+    <string name="mod_menu_license">许可证</string>
 </resources>

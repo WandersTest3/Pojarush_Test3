@@ -157,4 +157,14 @@
     <string name="nbt_back">Retour</string>
     <string name="nbt_save">Enregistrer</string>
     <string name="nbt_saved">Enregistré</string>
+    <string name="controls_gyro">Gyroscope</string>
+    <string name="controls_gyro_desc">Incliner le téléphone tourne la caméra en jeu.</string>
+    <string name="controls_gyro_sensitivity">Sensibilité du gyroscope</string>
+    <string name="controls_gyro_invert">Inverser l\'axe vertical du gyroscope</string>
+    <string name="mod_menu_by">par %s</string>
+    <string name="mod_menu_capabilities">Utilise : %s</string>
+    <string name="mod_menu_homepage">Site web</string>
+    <string name="mod_menu_sources">Sources</string>
+    <string name="mod_menu_issues">Problèmes</string>
+    <string name="mod_menu_license">Licence</string>
 </resources>

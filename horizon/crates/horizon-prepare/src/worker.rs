@@ -72,15 +72,18 @@ impl Worker {
                 })?
                 .map_err(|e| e.to_string())?;
             if line.trim_start().starts_with('"') {
-                break line;
+                if let Ok(value) = pyjson::loads(line.trim()) {
+                    break value;
+                }
             }
             if noise.len() < 8 && !line.trim().is_empty() {
                 noise.push(line);
             }
         };
-        match pyjson::loads(&reply)?.as_str() {
+        match reply.as_str() {
             Some("") => Ok(()),
-            _ => Err(format!("Exporter {main} failed: {reply}")),
+            Some(error) => Err(format!("Exporter {main} failed: \"{error}\"")),
+            None => Err(format!("Exporter {main} failed")),
         }
     }
 }

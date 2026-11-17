@@ -376,10 +376,24 @@ impl Run<'_> {
         ) && std::env::var_os("HORIZON_PREPARE_ISOLATED").is_none()
         {
             let mut workers = self.workers.borrow_mut();
-            if workers[side].is_none() {
-                workers[side] = Some(worker::Worker::new(self, &classes, classpath)?);
-            }
-            return workers[side].as_mut().unwrap().run(main, args, log_path);
+            let shared = match workers[side].take() {
+                Some(w) => Ok(w),
+                None => worker::Worker::new(self, &classes, classpath),
+            };
+            let failure = match shared {
+                Ok(mut w) => match w.run(main, args, log_path) {
+                    Ok(()) => {
+                        workers[side] = Some(w);
+                        return Ok(());
+                    }
+                    Err(e) => e,
+                },
+                Err(e) => e,
+            };
+            drop(workers);
+            (self.log)(&format!(
+                "{main}: the shared exporter JVM failed ({failure}); running it in its own JVM"
+            ));
         }
         let separator = if cfg!(windows) { ";" } else { ":" };
         let heap = heap_override().unwrap_or_else(|| heap.to_owned());

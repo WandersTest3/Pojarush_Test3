@@ -137,6 +137,10 @@ struct ModScreen {
     binding: Option<String>,
     /// The slider widget being dragged: its id.
     slider: Option<u32>,
+    /// How far the page is scrolled down, in GUI pixels.
+    page: f32,
+    /// A drag on empty space scrolling the page: where it started and the scroll then.
+    pan: Option<(f32, f32)>,
 }
 impl ModsState {
     /// The chat's command tree: vanilla's, plus the running mods' commands.
@@ -892,23 +896,40 @@ impl Game<'_> {
     }
     /// The layout the mod screen's widgets get at `h`: (widget, top,
     /// height), the column being `COLUMN` wide down the middle.
-    fn mod_ui_layout(h: f32, top: f32, widgets: &[UiWidget]) -> Vec<(f32, f32)> {
+    /// Where each key row and widget sits on a page scrolled by `page`, and the
+    /// furthest the page scrolls.
+    fn mod_ui_layout(
+        h: f32,
+        keys: usize,
+        widgets: &[UiWidget],
+        page: f32,
+    ) -> (Vec<f32>, Vec<(f32, f32)>, f32) {
+        let key_rows = (0..keys)
+            .map(|i| MOD_UI_TOP + i as f32 * MOD_UI_KEY_ROW)
+            .collect::<Vec<_>>();
         let mut out = Vec::with_capacity(widgets.len());
-        let mut y = top;
+        let mut y = MOD_UI_TOP + keys as f32 * MOD_UI_KEY_ROW;
         for w in widgets {
             let wh = match w {
                 UiWidget::Text(_) => 12.0,
                 UiWidget::Item(_) | UiWidget::Button(_) | UiWidget::Slider(_) => 20.0,
                 UiWidget::List(l) => (l.rows.len().min(6) as f32 * 12.0) + 8.0,
             };
-            // Nothing may cover Done; a crowded mod loses what won't fit.
-            if y + wh > h - 34.0 {
-                break;
-            }
             out.push((y, wh));
             y += wh + 6.0;
         }
-        out
+        let max = (y - 6.0 - (h - MOD_UI_BOTTOM)).max(0.0);
+        let page = page.clamp(0.0, max);
+        (
+            key_rows.into_iter().map(|y| y - page).collect(),
+            out.into_iter().map(|(y, wh)| (y - page, wh)).collect(),
+            max,
+        )
+    }
+    /// A row at `wy`, `wh` high, lies wholly inside the page's view (below the
+    /// title, above Done).
+    fn mod_ui_shown(h: f32, wy: f32, wh: f32) -> bool {
+        wy >= MOD_UI_TOP - 0.5 && wy + wh <= h - MOD_UI_BOTTOM + 0.5
     }
     /// A mod pushes its screen (`ui.open-screen`), or Options > Mods opens
     /// its settings page (`settings`, the mod's `installed` index).
@@ -933,6 +954,8 @@ impl Game<'_> {
             scrolls: Vec::new(),
             binding: None,
             slider: None,
+            page: 0.0,
+            pan: None,
         });
         self.screen = Screen::Mod;
         if self.player.is_some() {
@@ -996,8 +1019,15 @@ impl Game<'_> {
         let x = cx - MOD_UI_COLUMN / 2.0;
         // A settings page starts with the mod's keys, as Key Binds rows.
         let keys = Self::mod_page_keys(&self.mods.mods, ms);
+        let (key_rows, layout, max) =
+            Self::mod_ui_layout(batch.height, keys.len(), widgets, ms.page);
+        ms.page = ms.page.clamp(0.0, max);
+        let view_h = batch.height;
         for (i, k) in keys.iter().enumerate() {
-            let wy = MOD_UI_TOP + i as f32 * MOD_UI_KEY_ROW;
+            let wy = key_rows[i];
+            if !Self::mod_ui_shown(view_h, wy, 20.0) {
+                continue;
+            }
             let hover = ui::hovered(self.cursor, x, wy, MOD_UI_COLUMN, 20.0);
             let waiting = ms.binding.as_deref() == Some(k.name.as_str());
             let label = Self::mod_key_label(k, waiting);
@@ -1013,10 +1043,15 @@ impl Game<'_> {
                 hover,
             );
         }
-        let top = MOD_UI_TOP + keys.len() as f32 * MOD_UI_KEY_ROW;
-        let layout = Self::mod_ui_layout(batch.height, top, widgets);
         let mut list_i = 0usize;
         for (w, &(wy, wh)) in widgets.iter().zip(&layout) {
+            if !Self::mod_ui_shown(view_h, wy, wh) {
+                if matches!(w, UiWidget::List(_)) {
+                    ms.scrolls.resize_with(list_i + 1, ui::Scroll::default);
+                    list_i += 1;
+                }
+                continue;
+            }
             match w {
                 UiWidget::Button(b) => {
                     let hover = ui::hovered(self.cursor, x, wy, MOD_UI_COLUMN, 20.0);
@@ -1120,6 +1155,18 @@ impl Game<'_> {
                 }
             }
         }
+        if max > 0.0 {
+            let content = view_h - MOD_UI_BOTTOM - MOD_UI_TOP + max;
+            ui::scrollbar(
+                batch,
+                atlas,
+                x + MOD_UI_COLUMN + 6.0,
+                MOD_UI_TOP,
+                view_h - MOD_UI_BOTTOM,
+                content,
+                ms.page,
+            );
+        }
         let hover = ui::hovered(self.cursor, cx - 100.0, batch.height - 27.0, 200.0, 20.0);
         ui::button(
             batch,
@@ -1167,12 +1214,14 @@ impl Game<'_> {
             return;
         };
         let owner = ms.owner;
+        let page = ms.page;
         let x = (w / 2.0).floor() - MOD_UI_COLUMN / 2.0;
         // A key row waits for the key to bind.
         let keys = Self::mod_page_keys(&self.mods.mods, ms);
+        let (key_rows, layout, _) = Self::mod_ui_layout(h, keys.len(), widgets, page);
         let picked = (0..keys.len()).find(|&i| {
-            let wy = MOD_UI_TOP + i as f32 * MOD_UI_KEY_ROW;
-            ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
+            let wy = key_rows[i];
+            Self::mod_ui_shown(h, wy, 20.0) && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
         });
         if let Some(i) = picked {
             let name = keys[i].name.clone();
@@ -1182,12 +1231,16 @@ impl Game<'_> {
             }
             return;
         }
-        let top = MOD_UI_TOP + keys.len() as f32 * MOD_UI_KEY_ROW;
-        let layout = Self::mod_ui_layout(h, top, widgets);
         let mut list_i = 0usize;
         // The `ui_select` call needs `&mut`: find the pick first.
         let mut hit = None;
         for (w, &(wy, wh)) in widgets.iter().zip(&layout) {
+            if !Self::mod_ui_shown(h, wy, wh) {
+                if matches!(w, UiWidget::List(_)) {
+                    list_i += 1;
+                }
+                continue;
+            }
             if let UiWidget::Slider(sl) = w
                 && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
             {
@@ -1226,6 +1279,8 @@ impl Game<'_> {
             self.audio.play_button_click();
             self.mods.mods.ui_select(owner, id, row);
             self.show_mod_output();
+        } else if let Some(ms) = self.mods.screen.as_mut() {
+            ms.pan = Some((cursor.1, ms.page));
         }
     }
     /// The slider position under cursor column `cx` of a track at `x`.
@@ -1235,6 +1290,13 @@ impl Game<'_> {
     }
     /// A drag moved the cursor: the dragged slider follows it.
     pub(super) fn mod_screen_drag(&mut self) {
+        let cursor_y = self.cursor.1;
+        if let Some(ms) = self.mods.screen.as_mut()
+            && let Some((from, start)) = ms.pan
+        {
+            ms.page = (start - (cursor_y - from)).max(0.0);
+            return;
+        }
         let Some(ms) = self.mods.screen.as_ref() else {
             return;
         };
@@ -1264,6 +1326,7 @@ impl Game<'_> {
     pub(super) fn mod_screen_release(&mut self) {
         if let Some(ms) = self.mods.screen.as_mut() {
             ms.slider = None;
+            ms.pan = None;
         }
     }
     /// The wheel over a `list` scrolls it.
@@ -1277,13 +1340,13 @@ impl Game<'_> {
             return;
         };
         let x = (w / 2.0).floor() - MOD_UI_COLUMN / 2.0;
-        let top =
-            MOD_UI_TOP + Self::mod_page_keys(&self.mods.mods, ms).len() as f32 * MOD_UI_KEY_ROW;
-        let layout = Self::mod_ui_layout(h, top, widgets);
+        let keys = Self::mod_page_keys(&self.mods.mods, ms).len();
+        let (_, layout, max) = Self::mod_ui_layout(h, keys, widgets, ms.page);
         let mut list_i = 0usize;
         for (w, &(wy, wh)) in widgets.iter().zip(&layout) {
             let UiWidget::List(l) = w else { continue };
-            let over = ui::hovered(cursor, x, wy, MOD_UI_COLUMN, wh);
+            let over =
+                Self::mod_ui_shown(h, wy, wh) && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, wh);
             ms.scrolls.resize_with(list_i + 1, ui::Scroll::default);
             if over {
                 let content = l.rows.len() as f32 * 12.0;
@@ -1292,6 +1355,7 @@ impl Game<'_> {
             }
             list_i += 1;
         }
+        ms.page = (ms.page - delta * MOD_UI_KEY_ROW).clamp(0.0, max);
     }
 }
 
@@ -1342,6 +1406,8 @@ fn draw_list_rows(
 
 #[cfg(feature = "mods")]
 const MOD_UI_TOP: f32 = 40.0;
+#[cfg(feature = "mods")]
+const MOD_UI_BOTTOM: f32 = 34.0;
 #[cfg(feature = "mods")]
 const MOD_UI_COLUMN: f32 = 200.0;
 /// A key row's height with its gap, as the widgets below it space out.

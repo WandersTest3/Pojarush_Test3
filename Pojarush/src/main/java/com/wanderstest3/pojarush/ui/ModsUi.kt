@@ -4,7 +4,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -103,7 +111,19 @@ fun ModsPage() {
             )
         )
         if (entries.isEmpty()) Hint(stringResource(R.string.mods_empty))
-        entries.forEach { e ->
+        if (kind == PackKind.MOD) {
+            entries.forEach { e ->
+                ModMenuCard(e, onToggle = {
+                    GameFiles.setEnabled(kind, e, it)
+                    version++
+                    restart()
+                }, onDelete = {
+                    GameFiles.delete(kind, e)
+                    version++
+                    restart()
+                })
+            }
+        } else entries.forEach { e ->
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(e.name, modifier = Modifier.weight(1f).basicMarquee(), maxLines = 1, style = MaterialTheme.typography.bodyMedium)
                 if (e.enabled != null) {
@@ -129,6 +149,83 @@ fun ModsPage() {
             PackKind.MOD -> Hint(stringResource(R.string.mods_restart))
             PackKind.RESOURCE -> Hint(stringResource(R.string.mods_resource_switch))
             PackKind.SHADER -> Hint(stringResource(R.string.mods_pick_in_game))
+        }
+    }
+}
+
+@Composable
+private fun ModMenuCard(entry: com.wanderstest3.pojarush.horizon.PackEntry, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
+    val context = LocalContext.current
+    val info = remember(entry.file.path, entry.file.lastModified()) { GameFiles.modInfo(entry.file) }
+    val icon = remember(info) {
+        info?.icon?.let { runCatching { android.graphics.BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap() }.getOrNull() }
+    }
+    var open by rememberSaveable(entry.file.path) { mutableStateOf(false) }
+    val purple = androidx.compose.ui.graphics.Color(0xFF57197F)
+    androidx.compose.material3.Surface(
+        modifier = Modifier.fillMaxWidth().clickable { open = !open },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+    ) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (icon != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = icon,
+                        contentDescription = null,
+                        filterQuality = androidx.compose.ui.graphics.FilterQuality.None,
+                        modifier = Modifier.size(48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.size(48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(purple),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(entry.name.take(1).uppercase(), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.titleLarge)
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f, fill = false))
+                        if (!info?.version.isNullOrEmpty()) Text(info!!.version, maxLines = 1, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (!info?.authors.isNullOrEmpty()) {
+                        Text(stringResource(R.string.mod_menu_by, info!!.authors.joinToString(", ")), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (!info?.description.isNullOrEmpty()) {
+                        Text(info!!.description, maxLines = if (open) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (entry.enabled != null) SettingSwitchInline(entry.enabled, onToggle)
+            }
+            if (open) {
+                if (info != null) {
+                    Text(
+                        listOfNotNull(info.id, info.api.takeIf { it.isNotEmpty() }?.let { "API $it" }, info.side.takeIf { it.isNotEmpty() }).joinToString(" · "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (info.capabilities.isNotEmpty()) {
+                        Text(stringResource(R.string.mod_menu_capabilities, info.capabilities.joinToString(", ")), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Text(entry.file.name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    info?.links.orEmpty().forEach { (key, url) ->
+                        val label = when (key) {
+                            "homepage" -> R.string.mod_menu_homepage
+                            "sources" -> R.string.mod_menu_sources
+                            "issues" -> R.string.mod_menu_issues
+                            else -> R.string.mod_menu_license
+                        }
+                        TextButton(onClick = {
+                            runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                        }) { Text(stringResource(label), maxLines = 1) }
+                    }
+                    androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onDelete) { Text(stringResource(R.string.controls_delete)) }
+                }
+            }
         }
     }
 }

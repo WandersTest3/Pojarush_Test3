@@ -157,4 +157,14 @@
     <string name="nbt_back">Indietro</string>
     <string name="nbt_save">Salva</string>
     <string name="nbt_saved">Salvato</string>
+    <string name="controls_gyro">Giroscopio</string>
+    <string name="controls_gyro_desc">Inclinare il telefono ruota la visuale durante il gioco.</string>
+    <string name="controls_gyro_sensitivity">Sensibilità del giroscopio</string>
+    <string name="controls_gyro_invert">Inverti asse verticale del giroscopio</string>
+    <string name="mod_menu_by">di %s</string>
+    <string name="mod_menu_capabilities">Usa: %s</string>
+    <string name="mod_menu_homepage">Sito web</string>
+    <string name="mod_menu_sources">Sorgente</string>
+    <string name="mod_menu_issues">Problemi</string>
+    <string name="mod_menu_license">Licenza</string>
 </resources>

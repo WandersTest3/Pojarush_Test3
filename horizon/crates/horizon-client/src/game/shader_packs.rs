@@ -533,6 +533,7 @@ impl Game<'_> {
             .get(&(at.x >> 4, at.z >> 4))
             .map(|c| c.biome(at.x, at.y, at.z));
         let (held_items, held_light) = self.held_for_pack();
+        let player = self.pack_player();
         let info = biome.map(|b| self.res.biomes().get(b));
         PackInputs {
             day_time: self.world.day_time,
@@ -559,6 +560,37 @@ impl Game<'_> {
             held_items,
             held_light,
             mod_params: [[0.0; 4]; 8],
+            player,
+        }
+    }
+
+    fn pack_player(&mut self) -> horizon_client::gfx::pack_uniforms::PackPlayer {
+        let invisible = self.own_invisible();
+        let spectator = self.spectator();
+        let mode = self.mode;
+        let Some(p) = self.player.as_mut() else {
+            return Default::default();
+        };
+        let health_mode = matches!(
+            mode,
+            horizon_client::command::args::GameMode::Survival
+                | horizon_client::command::args::GameMode::Adventure
+        );
+        horizon_client::gfx::pack_uniforms::PackPlayer {
+            has_health: health_mode,
+            health: p.health.health(),
+            max_health: p.attribute("minecraft:max_health").unwrap_or(20.0) as f32,
+            food: p.health.food.food,
+            air: p.air,
+            max_air: 300,
+            armor: p.attribute("minecraft:armor").unwrap_or(0.0) as i32,
+            on_ground: p.ground.on_ground,
+            burning: p.fire_ticks > 0,
+            hurt: p.health.hurt.hurt_time > 0,
+            invisible,
+            sneaking: p.local_crouching,
+            sprinting: p.sprinting,
+            spectator,
         }
     }
 

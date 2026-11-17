@@ -23,6 +23,10 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.hardware.input.InputManager
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -142,14 +146,54 @@ class ControlsView(
         }
     }
 
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    private var gyroOn = false
+    private var gyroLast = 0L
+    private val gyroListener = object : SensorEventListener {
+        override fun onSensorChanged(e: SensorEvent) {
+            val last = gyroLast
+            gyroLast = e.timestamp
+            if (last == 0L || !captured || editMode) return
+            val dt = ((e.timestamp - last) / 1_000_000_000f).coerceIn(0f, 0.1f)
+            val (v0, v1) = e.values[0] to e.values[1]
+            val (up, right) = when (display?.rotation ?: 0) {
+                1 -> v0 to -v1
+                2 -> -v1 to -v0
+                3 -> -v0 to v1
+                else -> v1 to v0
+            }
+            val k = GYRO_PIXELS_PER_RADIAN * dt * settings.gyroSensitivity
+            val dx = if (kotlin.math.abs(up) > GYRO_DEAD_ZONE) -up * k else 0f
+            val dy = if (kotlin.math.abs(right) > GYRO_DEAD_ZONE) -right * k * (if (settings.gyroInvertY) -1f else 1f) else 0f
+            if (dx != 0f || dy != 0f) HorizonBridge.look(dx, dy)
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+    private fun syncGyro() {
+        val sensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        val want = settings.gyro && sensor != null && isAttachedToWindow
+        if (want == gyroOn) return
+        gyroOn = want
+        gyroLast = 0L
+        if (want && sensor != null) sensorManager?.registerListener(gyroListener, sensor, SensorManager.SENSOR_DELAY_GAME, uiHandler)
+        else sensorManager?.unregisterListener(gyroListener)
+    }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         inputManager.registerInputDeviceListener(deviceListener, uiHandler)
         scanDevices()
+        syncGyro()
     }
 
     override fun onDetachedFromWindow() {
         inputManager.unregisterInputDeviceListener(deviceListener)
+        if (gyroOn) {
+            sensorManager?.unregisterListener(gyroListener)
+            gyroOn = false
+        }
         if (pointerCaptured && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) releasePointerCapture()
         pointerCaptured = false
         super.onDetachedFromWindow()
@@ -210,6 +254,7 @@ class ControlsView(
         private set
     var onSelectionChanged: ((Selection?) -> Unit)? = null
     var onLayoutEdited: (() -> Unit)? = null
+    private var mouseHudDrag = false
     private var cursorX = -1f
     private var cursorY = -1f
 
@@ -365,6 +410,7 @@ class ControlsView(
 
     fun reloadSettings() {
         images.clear()
+        syncGyro()
         virtualMouse = settings.virtualMouse
         textActions = settings.textActions
         relayout()
@@ -790,14 +836,35 @@ class ControlsView(
         }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_BUTTON_PRESS -> {
+                if (mouseHudDrag) return true
                 if (!captured && (virtualMouse || physicalMouse)) {
                     cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
                     cursorY = e.y.coerceIn(0f, (height - 1).coerceAtLeast(0).toFloat())
                     HorizonBridge.cursor(cursorX, cursorY)
+                    if (button == 0 && HorizonBridge.hudDragStart(cursorX, cursorY)) {
+                        mouseHudDrag = true
+                        return true
+                    }
                 }
                 mouse(button, true)
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_BUTTON_RELEASE -> mouse(button, false)
+            MotionEvent.ACTION_MOVE -> if (mouseHudDrag) {
+                cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
+                cursorY = e.y.coerceIn(0f, (height - 1).coerceAtLeast(0).toFloat())
+                HorizonBridge.cursor(cursorX, cursorY)
+                HorizonBridge.hudDragMove(cursorX, cursorY, false)
+                invalidate()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_BUTTON_RELEASE -> {
+                if (mouseHudDrag) {
+                    if (e.actionMasked == MotionEvent.ACTION_UP || e.buttonState and MotionEvent.BUTTON_PRIMARY == 0) {
+                        mouseHudDrag = false
+                        HorizonBridge.hudDragMove(cursorX, cursorY, true)
+                    }
+                    return true
+                }
+                mouse(button, false)
+            }
         }
         return true
     }
@@ -836,6 +903,8 @@ class ControlsView(
     }
 
     private companion object {
+        const val GYRO_PIXELS_PER_RADIAN = 380f
+        const val GYRO_DEAD_ZONE = 0.02f
         const val PHYSICAL_LOOK = 1.3f
     }
 
@@ -1170,12 +1239,6 @@ class ControlsView(
             s.lock.forEach(::up)
             setStickActions(i, emptyList())
         }
-        if (s.doubleTap.isNotEmpty() && time - stickLastTap[i] < 300) {
-            stickSneak[i] = !stickSneak[i]
-            if (stickSneak[i]) s.doubleTap.forEach(::down) else s.doubleTap.forEach(::up)
-            vibrate()
-        }
-        stickLastTap[i] = time
         stickMove(i, x, y)
     }
 

@@ -24,8 +24,44 @@ object HudImages {
 
     fun dir(): File = File(Paths.publicRoot, "hud_image").apply { mkdirs() }
 
-    fun list(): List<File> = dir().listFiles { f -> f.isFile && f.extension.lowercase() in IMAGE }
-        ?.sortedBy { it.name.lowercase() }.orEmpty()
+    fun list(): List<File> {
+        unpackDropped()
+        return dir().walkTopDown().maxDepth(4)
+            .filter { it.isFile && it.extension.lowercase() in IMAGE && !it.name.startsWith(".") }
+            .sortedBy { it.name.lowercase() }.toList()
+    }
+
+    private fun key(name: String): String = name.lowercase().replace(Regex("[^a-z0-9]"), "")
+
+    private var index: Map<String, File> = emptyMap()
+    private var indexedAt = 0L
+
+    @Synchronized
+    private fun indexed(): Map<String, File> {
+        val now = System.currentTimeMillis()
+        if (now - indexedAt > 3000) {
+            index = list().groupBy { key(it.nameWithoutExtension) }.mapValues { it.value.first() }
+            indexedAt = now
+        }
+        return index
+    }
+
+    private fun unpackDropped() {
+        val dir = dir()
+        dir.listFiles { f -> f.isFile && f.extension.equals("zip", true) }?.forEach { zip ->
+            runCatching {
+                ZipInputStream(zip.inputStream().buffered()).use { input ->
+                    while (true) {
+                        val entry = input.nextEntry ?: break
+                        val base = entry.name.substringAfterLast('/')
+                        if (entry.isDirectory || base.startsWith(".") || base.substringAfterLast('.', "").lowercase() !in IMAGE) continue
+                        File(dir, base).outputStream().use { input.copyTo(it) }
+                    }
+                }
+                zip.renameTo(File(dir, "${zip.name}.imported"))
+            }
+        }
+    }
 
     fun file(ref: String): File? {
         if (ref.isEmpty()) return null
@@ -34,6 +70,7 @@ object HudImages {
         val base = dir()
         return File(base, ref).takeIf { it.isFile }
             ?: IMAGE.map { File(base, "$ref.$it") }.firstOrNull { it.isFile }
+            ?: indexed()[key(ref.substringBeforeLast('.').ifEmpty { ref })]
     }
 
     fun has(ref: String): Boolean = file(ref) != null

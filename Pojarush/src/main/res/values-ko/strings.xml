@@ -157,4 +157,14 @@
     <string name="nbt_back">뒤로</string>
     <string name="nbt_save">저장</string>
     <string name="nbt_saved">저장됨</string>
+    <string name="controls_gyro">자이로스코프</string>
+    <string name="controls_gyro_desc">플레이 중 휴대폰을 기울이면 카메라가 회전합니다.</string>
+    <string name="controls_gyro_sensitivity">자이로스코프 감도</string>
+    <string name="controls_gyro_invert">자이로스코프 상하 반전</string>
+    <string name="mod_menu_by">제작: %s</string>
+    <string name="mod_menu_capabilities">사용: %s</string>
+    <string name="mod_menu_homepage">웹사이트</string>
+    <string name="mod_menu_sources">소스</string>
+    <string name="mod_menu_issues">문제</string>
+    <string name="mod_menu_license">라이선스</string>
 </resources>

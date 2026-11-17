@@ -87,6 +87,15 @@ class ControlSettings(context: Context) {
     var bedrockDropMs: Int
         get() = prefs.getInt("bedrock_drop_ms", 200).coerceIn(50, 600)
         set(v) = prefs.edit().putInt("bedrock_drop_ms", v.coerceIn(50, 1000)).apply()
+    var gyro: Boolean
+        get() = prefs.getBoolean("gyro", false)
+        set(v) = prefs.edit().putBoolean("gyro", v).apply()
+    var gyroSensitivity: Float
+        get() = prefs.getFloat("gyro_sensitivity", 1.00f).coerceIn(0.10f, 3.00f)
+        set(v) = prefs.edit().putFloat("gyro_sensitivity", v.coerceIn(0.10f, 3.00f)).apply()
+    var gyroInvertY: Boolean
+        get() = prefs.getBoolean("gyro_invert_y", false)
+        set(v) = prefs.edit().putBoolean("gyro_invert_y", v).apply()
     var hotbarSwap: Boolean
         get() = prefs.getBoolean("hotbar_swap", true)
         set(v) = prefs.edit().putBoolean("hotbar_swap", v).apply()

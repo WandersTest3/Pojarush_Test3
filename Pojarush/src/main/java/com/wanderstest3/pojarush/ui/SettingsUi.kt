@@ -137,6 +137,24 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
                 onChange(Change.CONTROLS)
             }
         }
+        var gyro by remember { mutableStateOf(settings.gyro) }
+        SettingSwitch(stringResource(R.string.controls_gyro), gyro, stringResource(R.string.controls_gyro_desc)) {
+            settings.gyro = it
+            gyro = it
+            onChange(Change.CONTROLS)
+        }
+        if (gyro) {
+            SettingSlider(stringResource(R.string.controls_gyro_sensitivity), settings.gyroSensitivity, 0.10f..3.00f, 0.05f, { "${fmt(it)}x" }) {
+                settings.gyroSensitivity = it
+                onChange(Change.CONTROLS)
+            }
+            var invert by remember { mutableStateOf(settings.gyroInvertY) }
+            SettingSwitch(stringResource(R.string.controls_gyro_invert), invert) {
+                settings.gyroInvertY = it
+                invert = it
+                onChange(Change.CONTROLS)
+            }
+        }
         Hint(stringResource(R.string.controls_help))
     }
 }

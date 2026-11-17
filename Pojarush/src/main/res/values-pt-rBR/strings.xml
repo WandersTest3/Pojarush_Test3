@@ -202,6 +202,10 @@
     <string name="controls_bedrock_drop">Drop do Bedrock</string>
     <string name="controls_bedrock_drop_desc">Segurar um slot da hotbar fica apertando Q para soltar itens, como na Bedrock Edition.</string>
     <string name="controls_bedrock_drop_interval">Intervalo do drop</string>
+    <string name="controls_gyro">Giroscópio</string>
+    <string name="controls_gyro_desc">Inclinar o celular gira a câmera durante o jogo.</string>
+    <string name="controls_gyro_sensitivity">Sensibilidade do giroscópio</string>
+    <string name="controls_gyro_invert">Inverter vertical do giroscópio</string>
     <string name="menu_button_title">Botão flutuante</string>
     <string name="menu_button_size">Tamanho</string>
     <string name="menu_button_opacity">Opacidade</string>
@@ -351,4 +355,10 @@
     <string name="nbt_back">Voltar</string>
     <string name="nbt_save">Salvar</string>
     <string name="nbt_saved">Salvo</string>
+    <string name="mod_menu_by">por %s</string>
+    <string name="mod_menu_capabilities">Usa: %s</string>
+    <string name="mod_menu_homepage">Site</string>
+    <string name="mod_menu_sources">Código</string>
+    <string name="mod_menu_issues">Problemas</string>
+    <string name="mod_menu_license">Licença</string>
 </resources>

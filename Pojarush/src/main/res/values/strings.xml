@@ -203,6 +203,10 @@
     <string name="controls_bedrock_drop">Bedrock drop</string>
     <string name="controls_bedrock_drop_desc">Holding a hotbar slot keeps pressing Q to drop items, like Bedrock Edition.</string>
     <string name="controls_bedrock_drop_interval">Drop interval</string>
+    <string name="controls_gyro">Gyroscope</string>
+    <string name="controls_gyro_desc">Tilting the phone turns the camera while playing.</string>
+    <string name="controls_gyro_sensitivity">Gyroscope sensitivity</string>
+    <string name="controls_gyro_invert">Invert gyroscope vertical</string>
     <string name="menu_button_title">Floating button</string>
     <string name="menu_button_size">Size</string>
     <string name="menu_button_opacity">Opacity</string>
@@ -352,4 +356,10 @@
     <string name="nbt_back">Back</string>
     <string name="nbt_save">Save</string>
     <string name="nbt_saved">Saved</string>
+    <string name="mod_menu_by">by %s</string>
+    <string name="mod_menu_capabilities">Uses: %s</string>
+    <string name="mod_menu_homepage">Website</string>
+    <string name="mod_menu_sources">Source</string>
+    <string name="mod_menu_issues">Issues</string>
+    <string name="mod_menu_license">License</string>
 </resources>

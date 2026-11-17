@@ -157,4 +157,14 @@
     <string name="nbt_back">Назад</string>
     <string name="nbt_save">Зберегти</string>
     <string name="nbt_saved">Збережено</string>
+    <string name="controls_gyro">Гіроскоп</string>
+    <string name="controls_gyro_desc">Нахил телефона повертає камеру в грі.</string>
+    <string name="controls_gyro_sensitivity">Чутливість гіроскопа</string>
+    <string name="controls_gyro_invert">Інвертувати вертикаль гіроскопа</string>
+    <string name="mod_menu_by">автор: %s</string>
+    <string name="mod_menu_capabilities">Використовує: %s</string>
+    <string name="mod_menu_homepage">Сайт</string>
+    <string name="mod_menu_sources">Вихідний код</string>
+    <string name="mod_menu_issues">Проблеми</string>
+    <string name="mod_menu_license">Ліцензія</string>
 </resources>

@@ -37,6 +37,28 @@ pub struct PackInputs {
     pub held_light: [i32; 2],
     /// The values native mods hand their packs (`frame.mods`, `native_shader_params`).
     pub mod_params: [[f32; 4]; 8],
+    /// The local player, for Iris's player uniforms.
+    pub player: PackPlayer,
+}
+
+/// The local player's state as Iris's `currentPlayer*` and `is_*` uniforms read it.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct PackPlayer {
+    /// A player exists and its game mode has health (survival or adventure).
+    pub has_health: bool,
+    pub health: f32,
+    pub max_health: f32,
+    pub food: i32,
+    pub air: i32,
+    pub max_air: i32,
+    pub armor: i32,
+    pub on_ground: bool,
+    pub burning: bool,
+    pub hurt: bool,
+    pub invisible: bool,
+    pub sneaking: bool,
+    pub sprinting: bool,
+    pub spectator: bool,
 }
 
 /// One uniform's value: up to 16 floats or 3 integers.
@@ -192,6 +214,19 @@ pub const NAMES: &[&str] = &[
     "logicalHeightLimit",
     "hasSkylight",
     "hasCeiling",
+    "currentPlayerHealth",
+    "maxPlayerHealth",
+    "currentPlayerHunger",
+    "maxPlayerHunger",
+    "currentPlayerAir",
+    "maxPlayerAir",
+    "maxPlayerArmor",
+    "is_burning",
+    "is_hurt",
+    "is_invisible",
+    "is_sneaking",
+    "is_sprinting",
+    "isSpectator",
 ];
 
 /// Values carried from frame to frame.
@@ -384,6 +419,7 @@ impl FrameUniforms {
         let world_day = inputs.day_time.div_euclid(24000);
         let seconds = (now - self.start).as_secs_f32() % 3600.0;
 
+        let pl = inputs.player;
         let value = |name: &str| -> Value {
             let v3 = |v: Vec3| Value::f(&v.to_array());
             let m4 = |m: Mat4| Value::f(&m.to_cols_array());
@@ -467,15 +503,50 @@ impl FrameUniforms {
                 "dhNearPlane" => Value::f(&[frame.depth_far * 0.5]),
                 "dhFarPlane" => Value::f(&[frame.depth_far * 4.0]),
                 "dhRenderDistance" => Value::i(&[frame.depth_far as i32]),
-                "currentPlayerArmor" => Value::f(&[0.0]),
+                "currentPlayerHealth" => Value::f(&[if pl.has_health {
+                    pl.health / pl.max_health.max(1.0)
+                } else {
+                    -1.0
+                }]),
+                "maxPlayerHealth" => Value::f(&[if pl.has_health { pl.max_health } else { -1.0 }]),
+                "currentPlayerHunger" => Value::f(&[if pl.has_health {
+                    pl.food as f32 / 20.0
+                } else {
+                    -1.0
+                }]),
+                "maxPlayerHunger" => Value::f(&[if pl.has_health { 20.0 } else { -1.0 }]),
+                "currentPlayerAir" => Value::f(&[if pl.has_health {
+                    pl.air.max(0) as f32 / pl.max_air.max(1) as f32
+                } else {
+                    -1.0
+                }]),
+                "maxPlayerAir" => Value::f(&[if pl.has_health {
+                    pl.max_air as f32
+                } else {
+                    -1.0
+                }]),
+                "currentPlayerArmor" => Value::f(&[if pl.has_health {
+                    pl.armor as f32 / 50.0
+                } else {
+                    -1.0
+                }]),
+                "maxPlayerArmor" => Value::f(&[if pl.has_health { 50.0 } else { -1.0 }]),
+                "is_burning" => Value::i(&[i32::from(pl.burning)]),
+                "is_hurt" => Value::i(&[i32::from(pl.hurt)]),
+                "is_invisible" => Value::i(&[i32::from(pl.invisible)]),
+                "is_sneaking" => Value::i(&[i32::from(pl.sneaking)]),
+                "is_sprinting" => Value::i(&[i32::from(pl.sprinting)]),
+                "isSpectator" => Value::i(&[i32::from(pl.spectator)]),
                 "maxBlindnessDarkness" => Value::f(&[inputs.blindness.max(frame.darkness.0)]),
                 "isEyeInCave" => Value::i(&[i32::from(eye[1] < 4.0 && frame.camera.y < 60.0)]),
                 "lightningBoltPosition" => Value::f(&[0.0, 10000.0, 0.0, 0.0]),
                 "normalMatrix" => m4(view),
                 "isNether" => Value::i(&[i32::from(inputs.biome_category == 16)]),
-                "is_on_ground" => Value::i(&[1]),
+                "is_on_ground" => Value::i(&[i32::from(pl.on_ground)]),
                 "heightLimit" | "logicalHeightLimit" => Value::i(&[384]),
-                "hasSkylight" => Value::i(&[i32::from(inputs.biome_category != 16 && inputs.biome_category != 8)]),
+                "hasSkylight" => Value::i(&[i32::from(
+                    inputs.biome_category != 16 && inputs.biome_category != 8,
+                )]),
                 "hasCeiling" => Value::i(&[i32::from(inputs.biome_category == 16)]),
                 // renderStage is NONE outside gbuffers draws.
                 _ => Value::i(&[0]),
@@ -545,7 +616,12 @@ fn components(name: &str) -> usize {
         | "skyColor" => 3,
         "lightningBoltPosition" => 4,
         "eyeBrightness" | "eyeBrightnessSmooth" | "atlasSize" => 2,
-        n if n == "normalMatrix" || n.starts_with("gbuffer") || n.starts_with("shadow") && n != "shadowAngle" => 16,
+        n if n == "normalMatrix"
+            || n.starts_with("gbuffer")
+            || n.starts_with("shadow") && n != "shadowAngle" =>
+        {
+            16
+        }
         _ => 1,
     }
 }

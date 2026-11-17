@@ -157,4 +157,14 @@
     <string name="nbt_back">Quay lại</string>
     <string name="nbt_save">Lưu</string>
     <string name="nbt_saved">Đã lưu</string>
+    <string name="controls_gyro">Con quay hồi chuyển</string>
+    <string name="controls_gyro_desc">Nghiêng điện thoại để xoay camera khi chơi.</string>
+    <string name="controls_gyro_sensitivity">Độ nhạy con quay</string>
+    <string name="controls_gyro_invert">Đảo trục dọc con quay</string>
+    <string name="mod_menu_by">bởi %s</string>
+    <string name="mod_menu_capabilities">Dùng: %s</string>
+    <string name="mod_menu_homepage">Trang web</string>
+    <string name="mod_menu_sources">Mã nguồn</string>
+    <string name="mod_menu_issues">Sự cố</string>
+    <string name="mod_menu_license">Giấy phép</string>
 </resources>
