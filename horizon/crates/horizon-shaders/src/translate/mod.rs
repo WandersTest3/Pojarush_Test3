@@ -408,7 +408,11 @@ fn translate(
             // The game's, or zero for anything it doesn't provide.
             Some(inputs) => match inputs.attributes.iter().find(|a| &a.0 == name) {
                 Some((_, given)) => format!("{ty}({given})"),
-                None => format!("{ty}(0)"),
+                None => match name.as_str() {
+                    "at_tangent" => format!("{ty}(vec4(1.0, 0.0, 0.0, 1.0))"),
+                    "mc_midTexCoord" => format!("{ty}(vec4(0.5, 0.5, 0.0, 1.0))"),
+                    _ => format!("{ty}(0)"),
+                },
             },
         };
         writeln!(vertex_main, "    {name} = {value};").unwrap();
@@ -494,11 +498,12 @@ fn translate(
     }
     let vertex_module = compile(&v, &v_text, header(&v).lines().count());
     let fragment_module = compile(&f, &f_text, header(&f).lines().count());
-    let (vertex, fragment) = match (vertex_module, fragment_module) {
+    let (mut vertex, mut fragment) = match (vertex_module, fragment_module) {
         (Ok(v), Ok(f)) => (v, f),
         (a, b) => return Err(a.err().into_iter().chain(b.err()).flatten().collect()),
     };
     let (uniform_size, offsets) = block_layout(&fragment);
+    let samplers = used_samplers(samplers, &mut vertex, &mut fragment);
     let uniforms = offsets
         .into_iter()
         .filter_map(|(member, offset)| {
@@ -1005,9 +1010,10 @@ fn compile(stage: &Stage, text: &str, header_lines: usize) -> Result<naga::Modul
     // naga's frontend refuses a few things GL takes: a scalar's swizzle (`f.x`, GLSL 4.20), a
     // matrix column's component written to (`m[1].y =`) and `min`/`max`/`clamp` of a `uint` and
     // integer literals. Each refusal is rewritten where naga points, and the source parsed again.
-    let mut text = std::borrow::Cow::Borrowed(text);
+    let text = const_in_parameters(text);
+    let mut text = std::borrow::Cow::Borrowed(text.as_str());
     let mut tries = 0;
-    let module = loop {
+    let mut module = loop {
         tries += 1;
         match Frontend::default().parse(&Options::from(stage.kind), &text) {
             Ok(m) => break m,
@@ -1019,6 +1025,7 @@ fn compile(stage: &Stage, text: &str, header_lines: usize) -> Result<naga::Modul
             },
         }
     };
+    missing_returns(&mut module);
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .subgroup_operations(naga::valid::SubgroupOperationSet::all())
         .subgroup_stages(naga::valid::ShaderStages::all())
@@ -1852,4 +1859,83 @@ mod tests {
         );
         assert!(p.is_ok(), "{:?}", p.err());
     }
+}
+
+/// `const in` on a parameter (GLSL takes it, naga's frontend does not): the `const` is blanked
+/// with spaces, so every offset stays where it was.
+fn const_in_parameters(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = text.to_owned().into_bytes();
+    let mut i = 0;
+    while let Some(pos) = text[i..].find("const") {
+        let at = i + pos;
+        let before = at.checked_sub(1).map(|b| bytes[b]);
+        let boundary = before.is_none_or(|c| !(c.is_ascii_alphanumeric() || c == b'_'));
+        let mut j = at + 5;
+        while j < bytes.len() && (bytes[j] == b' ' || bytes[j] == b'\t') {
+            j += 1;
+        }
+        if boundary && j > at + 5 && text[j..].starts_with("in") {
+            let after = bytes.get(j + 2).copied();
+            if after.is_none_or(|c| !(c.is_ascii_alphanumeric() || c == b'_')) {
+                for b in &mut out[at..at + 5] {
+                    *b = b' ';
+                }
+            }
+        }
+        i = at + 5;
+    }
+    String::from_utf8(out).unwrap_or_else(|_| text.to_owned())
+}
+
+/// A function with a result type that can end without returning one (GL leaves the value
+/// undefined; naga refuses it): its bare `return`s give the type's zero instead.
+fn missing_returns(module: &mut naga::Module) {
+    fn fix(block: &mut naga::Block, zero: naga::Handle<naga::Expression>) {
+        for statement in block.iter_mut() {
+            match statement {
+                naga::Statement::Return { value } if value.is_none() => *value = Some(zero),
+                naga::Statement::Block(b) => fix(b, zero),
+                naga::Statement::If { accept, reject, .. } => {
+                    fix(accept, zero);
+                    fix(reject, zero);
+                }
+                naga::Statement::Switch { cases, .. } => {
+                    for c in cases {
+                        fix(&mut c.body, zero);
+                    }
+                }
+                naga::Statement::Loop { body, continuing, .. } => {
+                    fix(body, zero);
+                    fix(continuing, zero);
+                }
+                _ => {}
+            }
+        }
+    }
+    for (_, function) in module.functions.iter_mut() {
+        let Some(result) = &function.result else { continue };
+        let ty = result.ty;
+        let zero = function
+            .expressions
+            .append(naga::Expression::ZeroValue(ty), naga::Span::UNDEFINED);
+        fix(&mut function.body, zero);
+    }
+}
+
+/// The samplers either stage still reads once the code no entry point reaches is dropped: a pack
+/// declares many it reads only under some options, and mobile GPUs bind as few as 16 per stage.
+fn used_samplers(samplers: Vec<Sampler>, vertex: &mut naga::Module, fragment: &mut naga::Module) -> Vec<Sampler> {
+    let mut bound = std::collections::HashSet::new();
+    for m in [&mut *vertex, &mut *fragment] {
+        naga::compact::compact(m, naga::compact::KeepUnused::No);
+        for (_, g) in m.global_variables.iter() {
+            if g.space == naga::AddressSpace::Handle
+                && let Some(b) = &g.binding
+            {
+                bound.insert(b.binding);
+            }
+        }
+    }
+    samplers.into_iter().filter(|s| bound.contains(&s.binding)).collect()
 }

@@ -23,6 +23,7 @@ mod config;
 mod core_shader;
 mod custom;
 mod discover;
+mod gles;
 mod lang;
 mod macros;
 mod options;
@@ -34,6 +35,7 @@ mod screens;
 mod textures;
 mod translate;
 
+pub use gles::for_gles;
 pub use biomes::{category as biome_category, precipitation as biome_precipitation};
 pub use block_ids::BlockIds;
 pub use condition::eval_condition;

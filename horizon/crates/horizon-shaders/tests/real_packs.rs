@@ -202,6 +202,13 @@ fn real_packs_read() {
             if std::env::var_os("BACKENDS").is_some() {
                 backends(&post);
             }
+            if std::env::var_os("COUNT_SAMPLERS").is_some() {
+                let most = post.programs.iter().chain(&post.shadow_comp)
+                    .chain([&post.terrain, &post.water, &post.entities, &post.block, &post.shadow, &post.sky, &post.hand].into_iter().flatten())
+                    .filter_map(|p| p.program.as_ref().map(|g| (p.name.clone(), g.interface.samplers.len(), g.interface.images.len())))
+                    .max_by_key(|t| t.1);
+                println!("    most samplers: {most:?}");
+            }
             for p in post.programs.iter().chain(&post.shadow_comp) {
                 if std::env::var("PRINT_PROGRAM").is_ok_and(|n| n == p.name)
                     && let Some(program) = &p.program
@@ -290,7 +297,7 @@ fn backends(post: &horizon_shaders::Post) {
         &post.shadow_entities,
         &post.shadow_block,
     ];
-    let mut modules: Vec<(String, &naga::Module)> = Vec::new();
+    let mut owned: Vec<(String, naga::Module)> = Vec::new();
     for p in post
         .programs
         .iter()
@@ -298,13 +305,19 @@ fn backends(post: &horizon_shaders::Post) {
         .chain(optional.into_iter().flatten())
     {
         if let Some(program) = &p.program {
-            modules.push((format!("{} vertex", p.name), &program.vertex));
-            modules.push((format!("{} fragment", p.name), &program.fragment));
+            owned.push((format!("{} vertex", p.name), program.vertex.clone()));
+            owned.push((format!("{} fragment", p.name), program.fragment.clone()));
         }
         for (name, c) in &p.compute {
-            modules.push((name.clone(), &c.module));
+            owned.push((name.clone(), c.module.clone()));
         }
     }
+    if std::env::var_os("GLES").is_some() {
+        for (_, m) in &mut owned {
+            horizon_shaders::for_gles(m);
+        }
+    }
+    let modules: Vec<(String, &naga::Module)> = owned.iter().map(|(n, m)| (n.clone(), m)).collect();
     let (mut panics, mut errors) = (0, 0);
     for (name, module) in &modules {
         let info = naga::valid::Validator::new(
@@ -360,7 +373,7 @@ fn backends(post: &horizon_shaders::Post) {
             ("glsl", &|| {
                 use naga::back::glsl;
                 let options = glsl::Options {
-                    version: glsl::Version::Desktop(430),
+                    version: if std::env::var_os("GLES").is_some() { glsl::Version::Embedded { version: 320, is_webgl: false } } else { glsl::Version::Desktop(430) },
                     ..Default::default()
                 };
                 let pipeline = glsl::PipelineOptions {
@@ -415,6 +428,9 @@ fn backends(post: &horizon_shaders::Post) {
         "    backends: {} modules, {errors} errors, {panics} panics",
         modules.len()
     );
+    if std::env::var_os("NO_ASSERT").is_some() {
+        return;
+    }
     assert_eq!(
         (errors, panics),
         (0, 0),

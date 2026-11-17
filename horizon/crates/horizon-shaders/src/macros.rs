@@ -102,6 +102,8 @@ impl Macros {
         // Packs take Iris's extensions (compute programs, images, custom textures) where this
         // is defined.
         m.define("IS_IRIS", "");
+        m.define("MC_NORMAL_MAP", "");
+        m.define("MC_SPECULAR_MAP", "");
         m.define("CAT_OVERWORLD", "0");
         for (i, cat) in crate::biomes::CATEGORIES.iter().enumerate() {
             m.define(format!("CAT_{cat}"), i.to_string());

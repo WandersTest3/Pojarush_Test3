@@ -53,6 +53,10 @@ enum Source {
     ShadowDepth(usize, bool),
     /// `shadowcolor0/1` read outside the shadow programs (in them they are `Color`).
     ShadowColor(usize),
+    /// `normals`: a flat normal map (straight up in tangent space) until resource packs supply one.
+    Normals,
+    /// `specular`: no smoothness, metalness or emission.
+    Specular,
 }
 
 #[derive(Clone)]
@@ -86,6 +90,7 @@ impl SamplerKind {
             }
             Source::Depth | Source::Depth1 | Source::ShadowDepth(_, false) => Self::Nearest,
             Source::Noise => Self::Repeat,
+            Source::Normals | Source::Specular => Self::NearestRepeat,
             Source::Shadow | Source::ShadowDepth(_, true) => Self::Comparison,
             // Blocks look as the game draws them: nearest texels.
             Source::Atlas => Self::NearestRepeat,
@@ -635,6 +640,8 @@ pub struct PackPost {
     targets: Option<Targets>,
     noise: wgpu::TextureView,
     dummy: wgpu::TextureView,
+    flat_normals: wgpu::TextureView,
+    no_specular: wgpu::TextureView,
     dummy_3d: wgpu::TextureView,
     dummy_1d: wgpu::TextureView,
     /// `image.*` and `bufferObject.*`.
@@ -754,6 +761,8 @@ fn source(name: &str, shadow_space: bool, shadow_pass: bool, watershadow: bool) 
         "noisetex" => Source::Noise,
         "texture" | "gtexture" | "tex" => Source::Atlas,
         "lightmap" => Source::Lightmap,
+        "normals" => Source::Normals,
+        "specular" => Source::Specular,
         n => horizon_shaders::buffer_index(n).map_or(Source::Dummy, Source::Color),
     }
 }
@@ -1592,6 +1601,7 @@ fn build_pass(
             ..Default::default()
         });
         let module = |mut m: naga::Module, is_frag: bool| {
+            horizon_shaders::for_gles(&mut m);
             share_samplers(&mut m, &slots);
             if is_frag {
                 trim_fragment_outputs(&mut m, &targets);
@@ -2514,6 +2524,8 @@ impl PackPost {
                 .cloned()
                 .unwrap_or_else(|| noise(device, queue)),
             dummy: texture(device, queue, "Shader pack stand-in", 1, &white),
+            flat_normals: texture(device, queue, "Shader pack flat normals", 1, &[128, 128, 255, 255]),
+            no_specular: texture(device, queue, "Shader pack no specular", 1, &[0, 0, 0, 0]),
             images: {
                 let mut images = images;
                 for (k, image) in images.iter_mut().enumerate() {
@@ -2742,6 +2754,8 @@ impl PackPost {
                         .or(self.atlas.as_ref())
                         .unwrap_or(&self.dummy),
                     Source::Lightmap => &self.lightmap,
+                    Source::Normals => &self.flat_normals,
+                    Source::Specular => &self.no_specular,
                 };
                 let sampler = match SamplerKind::of(s.source, s.filtering) {
                     SamplerKind::Linear => &self.linear,

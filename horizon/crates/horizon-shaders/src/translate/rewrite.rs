@@ -247,7 +247,10 @@ impl Stage<'_> {
                 // unreachable but half-built (a module that fails validation): behind an `if`
                 // it stays reachable as far as naga knows.
                 "discard" => Some(
-                    if next(i).and_then(&next).is_some_and(|k| self.tokens[k] == "else") {
+                    if next(i).is_some_and(|j| self.tokens[j] == ";")
+                        && next(i).and_then(&next).is_some_and(|k| self.tokens[k] == "else")
+                    {
+                        skip_until = next(i).unwrap_or(i) + 1;
                         "{ if (true) discard; }".into()
                     } else {
                         "if (true) discard".into()
@@ -255,6 +258,7 @@ impl Stage<'_> {
                 ),
                 "return" if next(i).is_some_and(|j| self.tokens[j] == ";") => Some(
                     if next(i).and_then(&next).is_some_and(|k| self.tokens[k] == "else") {
+                        skip_until = next(i).unwrap_or(i) + 1;
                         "{ if (true) return; }".into()
                     } else {
                         "if (true) return".into()
