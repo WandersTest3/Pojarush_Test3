@@ -1026,22 +1026,39 @@ fn compile(stage: &Stage, text: &str, header_lines: usize) -> Result<naga::Modul
         }
     };
     missing_returns(&mut module);
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .subgroup_operations(naga::valid::SubgroupOperationSet::all())
-        .subgroup_stages(naga::valid::ShaderStages::all())
-        .validate(&module)
-        .map_err(|e| {
-            let span = e.spans().next().map_or(naga::Span::default(), |(s, _)| *s);
-            // The validator nests its reasons: say them all.
-            let inner = e.into_inner();
-            let mut message = inner.to_string();
-            let mut source = std::error::Error::source(&inner);
-            while let Some(s) = source {
-                write!(message, ": {s}").unwrap();
-                source = s.source();
+    let validate = |module: &naga::Module| {
+        Validator::new(ValidationFlags::all(), Capabilities::all())
+            .subgroup_operations(naga::valid::SubgroupOperationSet::all())
+            .subgroup_stages(naga::valid::ShaderStages::all())
+            .validate(module)
+    };
+    let mut checked = validate(&module);
+    // Code after a `return` or `discard` keeps its call results with no statement (GL drops
+    // it): drop what no statement reaches and check again.
+    if let Err(e) = &checked
+        && matches!(
+            e.as_inner(),
+            naga::valid::ValidationError::Function {
+                source: naga::valid::FunctionError::UnvisitedExpression(_),
+                ..
             }
-            vec![at(&text, span, message)]
-        })?;
+        )
+    {
+        naga::compact::compact(&mut module, naga::compact::KeepUnused::Yes);
+        checked = validate(&module);
+    }
+    checked.map_err(|e| {
+        let span = e.spans().next().map_or(naga::Span::default(), |(s, _)| *s);
+        // The validator nests its reasons: say them all.
+        let inner = e.into_inner();
+        let mut message = inner.to_string();
+        let mut source = std::error::Error::source(&inner);
+        while let Some(s) = source {
+            write!(message, ": {s}").unwrap();
+            source = s.source();
+        }
+        vec![at(&text, span, message)]
+    })?;
     Ok(module)
 }
 
@@ -1196,6 +1213,22 @@ mod tests {
 
     const VSH_120: &str = "#version 120\nvarying vec2 texcoord;\nvoid main() {\n    gl_Position = ftransform();\n    \
                            texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;\n}\n";
+
+    /// photon's `get_rain_puddles`: an early `return` with an option off leaves the calls after
+    /// it in naga's arena with no statement; GL compiles that dead code away.
+    #[test]
+    fn code_after_a_return_is_dropped() {
+        let fsh = "#version 120\nuniform float rainStrength;\nvarying vec2 texcoord;\n\
+                   float noise(vec2 c) { return fract(c.x * 7.0 + rainStrength); }\n\
+                   bool puddles(inout vec3 albedo) {\n    return false;\n    float p = noise(texcoord);\n    \
+                   if (p < 0.1) { return false; }\n    albedo *= p;\n    return true;\n}\n\
+                   void main() { vec3 c = vec3(1.0); if (puddles(c)) c *= 0.5; gl_FragColor = vec4(c, 1.0); }\n";
+        let p = program(
+            &[("composite.vsh", VSH_120), ("composite.fsh", fsh)],
+            Target::Window,
+        );
+        assert!(p.is_ok(), "{:?}", p.err());
+    }
 
     #[test]
     fn compatibility_programs_translate() {

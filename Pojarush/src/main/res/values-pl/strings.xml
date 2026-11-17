@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">Źródło</string>
     <string name="mod_menu_issues">Zgłoszenia</string>
     <string name="mod_menu_license">Licencja</string>
+    <string name="color_slots_hint">Dotknij pustego koła, aby zapisać bieżący kolor; dotknij zapisanego koloru, aby go użyć, przytrzymaj, aby usunąć.</string>
+    <string name="registry_open_modrinth">Otwórz Modrinth</string>
+    <string name="registry_load_more">Wczytaj więcej</string>
 </resources>

@@ -173,6 +173,10 @@ pub fn pending_shader_pack_status() -> Option<String> {
     ))
 }
 
+pub(super) fn reload_shader_pack_job() {
+    clear_pending_shader_job();
+}
+
 fn clear_pending_shader_job() {
     if let Ok(mut slot) = PENDING_SHADER_JOB.lock() {
         *slot = None;

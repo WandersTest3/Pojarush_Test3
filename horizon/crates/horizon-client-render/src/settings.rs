@@ -399,7 +399,7 @@ impl Settings {
         }
         Self {
             fov: f.int("fov") as f32,
-            render_distance: f.int("renderDistance"),
+            render_distance: f.int("renderDistance").min(crate::options_file::memory_render_cap()),
             simulation_distance: f.int("simulationDistance"),
             sensitivity: f.double("mouseSensitivity") as f32,
             master_volume: volumes[0],

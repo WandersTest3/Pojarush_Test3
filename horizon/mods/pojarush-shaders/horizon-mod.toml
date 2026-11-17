@@ -1,0 +1,17 @@
+id = "pojarush_shaders"
+name = "Pojarush Shaders"
+version = "1.0.0"
+description = "Iris's shortcuts for shader packs: O opens the pack list, K turns shaders on and off, R reloads the pack. A screen lists the packs to pick one and opens the pack's options."
+authors = ["Wanders_Test3"]
+api = "0.1"
+side = "client"
+capabilities = ["input", "ui", "storage"]
+experimental = ["input", "ui"]
+minecraft = "26.3"
+license = "Mod Test3 License V1.0"
+icon = "assets/pojarush_shaders/icon.png"
+
+[contact]
+homepage = "https://github.com/WandersTest3/Pojarush_Test3"
+sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/pojarush-shaders"
+issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"

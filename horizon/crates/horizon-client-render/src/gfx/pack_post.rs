@@ -2113,7 +2113,7 @@ impl PackPost {
         let (mut hides_sky, mut hides_celestial) =
             (post.sky.is_some(), post.sky_textured.is_some());
         let sky = (post.sky.is_some() || post.sky_textured.is_some()).then(|| {
-            let geometry = PackSky::new(device);
+            let geometry = PackSky::new(device, queue);
             let basic = Geometry {
                 buffers: &PackSky::buffers(),
                 table: Some(&geometry.layout),

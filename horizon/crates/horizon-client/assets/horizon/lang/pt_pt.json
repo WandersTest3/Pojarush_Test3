@@ -218,5 +218,6 @@
   "horizon.pages.shader_options": "Opções do shader",
   "horizon.shader_options.open": "Opções do shader...",
   "horizon.shader_options.profile": "Perfil",
-  "horizon.shader_options.loading": "A ler as opções do shader pack..."
+  "horizon.shader_options.loading": "A ler as opções do shader pack...",
+  "horizon.options.render_distance_memory": "%s chunks (limite da memória)"
 }

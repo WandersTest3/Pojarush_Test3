@@ -385,7 +385,8 @@ impl Content {
         };
         let mut files = Vec::with_capacity(sized.len());
         let mut total = 0u64;
-        for (name, size) in sized {
+        // The icon is the mod list's, not content.
+        for (name, size) in sized.into_iter().filter(|(n, _)| *n != manifest.icon) {
             check_path(&name)?;
             if size > MAX_FILE {
                 return Err(format!("{name} is over {} MiB", MAX_FILE >> 20));

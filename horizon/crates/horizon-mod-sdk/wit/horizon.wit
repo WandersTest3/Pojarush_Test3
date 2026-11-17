@@ -229,6 +229,45 @@ interface ui {
     /// Move the handle and change the label of the slider `id` on the
     /// screen and the settings page without sending every widget again.
     set-slider: func(id: u32, position: u32, label: string);
+    /// A mod the game has, as a mod list shows it: its manifest and whether
+    /// it runs.
+    record mod-info {
+        id: string,
+        name: string,
+        version: string,
+        description: string,
+        authors: list<string>,
+        /// The Minecraft versions it is for (`26.3`, `>=26.3`), empty when unsaid.
+        minecraft: string,
+        /// The API line it was built for (`0.1`).
+        api: string,
+        license: string,
+        homepage: string,
+        sources: string,
+        issues: string,
+        /// Its icon inside the `.hmod` (`assets/<id>/icon.png`), empty for none.
+        icon: string,
+        running: bool,
+        /// It has a page in Options > Mods.
+        has-settings: bool,
+    }
+    /// Every mod installed, in the order Options > Mods lists them.
+    mods: func() -> list<mod-info>;
+    /// Opens the settings page of the mod `id` once this hook returns;
+    /// false when it has none.
+    open-mod-settings: func(id: string) -> bool;
+    /// The shader packs in the `shaderpacks` folder, by file name.
+    shader-packs: func() -> list<string>;
+    /// The shader pack in use, empty when shaders are off.
+    shader-pack: func() -> string;
+    /// Picks the shader pack `name` (empty: shaders off) once this hook returns.
+    set-shader-pack: func(name: string);
+    /// Opens the Shader Options page of the pack in use; false when none is.
+    open-shader-options: func() -> bool;
+    /// Opens Options > Shader Packs.
+    open-shader-packs: func();
+    /// Loads the shader pack in use again, from its files.
+    reload-shader-pack: func();
 }
 
 /// What the game calls on a mod that shows widgets (capability `ui`):

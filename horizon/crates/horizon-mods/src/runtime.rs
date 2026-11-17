@@ -66,6 +66,55 @@ pub use ui_bindings::horizon::mods::ui::{
     ButtonWidget, ItemWidget, ListWidget, SliderWidget, TextWidget, WidgetV2 as UiWidget,
 };
 use ui_bindings::horizon::mods::ui::{Screen as ScreenV1, Widget as WidgetV1};
+/// A mod as `ui.mods` lists it (WIT `ui.mod-info`).
+pub use ui_bindings::horizon::mods::ui::ModInfo as UiModInfo;
+
+/// What `ui.mods` and the shader calls read: the game fills it each frame.
+#[derive(Default)]
+pub struct Directory {
+    pub mods: Vec<UiModInfo>,
+    pub shader_packs: Vec<String>,
+    pub shader_pack: String,
+}
+
+/// What mods asked of the game's menus during their hooks, for it to act on.
+#[derive(Clone, Debug, PartialEq)]
+pub enum UiRequest {
+    ModSettings(String),
+    ShaderPack(String),
+    ShaderOptions,
+    ShaderPacks,
+    ReloadShaderPack,
+}
+
+static DIRECTORY: Mutex<Directory> = Mutex::new(Directory {
+    mods: Vec::new(),
+    shader_packs: Vec::new(),
+    shader_pack: String::new(),
+});
+static REQUESTS: Mutex<Vec<UiRequest>> = Mutex::new(Vec::new());
+
+/// The shader packs the game has and the one in use, for `ui.shader-*`.
+pub fn set_shader_directory(packs: Vec<String>, current: String) {
+    if let Ok(mut d) = DIRECTORY.lock() {
+        d.shader_packs = packs;
+        d.shader_pack = current;
+    }
+}
+
+/// The requests mods made since the last call.
+pub fn take_ui_requests() -> Vec<UiRequest> {
+    REQUESTS.lock().map(|mut r| std::mem::take(&mut *r)).unwrap_or_default()
+}
+
+fn request(r: UiRequest) {
+    if let Ok(mut q) = REQUESTS.lock()
+        && q.len() < 64
+        && !q.contains(&r)
+    {
+        q.push(r);
+    }
+}
 use ui_bindings::{UiHost, horizon::mods::ui};
 
 /// A mod's screen as the game stores it: `ui.open-screen`'s `screen`, its
@@ -724,6 +773,35 @@ impl Mods {
     }
     pub fn entries(&self) -> &[Entry] {
         &self.entries
+    }
+    /// Shares the installed mods with `ui.mods`.
+    pub fn publish_directory(&self) {
+        let mods = self
+            .entries
+            .iter()
+            .filter_map(|e| {
+                let m = e.manifest.as_ref()?;
+                Some(UiModInfo {
+                    id: m.id.clone(),
+                    name: m.name.clone(),
+                    version: m.version.clone(),
+                    description: m.description.clone(),
+                    authors: m.authors.clone(),
+                    minecraft: m.minecraft.clone(),
+                    api: m.api.clone(),
+                    license: m.license.clone(),
+                    homepage: m.contact.homepage.clone(),
+                    sources: m.contact.sources.clone(),
+                    issues: m.contact.issues.clone(),
+                    icon: m.icon.clone(),
+                    running: e.run.is_some(),
+                    has_settings: e.has_ui_settings(),
+                })
+            })
+            .collect();
+        if let Ok(mut d) = DIRECTORY.lock() {
+            d.mods = mods;
+        }
     }
     /// What mods read until the next snapshot.
     pub fn set_snapshot(&mut self, snapshot: Snapshot) {
@@ -2008,6 +2086,40 @@ impl ui::Host for State {
     }
     fn language(&mut self) -> String {
         horizon_client_core::lang::code()
+    }
+    fn mods(&mut self) -> Vec<UiModInfo> {
+        DIRECTORY.lock().map(|d| d.mods.clone()).unwrap_or_default()
+    }
+    fn open_mod_settings(&mut self, id: String) -> bool {
+        let has = DIRECTORY
+            .lock()
+            .is_ok_and(|d| d.mods.iter().any(|m| m.id == id && m.has_settings));
+        if has {
+            request(UiRequest::ModSettings(id));
+        }
+        has
+    }
+    fn shader_packs(&mut self) -> Vec<String> {
+        DIRECTORY.lock().map(|d| d.shader_packs.clone()).unwrap_or_default()
+    }
+    fn shader_pack(&mut self) -> String {
+        DIRECTORY.lock().map(|d| d.shader_pack.clone()).unwrap_or_default()
+    }
+    fn set_shader_pack(&mut self, name: String) {
+        request(UiRequest::ShaderPack(clip(name)));
+    }
+    fn open_shader_options(&mut self) -> bool {
+        let on = DIRECTORY.lock().is_ok_and(|d| !d.shader_pack.is_empty());
+        if on {
+            request(UiRequest::ShaderOptions);
+        }
+        on
+    }
+    fn open_shader_packs(&mut self) {
+        request(UiRequest::ShaderPacks);
+    }
+    fn reload_shader_pack(&mut self) {
+        request(UiRequest::ReloadShaderPack);
     }
     fn set_slider(&mut self, id: u32, position: u32, label: String) {
         let label = clip(label);

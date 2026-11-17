@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wanderstest3.pojarush.R
@@ -61,7 +62,7 @@ fun ColorPanel(initial: Color, onChange: (Color) -> Unit) {
         hue = v[0]; sat = v[1]; value = v[2]
         emit(updateText)
     }
-    val square = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(12.dp))
+    val square = Modifier.fillMaxWidth(PANEL_WIDTH).height(170.dp).clip(RoundedCornerShape(12.dp))
     Canvas(
         modifier = square
             .pointerInput(Unit) {
@@ -88,7 +89,7 @@ fun ColorPanel(initial: Color, onChange: (Color) -> Unit) {
     }
     val hues = remember { (0..6).map { fromHsv(it * 60f % 360f, 1f, 1f) }.let { it.dropLast(1) + Color.Red } }
     Canvas(
-        modifier = Modifier.fillMaxWidth().height(28.dp).clip(RoundedCornerShape(14.dp))
+        modifier = Modifier.fillMaxWidth(PANEL_WIDTH).height(28.dp).clip(RoundedCornerShape(14.dp))
             .pointerInput(Unit) {
                 detectTapGestures { hue = (it.x / size.width).coerceIn(0f, 1f) * 359.9f; emit() }
             }
@@ -116,12 +117,40 @@ fun ColorPanel(initial: Color, onChange: (Color) -> Unit) {
         )
         Text("R ${(current.red * 255).toInt()}  G ${(current.green * 255).toInt()}  B ${(current.blue * 255).toInt()}")
     }
+    val context = LocalContext.current
+    val store = remember { ControlSettings(context) }
+    var saved by remember { mutableStateOf(store.savedColors) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(0xFF57197F, 0xFF1565C0, 0xFF00897B, 0xFF2E7D32, 0xFFF9A825, 0xFFE65100, 0xFFC62828, 0xFFAD1457, 0xFF424242).forEach { c ->
-            Box(Modifier.size(30.dp).clip(CircleShape).background(Color(c)).border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape).clickable { set(Color(c)) })
+        saved.forEachIndexed { i, c ->
+            val shape = Modifier.size(30.dp).clip(CircleShape)
+            if (c == null) {
+                Box(
+                    shape.border(1.5.dp, Color.White.copy(alpha = 0.5f), CircleShape).clickable {
+                        saved = saved.toMutableList().also { it[i] = current.toArgb() }
+                        store.savedColors = saved
+                    },
+                    contentAlignment = Alignment.Center,
+                ) { Text("+", color = Color.White.copy(alpha = 0.8f)) }
+            } else {
+                Box(
+                    shape.background(Color(c)).border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
+                        .pointerInput(i, c) {
+                            detectTapGestures(
+                                onTap = { set(Color(c)) },
+                                onLongPress = {
+                                    saved = saved.toMutableList().also { it[i] = null }
+                                    store.savedColors = saved
+                                },
+                            )
+                        }
+                )
+            }
         }
     }
+    Hint(stringResource(R.string.color_slots_hint))
 }
+
+private const val PANEL_WIDTH = 0.6f
 
 @Composable
 fun AccentSettings(settings: ControlSettings) {

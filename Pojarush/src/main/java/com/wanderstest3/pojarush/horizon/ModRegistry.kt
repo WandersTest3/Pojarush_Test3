@@ -24,7 +24,14 @@ data class RegistryEntry(
     val size: Long,
     val sha256: String,
     val downloads: Long,
+    val source: Int = HORIZON,
+    val slug: String = "",
 ) {
+    companion object {
+        const val HORIZON = 0
+        const val MODRINTH = 1
+    }
+
     val packKind: PackKind?
         get() = when (kind) {
             "mod" -> PackKind.MOD
@@ -112,9 +119,10 @@ object ModRegistry {
     fun installedFile(entry: RegistryEntry): File? {
         val kind = entry.packKind ?: return null
         val dir = GameFiles.dir(kind)
-        val file = File(dir, entry.fileName)
+        val name = if (entry.source == RegistryEntry.MODRINTH) InstalledModrinth.file(entry.id) ?: return null else entry.fileName
+        val file = File(dir, name)
         if (file.exists()) return file
-        val folder = File(dir, entry.fileName.substringBeforeLast('.'))
+        val folder = File(dir, name.substringBeforeLast('.'))
         return folder.takeIf { it.isDirectory }
     }
 

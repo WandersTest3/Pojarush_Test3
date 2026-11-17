@@ -23,7 +23,6 @@ const CORNERS: [(&str, u32, u32); 5] = [
 const SCALE_MIN: u32 = 25;
 const SCALE_MAX: u32 = 200;
 const SCALE_STEP: u32 = 5;
-const OFFSET_RANGE: i32 = 500;
 const PAD_MAX: u32 = 32;
 const SHOW: u32 = 1;
 const CORNER: u32 = 8;
@@ -34,8 +33,6 @@ const RESET: u32 = 12;
 const S_SIZE: u32 = 20;
 const S_X: u32 = 21;
 const S_Y: u32 = 22;
-const S_XOFF: u32 = 23;
-const S_YOFF: u32 = 24;
 const S_PAD: u32 = 25;
 const S_OPACITY: u32 = 26;
 
@@ -44,8 +41,6 @@ struct Fps {
     scale: u32,
     x: u32,
     y: u32,
-    x_off: i32,
-    y_off: i32,
     pad: u32,
     opacity: u32,
     lows: bool,
@@ -98,12 +93,6 @@ fn stored(cfg: &[(String, String)], key: &str, default: u32, min: u32, max: u32)
     raw(cfg, key)
         .and_then(|v| v.parse::<u32>().ok())
         .map_or(default, |v| v.clamp(min, max))
-}
-
-fn stored_i(cfg: &[(String, String)], key: &str, default: i32) -> i32 {
-    raw(cfg, key)
-        .and_then(|v| v.parse::<i32>().ok())
-        .map_or(default, |v| v.clamp(-OFFSET_RANGE, OFFSET_RANGE))
 }
 
 const LANGS: [(&str, [&str; 24]); 19] = [
@@ -163,17 +152,7 @@ impl Fps {
                 (self.scale - SCALE_MIN) / SCALE_STEP,
             ),
             S_X => (format!("{}: {:.1}%", t[7], self.x as f32 / 10.0), 200, self.x / 5),
-            S_Y => (format!("{}: {:.1}%", t[8], self.y as f32 / 10.0), 1000, self.y),
-            S_XOFF => (
-                format!("{}: {} px", t[9], self.x_off),
-                OFFSET_RANGE as u32 * 2,
-                (self.x_off + OFFSET_RANGE) as u32,
-            ),
-            S_YOFF => (
-                format!("{}: {} px", t[10], self.y_off),
-                OFFSET_RANGE as u32 * 2,
-                (self.y_off + OFFSET_RANGE) as u32,
-            ),
+            S_Y => (format!("{}: {:.1}%", t[8], self.y as f32 / 10.0), 200, self.y / 5),
             S_PAD => (format!("{}: {:.1}", t[11], self.pad as f32 / 2.0), PAD_MAX, self.pad),
             _ => (format!("{}: {}%", t[12], self.opacity), 100, self.opacity),
         }
@@ -195,8 +174,6 @@ impl Fps {
             self.slider_widget(S_SIZE),
             self.slider_widget(S_X),
             self.slider_widget(S_Y),
-            self.slider_widget(S_XOFF),
-            self.slider_widget(S_YOFF),
             self.slider_widget(S_PAD),
             self.slider_widget(S_OPACITY),
             button(RESET, strings()[5].into()),
@@ -205,13 +182,11 @@ impl Fps {
 
     fn save(&self) {
         let text = format!(
-            "show={}\nscale={}\nx={}\ny={}\nxoff={}\nyoff={}\npad={}\nopacity={}\nlows={}\nbackground={}\ncolor={}\n",
+            "show={}\nscale={}\nx={}\ny={}\npad={}\nopacity={}\nlows={}\nbackground={}\ncolor={}\n",
             u32::from(self.show),
             self.scale,
             self.x,
             self.y,
-            self.x_off,
-            self.y_off,
             self.pad,
             self.opacity,
             u32::from(self.lows),
@@ -230,8 +205,6 @@ impl Fps {
         self.scale = 100;
         self.x = 320;
         self.y = 0;
-        self.x_off = 0;
-        self.y_off = 0;
         self.pad = 4;
         self.opacity = 50;
         self.lows = false;
@@ -287,8 +260,8 @@ impl Fps {
         let text_w = lines.iter().map(|l| render::text_width(l)).fold(0.0, f32::max);
         let box_w = text_w + pad * 2.0;
         let box_h = lines.len() as f32 * line_h + pad * 2.0 - 1.0;
-        let left = (w - box_w).max(0.0) * self.x as f32 / 1000.0 + self.x_off as f32 / scale;
-        let top = (h - box_h).max(0.0) * self.y as f32 / 1000.0 + self.y_off as f32 / scale;
+        let left = (w - box_w).max(0.0) * self.x as f32 / 1000.0;
+        let top = (h - box_h).max(0.0) * self.y as f32 / 1000.0;
         let mut shapes = Vec::new();
         if self.background {
             shapes.push(Shape::Fill(FillShape {
@@ -322,8 +295,6 @@ impl Fps {
         let span_y = (h - box_h).max(1.0);
         self.x = ((left / span_x) * 1000.0).round().clamp(0.0, 1000.0) as u32;
         self.y = ((top / span_y) * 1000.0).round().clamp(0.0, 1000.0) as u32;
-        self.x_off = 0;
-        self.y_off = 0;
         self.drawn = false;
         if d.done {
             self.save();
@@ -341,9 +312,7 @@ impl Mod for Fps {
             show: stored(&cfg, "show", 1, 0, 1) == 1,
             scale: stored(&cfg, "scale", 100, SCALE_MIN, SCALE_MAX) / SCALE_STEP * SCALE_STEP,
             x: stored(&cfg, xk, 320, 0, 1000) / 5 * 5,
-            y: stored(&cfg, yk, 0, 0, 1000),
-            x_off: stored_i(&cfg, "xoff", 0),
-            y_off: stored_i(&cfg, "yoff", 0),
+            y: stored(&cfg, yk, 0, 0, 1000) / 5 * 5,
             pad: stored(&cfg, "pad", 4, 0, PAD_MAX),
             opacity: stored(&cfg, "opacity", 50, 0, 100),
             lows: stored(&cfg, "lows", 0, 0, 1) == 1,
@@ -375,15 +344,7 @@ impl Mod for Fps {
                 true
             }
             S_Y => {
-                self.y = row.min(1000);
-                true
-            }
-            S_XOFF => {
-                self.x_off = row as i32 - OFFSET_RANGE;
-                true
-            }
-            S_YOFF => {
-                self.y_off = row as i32 - OFFSET_RANGE;
+                self.y = (row * 5).min(1000);
                 true
             }
             S_PAD => {

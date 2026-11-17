@@ -1,5 +1,5 @@
 {
-  "key": "29cc53e350dd7ad40bec356bd7db1a2cd4ff968443c71495d196135035d74b09",
+  "key": "0a3f1e602abefc19ae48c24d97c9bdea8a1f748c2cfb0be3fab5f02b66271ba6",
   "classes": {
     "client/dev/horizonlab/parity/PrepareWorker.class": "ef61448529e33752136f62feb14263101b9ce2aef3cda8e22c574ae7d9ec199d",
     "client/dev/horizonlab/parity/VanillaBlockStateBindingOracle.class": "afc619f3df763e56d574fe087152b13129ca90422c023fa29de9c1f309cad52f",
@@ -47,7 +47,7 @@
     "server/dev/horizonlab/parity/VanillaEntityAttributeOracle.class": "a205064dccb811f8e589859bcbe18307cc8e9c5d72e4532c2f00e8375908b8f7",
     "server/dev/horizonlab/parity/VanillaEntityTypesExporter.class": "76b3968607da6f28e252f0cf2ff73adff31449e58996dc9cae78bc667656979e",
     "server/dev/horizonlab/parity/VanillaFaceVisibilityOracle.class": "d7f5f11a4809986e73acd9f68be0104e2b646ab08b896a94d2bdf6d26cc6a8c9",
-    "server/dev/horizonlab/parity/VanillaGameplayFactsExporter.class": "c06c4bcd8a93ca8c652501ed54f505b6c39b25f0376451dc0bde9bd91beaf686",
+    "server/dev/horizonlab/parity/VanillaGameplayFactsExporter.class": "c7e9c6afcf39c83ec7c7706765f550a37f06ab2aacb7481b7caff07251d18a45",
     "server/dev/horizonlab/parity/VanillaHeightmapOracle$1.class": "5f75c05593f2179f94e835eed8187d766763f08acd91c891c2aa19ac35a03792",
     "server/dev/horizonlab/parity/VanillaHeightmapOracle$Chunk.class": "d70ee47e1c563ff60f03bd64440897049f8c8d48cdf45180c1063a1bee85ed27",
     "server/dev/horizonlab/parity/VanillaHeightmapOracle.class": "3c1443cfacbefe8122d9ce99ccf68b538d0ddcced74d453a94c45b9ec345e1d8",

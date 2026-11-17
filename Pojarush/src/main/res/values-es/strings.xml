@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">Código</string>
     <string name="mod_menu_issues">Problemas</string>
     <string name="mod_menu_license">Licencia</string>
+    <string name="color_slots_hint">Toca un círculo vacío para guardar el color actual; toca un color guardado para usarlo y mantenlo pulsado para borrarlo.</string>
+    <string name="registry_open_modrinth">Abrir Modrinth</string>
+    <string name="registry_load_more">Cargar más</string>
 </resources>

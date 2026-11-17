@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">ソース</string>
     <string name="mod_menu_issues">問題</string>
     <string name="mod_menu_license">ライセンス</string>
+    <string name="color_slots_hint">空の円をタップすると現在の色を保存します。保存した色はタップで使用、長押しで削除します。</string>
+    <string name="registry_open_modrinth">Modrinth を開く</string>
+    <string name="registry_load_more">さらに読み込む</string>
 </resources>

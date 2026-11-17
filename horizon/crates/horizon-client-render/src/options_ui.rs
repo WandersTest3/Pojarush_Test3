@@ -312,11 +312,9 @@ impl Opt {
             | Opt::GlintStrength
             | Opt::PanoramaSpeed => Kind::Slider(s.file.double(self.file_key().unwrap()) as f32),
             Opt::Fov => unit(s.fov, 30.0, 110.0),
-            Opt::RenderDistance => unit(
-                s.render_distance as f32,
-                2.0,
-                crate::options_file::MAX_RENDER_DISTANCE as f32,
-            ),
+            Opt::RenderDistance => Kind::Slider(crate::options_file::render_distance_position(
+                s.render_distance,
+            )),
             Opt::SimulationDistance => unit(s.simulation_distance as f32, 5.0, 32.0),
             Opt::Sensitivity => Kind::Slider(s.sensitivity),
             Opt::WheelSensitivity => unit(s.mouse_wheel_sensitivity, 0.01, 10.0),
@@ -408,6 +406,12 @@ impl Opt {
                 110 => generic(c, tr("options.fov.max")),
                 v => generic(c, Text::literal(v.to_string())),
             },
+            Opt::RenderDistance if s.render_distance >= crate::options_file::memory_render_cap() => {
+                generic(
+                    c,
+                    Text::tr("horizon.options.render_distance_memory", &[&s.render_distance]),
+                )
+            }
             Opt::RenderDistance => generic(c, Text::tr("options.chunks", &[&s.render_distance])),
             Opt::SimulationDistance => {
                 generic(c, Text::tr("options.chunks", &[&s.simulation_distance]))
@@ -715,8 +719,8 @@ impl Opt {
             ),
             Opt::Fov => s.fov = step(30.0, 110.0),
             Opt::RenderDistance => {
-                s.render_distance =
-                    step(2.0, crate::options_file::MAX_RENDER_DISTANCE as f32) as i32
+                s.render_distance = crate::options_file::render_distance_at(v)
+                    .min(crate::options_file::memory_render_cap())
             }
             Opt::SimulationDistance => s.simulation_distance = step(5.0, 32.0) as i32,
             Opt::Sensitivity => s.sensitivity = v,
@@ -3718,22 +3722,21 @@ mod tests {
 
     #[test]
     fn render_distance_slider_round_trips_through_extended_options_range() {
+        let cap = crate::options_file::memory_render_cap();
         let mut s = Settings::default();
-        for (position, distance) in [(0.0, 2), (0.5, 65), (1.0, 128)] {
-            set_slider(Opt::RenderDistance, &mut s, position);
-            assert_eq!(s.render_distance, distance);
-            let reloaded = Settings::parse(&s.serialize());
-            assert_eq!(reloaded.render_distance, distance);
-            assert_eq!(
-                Opt::RenderDistance.slider_position(&reloaded),
-                Some(position)
-            );
+        set_slider(Opt::RenderDistance, &mut s, 0.0);
+        assert_eq!(s.render_distance, 2);
+        set_slider(Opt::RenderDistance, &mut s, 1.0);
+        assert_eq!(s.render_distance, cap);
+        for d in [2, 12, 32] {
+            let at = crate::options_file::render_distance_position(d);
+            assert_eq!(crate::options_file::render_distance_at(at), d);
         }
         let mut file = crate::options_file::OptionsFile::default();
-        file.set_text("renderDistance", "128").unwrap();
-        assert!(file.set_text("renderDistance", "129").is_err());
+        file.set_text("renderDistance", "2000000").unwrap();
+        assert!(file.set_text("renderDistance", "2000001").is_err());
         assert!(file.set_text("renderDistance", "1").is_err());
-        assert_eq!(file.int("renderDistance"), 128);
+        assert_eq!(Settings::parse(&s.serialize()).render_distance, cap);
     }
     fn atlas() -> HudAtlas {
         HudAtlas::build(std::path::Path::new("/nonexistent/horizon-test-assets")).unwrap()

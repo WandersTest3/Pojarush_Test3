@@ -222,10 +222,30 @@ Capacidades (`capabilities` no manifesto). O jogador vê a lista antes de ligar 
 `render`, `input`, `ui` e `recipes` ainda podem mudar entre versões: além de `capabilities`, elas precisam estar em
 `experimental = [...]` no manifesto, como no mod de zoom.
 
+Informações do mod, no estilo do `fabric.mod.json` (todas opcionais, Pojarush 1.11.17 ou mais novo):
+
+```toml
+minecraft = "26.3"                 # versões do Minecraft: "26.3", "26.x", ">=26.3", "*"
+license = "Mod Test3 License V1.0"
+icon = "assets/meu_codigo/icon.png" # PNG dentro do .hmod, mostrado nas listas de mods
+
+[contact]
+homepage = "https://..."
+sources = "https://..."
+issues = "https://..."
+```
+
+O `cargo horizon-mod build` empacota o ícone. Um mod feito para outra versão do Minecraft é recusado com a versão
+para a qual foi feito. Nível de API 10 (capacidade `ui`): `ui::mods()` e `ui::open_mod_settings(id)` para listas de
+mods; `ui::shader_packs()`, `ui::shader_pack()`, `ui::set_shader_pack(nome)`, `ui::open_shader_options()`,
+`ui::open_shader_packs()` e `ui::reload_shader_pack()` para shaders.
+
 Exemplos completos neste repositório:
 
 - `horizon/mods/pojarush-zoom`: tecla própria, roda do mouse, zoom, página de ajustes e ajustes salvos.
 - `horizon/mods/pojarush-fps`: texto na fonte do Minecraft no HUD, ampliado com `render::set_hud_scale` (função do Horizon do Pojarush), tamanho e posição ajustáveis e ajustes salvos. Com ele instalado, o launcher desliga a sobreposição do próprio Horizon.
+- `horizon/mods/pojarush-modmenu`: lista dos mods instalados no jogo (tecla M), com versão, autores, versões do Minecraft e da API, licença, links e botão para as configurações de cada um.
+- `horizon/mods/pojarush-shaders`: atalhos do Iris para shaders (O lista, K liga e desliga, R recarrega) e uma tela para escolher o pack e abrir as opções dele.
 - `horizon/crates/horizon-mod-sdk/examples/`: `welcome`, `coords-hud`, `beacons`, `ruby-content`, `predator-missile`.
 - Contrato completo da API: `horizon/crates/horizon-mod-sdk/wit/horizon.wit`.
 
@@ -352,3 +372,5 @@ OAuth do Azure em `.oauth_client_id.txt` ou `OAUTH_CLIENT_ID`; sem ele o app jog
 | `horizon/` | Código do Horizon com o port para Android (`crates/horizon-android`, `horizon-client/src/android.rs`) |
 | `horizon/mods/pojarush-zoom/` | Mod de zoom do Pojarush |
 | `horizon/mods/pojarush-fps/` | Mod de FPS do Pojarush |
+| `horizon/mods/pojarush-modmenu/` | Mod Menu do Pojarush |
+| `horizon/mods/pojarush-shaders/` | Mod de shaders do Pojarush (atalhos do Iris) |

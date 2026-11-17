@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">Kaynak</string>
     <string name="mod_menu_issues">Sorunlar</string>
     <string name="mod_menu_license">Lisans</string>
+    <string name="color_slots_hint">Geçerli rengi kaydetmek için boş bir daireye dokunun; kayıtlı bir rengi kullanmak için dokunun, silmek için basılı tutun.</string>
+    <string name="registry_open_modrinth">Modrinth\'i aç</string>
+    <string name="registry_load_more">Daha fazla yükle</string>
 </resources>

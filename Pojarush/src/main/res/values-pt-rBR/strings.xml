@@ -361,4 +361,7 @@
     <string name="mod_menu_sources">Código</string>
     <string name="mod_menu_issues">Problemas</string>
     <string name="mod_menu_license">Licença</string>
+    <string name="color_slots_hint">Toque num círculo vazio para salvar a cor atual; toque numa cor salva para usá-la e segure para apagar.</string>
+    <string name="registry_open_modrinth">Abrir o Modrinth</string>
+    <string name="registry_load_more">Carregar mais</string>
 </resources>

@@ -58,6 +58,72 @@ pub struct Manifest {
     /// accepted here, so the manifest keeps loading once it is promoted.
     #[serde(default)]
     pub experimental: Vec<Capability>,
+    /// The Minecraft versions the mod is for, as `fabric.mod.json` names them:
+    /// `26.3`, `26.3.x`, `>=26.3`, `*`; empty when unsaid.
+    #[serde(default)]
+    pub minecraft: String,
+    /// The mod's license, by name or URL.
+    #[serde(default)]
+    pub license: String,
+    /// A PNG in the `.hmod` (`assets/<id>/icon.png`), shown in mod lists.
+    #[serde(default)]
+    pub icon: String,
+    #[serde(default)]
+    pub contact: Contact,
+}
+
+/// Where players find more about a mod (`[contact]`).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct Contact {
+    #[serde(default)]
+    pub homepage: String,
+    #[serde(default)]
+    pub sources: String,
+    #[serde(default)]
+    pub issues: String,
+}
+
+/// The Minecraft version this Horizon plays.
+pub const MINECRAFT: &str = "26.3";
+
+/// Whether `pattern` (`26.3`, `26.x`, `>=26.3`, `<=26.3`, `*`, several joined
+/// by spaces or `||`) takes Minecraft `version`.
+pub fn minecraft_matches(pattern: &str, version: &str) -> bool {
+    fn parts(v: &str) -> Vec<u32> {
+        v.split('.').map(|p| p.parse().unwrap_or(0)).collect()
+    }
+    fn cmp(a: &str, b: &str) -> std::cmp::Ordering {
+        let (mut a, mut b) = (parts(a), parts(b));
+        let n = a.len().max(b.len());
+        a.resize(n, 0);
+        b.resize(n, 0);
+        a.cmp(&b)
+    }
+    let one = |p: &str| {
+        let p = p.trim();
+        if p.is_empty() || p == "*" {
+            return true;
+        }
+        if let Some(v) = p.strip_prefix(">=") {
+            return cmp(version, v.trim()).is_ge();
+        }
+        if let Some(v) = p.strip_prefix("<=") {
+            return cmp(version, v.trim()).is_le();
+        }
+        if let Some(v) = p.strip_prefix('>') {
+            return cmp(version, v.trim()).is_gt();
+        }
+        if let Some(v) = p.strip_prefix('<') {
+            return cmp(version, v.trim()).is_lt();
+        }
+        let p = p.trim_start_matches('=').trim_start_matches('~');
+        if let Some(prefix) = p.strip_suffix(".x").or_else(|| p.strip_suffix(".*")) {
+            return version == prefix || version.starts_with(&format!("{prefix}."));
+        }
+        version == p
+    };
+    pattern.split("||").any(|alt| alt.split_whitespace().all(one) || alt.trim().is_empty())
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq)]
@@ -237,6 +303,15 @@ impl Manifest {
                 m.api,
                 APIS.join(" and ")
             ));
+        }
+        if !minecraft_matches(&m.minecraft, MINECRAFT) {
+            return Err(format!(
+                "made for Minecraft {}; this Horizon plays {MINECRAFT}",
+                m.minecraft
+            ));
+        }
+        if !m.icon.is_empty() && (m.icon.starts_with('/') || m.icon.contains("..")) {
+            return Err(format!("{MANIFEST}: icon {:?} is not a path inside the mod", m.icon));
         }
         if m.capabilities.contains(&Capability::Registries) && m.api == API {
             return Err(format!(
@@ -442,6 +517,16 @@ pub fn component_imports(component: &[u8]) -> Result<Vec<String>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn minecraft_versions_match_like_fabric() {
+        for p in ["", "*", "26.3", "26.x", "26.3.x", ">=26.3", ">=26.1 <27", "1.21 || 26.3", "<=26.3"] {
+            assert!(minecraft_matches(p, "26.3"), "{p}");
+        }
+        for p in ["26.2", ">26.3", "<26.3", "1.21.x", ">=27"] {
+            assert!(!minecraft_matches(p, "26.3"), "{p}");
+        }
+    }
 
     const EXAMPLE: &str = r#"
 id = "coords_hud"

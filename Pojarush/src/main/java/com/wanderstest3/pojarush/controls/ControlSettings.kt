@@ -120,6 +120,11 @@ class ControlSettings(context: Context) {
     var accentColor: Int
         get() = prefs.getInt("accent_color", 0xFF57197F.toInt())
         set(v) = prefs.edit().putInt("accent_color", v or 0xFF000000.toInt()).apply()
+    var savedColors: List<Int?>
+        get() = (prefs.getString("saved_colors", "") ?: "").split(',').let { parts ->
+            List(9) { i -> parts.getOrNull(i)?.takeIf { it.isNotBlank() }?.toLongOrNull(16)?.toInt() }
+        }
+        set(v) = prefs.edit().putString("saved_colors", v.take(9).joinToString(",") { c -> c?.let { String.format("%08X", it) } ?: "" }).apply()
     var gameDate: String
         get() = prefs.getString("game_date", "").orEmpty()
         set(v) = prefs.edit().putString("game_date", v).apply()

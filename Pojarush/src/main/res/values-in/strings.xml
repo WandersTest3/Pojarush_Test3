@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">Sumber</string>
     <string name="mod_menu_issues">Masalah</string>
     <string name="mod_menu_license">Lisensi</string>
+    <string name="color_slots_hint">Ketuk lingkaran kosong untuk menyimpan warna saat ini; ketuk warna tersimpan untuk memakainya, tahan untuk menghapusnya.</string>
+    <string name="registry_open_modrinth">Buka Modrinth</string>
+    <string name="registry_load_more">Muat lebih banyak</string>
 </resources>

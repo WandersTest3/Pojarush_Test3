@@ -362,4 +362,7 @@
     <string name="mod_menu_sources">Source</string>
     <string name="mod_menu_issues">Issues</string>
     <string name="mod_menu_license">License</string>
+    <string name="color_slots_hint">Tap an empty circle to save the current color; tap a saved color to use it, hold it to clear.</string>
+    <string name="registry_open_modrinth">Open Modrinth</string>
+    <string name="registry_load_more">Load more</string>
 </resources>

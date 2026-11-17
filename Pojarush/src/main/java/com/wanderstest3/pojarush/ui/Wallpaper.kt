@@ -194,17 +194,29 @@ private class WallpaperVideoView(context: Context, private val file: File, priva
     }
 
     override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {
-        val blur = live ?: return
         val sink = onFrame ?: return
+        if (liveStrength < 1f || videoW <= 0 || videoH <= 0) return
         val now = android.os.SystemClock.uptimeMillis()
-        if (now - lastGrab < 50L || videoW <= 0 || videoH <= 0) return
+        if (!GpuBlur && now - lastGrab < 50L) return
         lastGrab = now
-        val w = 160
-        val h = (w * videoH / videoW).coerceIn(1, 320)
+        val w = if (GpuBlur) 320 else 160
+        val h = (w * videoH / videoW).coerceIn(1, w * 2)
         val target = grab?.takeIf { it.width == w && it.height == h }
             ?: android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888).also { grab = it }
-        runCatching { getBitmap(target) }.getOrNull()?.let { sink(blur.blur(it)) }
+        val frame = runCatching { getBitmap(target) }.getOrNull() ?: return
+        if (GpuBlur) {
+            flip = 1 - flip
+            val out = shown[flip]?.takeIf { it.width == w && it.height == h }
+                ?: android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888).also { shown[flip] = it }
+            android.graphics.Canvas(out).drawBitmap(frame, 0f, 0f, null)
+            sink(out)
+        } else {
+            live?.let { sink(it.blur(frame)) }
+        }
     }
+
+    private val shown = arrayOfNulls<android.graphics.Bitmap>(2)
+    private var flip = 0
 
     fun release() {
         runCatching { player?.release() }

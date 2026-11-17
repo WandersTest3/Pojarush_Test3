@@ -63,9 +63,24 @@ api = "0.2"                  # content mods
 side = "both"
 capabilities = ["registries"]
 namespaces = []              # optional: more namespaces the mod's files use (below)
+minecraft = "26.3"           # optional: Minecraft versions, as fabric.mod.json writes them ("26.3", "26.x", ">=26.3", "*")
+license = "MIT"              # optional: shown in mod lists
+icon = "assets/my_mod/icon.png"  # optional: a PNG in the .hmod, shown in mod lists (not content)
+
+[contact]                    # optional: links shown in mod lists
+homepage = "https://..."
+sources = "https://..."
+issues = "https://..."
 ```
 
-Unknown keys are refused, so a typo is an error, not a silently ignored permission.
+Unknown keys are refused, so a typo is an error, not a silently ignored permission. A mod whose
+`minecraft` does not take this Horizon's version is refused with the version it was made for.
+`cargo horizon-mod build` packs the icon beside `mod.wasm`.
+
+Mods that list or open other mods (API level 10, capability `ui`): `ui::mods()` returns every
+installed mod's manifest and whether it runs, `ui::open_mod_settings(id)` opens one's page.
+Shader packs: `ui::shader_packs()`, `ui::shader_pack()`, `ui::set_shader_pack(name)`,
+`ui::open_shader_options()`, `ui::open_shader_packs()` and `ui::reload_shader_pack()`.
 
 ### Content mods (API 0.2)
 

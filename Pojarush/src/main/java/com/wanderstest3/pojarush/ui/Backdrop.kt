@@ -13,7 +13,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -29,8 +34,11 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
 
+val GpuBlur: Boolean = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+
 class Backdrop {
     var image by mutableStateOf<ImageBitmap?>(null)
+    var blur by mutableStateOf(0f)
     var dim by mutableStateOf(0f)
     var origin by mutableStateOf(Offset.Zero)
     var size by mutableStateOf(IntSize.Zero)
@@ -48,9 +56,10 @@ fun WithBackdrop(content: @Composable () -> Unit) {
 fun BackdropSource(file: File?, stamp: Long, dim: Float, blur: Float) {
     val backdrop = LocalBackdrop.current ?: return
     backdrop.dim = dim
-    LaunchedEffect(file?.absolutePath, stamp, blur) {
+    backdrop.blur = blur
+    LaunchedEffect(file?.absolutePath, stamp, blur >= 1f, if (GpuBlur) 0f else blur) {
         backdrop.image = if (file == null || blur < 1f) null else withContext(Dispatchers.IO) {
-            runCatching { blurred(file, blur)?.asImageBitmap() }.getOrNull()
+            runCatching { (if (GpuBlur) sharp(file) else blurred(file, blur))?.asImageBitmap() }.getOrNull()
         }
     }
 }
@@ -71,21 +80,59 @@ fun Modifier.frostedBackdrop(): Modifier = composed {
     var at by remember { mutableStateOf(Offset.Zero) }
     this
         .onGloballyPositioned { at = it.positionInWindow() }
-        .drawBehind {
-            val root = backdrop.size
-            if (root.width <= 0 || root.height <= 0) return@drawBehind
-            val scale = max(root.width.toFloat() / image.width, root.height.toFloat() / image.height)
-            val w = (image.width * scale).roundToInt()
-            val h = (image.height * scale).roundToInt()
-            val left = (root.width - w) / 2f + backdrop.origin.x - at.x
-            val top = (root.height - h) / 2f + backdrop.origin.y - at.y
-            drawImage(
-                image = image,
-                dstOffset = IntOffset(left.roundToInt(), top.roundToInt()),
-                dstSize = IntSize(w, h),
-            )
-            if (backdrop.dim > 0f) drawRect(Color.Black.copy(alpha = backdrop.dim))
+        .drawWithCache {
+            val layer = if (GpuBlur) obtainGraphicsLayer() else null
+            onDrawBehind {
+                val root = backdrop.size
+                if (root.width <= 0 || root.height <= 0) return@onDrawBehind
+                val scale = max(root.width.toFloat() / image.width, root.height.toFloat() / image.height)
+                val w = (image.width * scale).roundToInt()
+                val h = (image.height * scale).roundToInt()
+                val left = (root.width - w) / 2f + backdrop.origin.x - at.x
+                val top = (root.height - h) / 2f + backdrop.origin.y - at.y
+                val paint: DrawScope.() -> Unit = {
+                    drawImage(
+                        image = image,
+                        dstOffset = IntOffset(left.roundToInt(), top.roundToInt()),
+                        dstSize = IntSize(w, h),
+                        filterQuality = FilterQuality.High,
+                    )
+                }
+                if (layer != null) {
+                    layer.renderEffect = glassEffect(backdrop.blur * 4.dp.toPx())
+                    layer.record { paint() }
+                    drawLayer(layer)
+                } else {
+                    paint()
+                }
+                if (backdrop.dim > 0f) drawRect(Color.Black.copy(alpha = backdrop.dim))
+            }
         }
+}
+
+private val glassEffects = HashMap<Int, androidx.compose.ui.graphics.RenderEffect>()
+
+private fun glassEffect(radius: Float): androidx.compose.ui.graphics.RenderEffect? {
+    if (!GpuBlur || radius < 0.5f) return null
+    val key = radius.roundToInt()
+    return glassEffects.getOrPut(key) {
+        val r = key.toFloat().coerceAtLeast(1f)
+        val blur = android.graphics.RenderEffect.createBlurEffect(r, r, android.graphics.Shader.TileMode.CLAMP)
+        val vivid = android.graphics.ColorMatrix().apply { setSaturation(1.35f) }
+        android.graphics.RenderEffect.createChainEffect(
+            android.graphics.RenderEffect.createColorFilterEffect(android.graphics.ColorMatrixColorFilter(vivid)),
+            blur,
+        ).asComposeRenderEffect()
+    }
+}
+
+private fun sharp(file: File): Bitmap? {
+    val decoded = frame(file) ?: return null
+    val source = if (decoded.config == Bitmap.Config.HARDWARE || decoded.config == null) decoded.copy(Bitmap.Config.ARGB_8888, false) ?: return null else decoded
+    val ratio = 480f / max(source.width, source.height)
+    if (ratio >= 1f) return source
+    return Bitmap.createScaledBitmap(source, max(1, (source.width * ratio).roundToInt()), max(1, (source.height * ratio).roundToInt()), true)
+        .also { if (it !== source) source.recycle() }
 }
 
 private fun frame(file: File): Bitmap? {

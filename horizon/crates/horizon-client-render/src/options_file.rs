@@ -88,8 +88,46 @@ const MODEL_PARTS: [&str; 7] = [
 const GRAPHICS_BACKEND: &[&str] = &["default", "opengl", "vulkan"];
 const GRAPHICS_PRESET: &[&str] = &["fast", "fancy", "fabulous", "custom"];
 /// Horizon's render distance cap (vanilla stops at 32): the server protocol's
-/// view distance tops out at 127 anyway.
-pub const MAX_RENDER_DISTANCE: i32 = 1000;
+/// view distance tops out at 127 anyway, and [`memory_render_cap`] keeps what
+/// is set to what this device's memory holds.
+pub const MAX_RENDER_DISTANCE: i32 = 2_000_000;
+/// Memory a loaded chunk column may take with its meshes, for [`memory_render_cap`].
+const CHUNK_BYTES: u64 = 128 << 10;
+
+/// The largest render distance whose square of chunks fits in half this device's memory
+/// (`/proc/meminfo`), at least vanilla's 32; [`MAX_RENDER_DISTANCE`] where it cannot be read.
+pub fn memory_render_cap() -> i32 {
+    static CAP: std::sync::OnceLock<i32> = std::sync::OnceLock::new();
+    *CAP.get_or_init(|| {
+        let total_kb = std::fs::read_to_string("/proc/meminfo").ok().and_then(|text| {
+            text.lines()
+                .find_map(|l| l.strip_prefix("MemTotal:"))
+                .and_then(|v| v.split_whitespace().next()?.parse::<u64>().ok())
+        });
+        match total_kb {
+            Some(kb) => {
+                let chunks = kb * 1024 / 2 / CHUNK_BYTES;
+                let radius = ((chunks as f64).sqrt() / 2.0) as i64;
+                radius.clamp(32, i64::from(MAX_RENDER_DISTANCE)) as i32
+            }
+            None => MAX_RENDER_DISTANCE,
+        }
+    })
+}
+
+/// The render distance slider's position (0..1) for `distance`: logarithmic, so the
+/// first chunks keep their own steps.
+pub fn render_distance_position(distance: i32) -> f32 {
+    let max = (f64::from(MAX_RENDER_DISTANCE) / 2.0).ln();
+    ((f64::from(distance.max(2)) / 2.0).ln() / max).clamp(0.0, 1.0) as f32
+}
+
+/// The render distance at slider position `v` (0..1), before [`memory_render_cap`].
+pub fn render_distance_at(v: f32) -> i32 {
+    let max = (f64::from(MAX_RENDER_DISTANCE) / 2.0).ln();
+    let d = (2.0 * (f64::from(v.clamp(0.0, 1.0)) * max).exp()).round() as i64;
+    d.clamp(2, i64::from(MAX_RENDER_DISTANCE)) as i32
+}
 const INACTIVITY: &[&str] = &["minimized", "afk"];
 const CLOUDS: &[&str] = &["false", "fast", "true"];
 const MAIN_HAND: &[&str] = &["left", "right"];

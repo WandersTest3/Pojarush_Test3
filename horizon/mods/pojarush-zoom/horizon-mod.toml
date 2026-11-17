@@ -1,9 +1,17 @@
 id = "pojarush_zoom"
 name = "Pojarush Zoom"
-version = "2.2.3"
+version = "2.2.4"
 description = "Hold (or toggle) C to zoom. The mouse wheel zooms from a wide 0.25x view up to 50x while zoomed. Settings for distance, speed, wheel step, key mode and camera steadiness."
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"
 capabilities = ["render", "input", "ui", "storage"]
 experimental = ["render", "input", "ui"]
+minecraft = "26.3"
+license = "Mod Test3 License V1.0"
+icon = "assets/pojarush_zoom/icon.png"
+
+[contact]
+homepage = "https://github.com/WandersTest3/Pojarush_Test3"
+sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/pojarush-zoom"
+issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"

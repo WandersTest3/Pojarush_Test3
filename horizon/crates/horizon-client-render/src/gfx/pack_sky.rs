@@ -6,7 +6,6 @@
 
 use std::ops::Range;
 
-use wgpu::util::DeviceExt;
 
 /// A sky vertex: a position and what it belongs to (`SKY`...).
 #[repr(C)]
@@ -179,7 +178,7 @@ pub(super) struct PackSky {
 }
 
 impl PackSky {
-    pub fn new(device: &wgpu::Device) -> Self {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
         let mut v = Vec::new();
         disc(16.0, SKY, &mut v);
         let sky = 0..v.len() as u32;
@@ -206,11 +205,16 @@ impl PackSky {
         let stars = sunset.end..v.len() as u32;
         disc(-4.0, VOID, &mut v);
         let void = stars.end..v.len() as u32;
-        let vertices = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let bytes: &[u8] = bytemuck::cast_slice(&v);
+        let vertices = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Shader pack sky"),
-            contents: bytemuck::cast_slice(&v),
-            usage: wgpu::BufferUsages::VERTEX,
+            size: (bytes.len() as u64).next_multiple_of(wgpu::COPY_BUFFER_ALIGNMENT),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
+        let mut padded = bytes.to_vec();
+        padded.resize(vertices.size() as usize, 0);
+        queue.write_buffer(&vertices, 0, &padded);
         let celestial = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Shader pack sun and moon"),
             size: (std::mem::size_of::<Celestial>() * 6 * CELESTIAL_QUADS) as u64,

@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">소스</string>
     <string name="mod_menu_issues">문제</string>
     <string name="mod_menu_license">라이선스</string>
+    <string name="color_slots_hint">빈 원을 탭하면 현재 색이 저장됩니다. 저장된 색을 탭하면 사용하고, 길게 누르면 지웁니다.</string>
+    <string name="registry_open_modrinth">Modrinth 열기</string>
+    <string name="registry_load_more">더 불러오기</string>
 </resources>

@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">Mã nguồn</string>
     <string name="mod_menu_issues">Sự cố</string>
     <string name="mod_menu_license">Giấy phép</string>
+    <string name="color_slots_hint">Chạm vào vòng tròn trống để lưu màu hiện tại; chạm vào màu đã lưu để dùng, giữ để xóa.</string>
+    <string name="registry_open_modrinth">Mở Modrinth</string>
+    <string name="registry_load_more">Tải thêm</string>
 </resources>

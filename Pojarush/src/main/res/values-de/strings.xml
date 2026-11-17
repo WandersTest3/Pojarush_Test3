@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">Quellcode</string>
     <string name="mod_menu_issues">Probleme</string>
     <string name="mod_menu_license">Lizenz</string>
+    <string name="color_slots_hint">Tippe auf einen leeren Kreis, um die aktuelle Farbe zu speichern; tippe auf eine gespeicherte Farbe, um sie zu nutzen, halte sie gedrückt, um sie zu löschen.</string>
+    <string name="registry_open_modrinth">Modrinth öffnen</string>
+    <string name="registry_load_more">Mehr laden</string>
 </resources>

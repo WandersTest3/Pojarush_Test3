@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">Вихідний код</string>
     <string name="mod_menu_issues">Проблеми</string>
     <string name="mod_menu_license">Ліцензія</string>
+    <string name="color_slots_hint">Торкніться порожнього кола, щоб зберегти поточний колір; торкніться збереженого кольору, щоб вибрати його, утримуйте, щоб видалити.</string>
+    <string name="registry_open_modrinth">Відкрити Modrinth</string>
+    <string name="registry_load_more">Завантажити ще</string>
 </resources>

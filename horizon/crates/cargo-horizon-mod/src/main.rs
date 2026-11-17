@@ -199,6 +199,14 @@ fn build_in(root: &Path, release: bool) -> Result<PathBuf, String> {
     for name in &content.files {
         files.push((name.as_str(), reader.read(name)?));
     }
+    if !manifest.icon.is_empty() {
+        let icon = std::fs::read(root.join(&manifest.icon))
+            .map_err(|e| format!("icon {}: {e}", manifest.icon))?;
+        if !icon.starts_with(b"\x89PNG") {
+            return Err(format!("icon {} is not a PNG", manifest.icon));
+        }
+        files.push((manifest.icon.as_str(), icon));
+    }
     let files: Vec<(&str, &[u8])> = files.iter().map(|(n, b)| (*n, b.as_slice())).collect();
     let dir = target_dir.join("horizon-mod");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;

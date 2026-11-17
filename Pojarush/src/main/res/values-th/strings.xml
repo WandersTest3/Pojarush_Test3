@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">ซอร์ส</string>
     <string name="mod_menu_issues">ปัญหา</string>
     <string name="mod_menu_license">สัญญาอนุญาต</string>
+    <string name="color_slots_hint">แตะวงกลมว่างเพื่อบันทึกสีปัจจุบัน แตะสีที่บันทึกไว้เพื่อใช้ และกดค้างเพื่อลบ</string>
+    <string name="registry_open_modrinth">เปิด Modrinth</string>
+    <string name="registry_load_more">โหลดเพิ่ม</string>
 </resources>

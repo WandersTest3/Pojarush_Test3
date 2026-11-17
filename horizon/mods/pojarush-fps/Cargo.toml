@@ -1,6 +1,6 @@
 [package]
 name = "pojarush_fps"
-version = "1.1.5"
+version = "1.1.6"
 edition = "2024"
 license-file = "LICENSE.txt"
 publish = false

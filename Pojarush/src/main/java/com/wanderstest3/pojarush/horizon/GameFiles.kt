@@ -21,6 +21,8 @@ data class ModInfo(
     val capabilities: List<String>,
     val links: List<Pair<String, String>>,
     val icon: ByteArray?,
+    val minecraft: String = "",
+    val license: String = "",
 )
 
 data class PackEntry(
@@ -57,7 +59,8 @@ object GameFiles {
                 PackKind.MOD -> {
                     val manifest = readManifest(f)
                     val id = manifest?.first
-                    PackEntry(f, manifest?.second ?: f.nameWithoutExtension, id, id?.let { enabled[it] ?: false })
+                    if (id != null && enabled[id] != true) setModEnabled(id, true)
+                    PackEntry(f, manifest?.second ?: f.nameWithoutExtension, id, null)
                 }
                 PackKind.RESOURCE -> PackEntry(f, f.nameWithoutExtension.ifEmpty { f.name }, packId(f), packId(f) in packs)
                 PackKind.SHADER -> PackEntry(f, f.nameWithoutExtension.ifEmpty { f.name }, null, null)
@@ -140,7 +143,7 @@ object GameFiles {
     fun modInfo(file: File): ModInfo? {
         val text = runCatching { manifestText(file) }.getOrNull() ?: return null
         val id = idPattern.find(text)?.groupValues?.get(1) ?: return null
-        val links = listOf("homepage", "sources", "issues", "license").mapNotNull { k -> tomlString(text, k)?.takeIf { it.isNotBlank() }?.let { k to it } }
+        val links = listOf("homepage", "sources", "issues", "license").mapNotNull { k -> tomlString(text, k)?.takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { k to it } }
         val iconNames = listOfNotNull(tomlString(text, "icon")?.trimStart('/')) + listOf("icon.png", "assets/$id/icon.png", "pack.png")
         return ModInfo(
             id = id,
@@ -153,6 +156,8 @@ object GameFiles {
             capabilities = tomlList(text, "capabilities"),
             links = links,
             icon = entryBytes(file, iconNames),
+            minecraft = tomlString(text, "minecraft").orEmpty(),
+            license = tomlString(text, "license").orEmpty(),
         )
     }
 

@@ -167,4 +167,7 @@
     <string name="mod_menu_sources">源代码</string>
     <string name="mod_menu_issues">问题</string>
     <string name="mod_menu_license">许可证</string>
+    <string name="color_slots_hint">点按空圆圈保存当前颜色；点按已保存的颜色使用它，长按可清除。</string>
+    <string name="registry_open_modrinth">打开 Modrinth</string>
+    <string name="registry_load_more">加载更多</string>
 </resources>

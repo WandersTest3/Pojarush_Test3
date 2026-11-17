@@ -113,11 +113,7 @@ fun ModsPage() {
         if (entries.isEmpty()) Hint(stringResource(R.string.mods_empty))
         if (kind == PackKind.MOD) {
             entries.forEach { e ->
-                ModMenuCard(e, onToggle = {
-                    GameFiles.setEnabled(kind, e, it)
-                    version++
-                    restart()
-                }, onDelete = {
+                ModMenuCard(e, onDelete = {
                     GameFiles.delete(kind, e)
                     version++
                     restart()
@@ -154,7 +150,7 @@ fun ModsPage() {
 }
 
 @Composable
-private fun ModMenuCard(entry: com.wanderstest3.pojarush.horizon.PackEntry, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
+private fun ModMenuCard(entry: com.wanderstest3.pojarush.horizon.PackEntry, onDelete: () -> Unit) {
     val context = LocalContext.current
     val info = remember(entry.file.path, entry.file.lastModified()) { GameFiles.modInfo(entry.file) }
     val icon = remember(info) {
@@ -196,15 +192,22 @@ private fun ModMenuCard(entry: com.wanderstest3.pojarush.horizon.PackEntry, onTo
                         Text(info!!.description, maxLines = if (open) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (entry.enabled != null) SettingSwitchInline(entry.enabled, onToggle)
             }
             if (open) {
                 if (info != null) {
                     Text(
-                        listOfNotNull(info.id, info.api.takeIf { it.isNotEmpty() }?.let { "API $it" }, info.side.takeIf { it.isNotEmpty() }).joinToString(" · "),
+                        listOfNotNull(
+                            info.id,
+                            info.minecraft.takeIf { it.isNotEmpty() }?.let { "Minecraft $it" },
+                            info.api.takeIf { it.isNotEmpty() }?.let { "API $it" },
+                            info.side.takeIf { it.isNotEmpty() },
+                        ).joinToString(" · "),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (info.license.isNotEmpty()) {
+                        Text("${stringResource(R.string.mod_menu_license)}: ${info.license}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     if (info.capabilities.isNotEmpty()) {
                         Text(stringResource(R.string.mod_menu_capabilities, info.capabilities.joinToString(", ")), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

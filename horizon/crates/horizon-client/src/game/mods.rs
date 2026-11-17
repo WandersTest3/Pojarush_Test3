@@ -650,6 +650,81 @@ impl Game<'_> {
         }
         self.mods.mods.frame(elapsed.as_secs_f32());
         self.show_mod_output();
+        self.mod_ui_requests();
+    }
+    /// Shares the mod list and the shader packs with `ui.mods` and
+    /// `ui.shader-*`, then does what mods asked of the menus.
+    fn mod_ui_requests(&mut self) {
+        static SCANNED: std::sync::Mutex<Option<Instant>> = std::sync::Mutex::new(None);
+        let due = SCANNED.lock().is_ok_and(|mut last| {
+            let due = last.is_none_or(|t| t.elapsed() >= Duration::from_secs(2));
+            if due {
+                *last = Some(Instant::now());
+            }
+            due
+        });
+        if due {
+            self.mods.mods.publish_directory();
+            let packs = horizon_client::shader_pack_list::scan(&Self::shader_packs_dir())
+                .into_iter()
+                .map(|p| p.file)
+                .collect();
+            horizon_mods::set_shader_directory(packs, self.settings.horizon.shader_pack.clone());
+        }
+        for r in horizon_mods::take_ui_requests() {
+            match r {
+                horizon_mods::UiRequest::ModSettings(id) => {
+                    let found = self.mods.mods.entries().iter().position(|e| {
+                        e.manifest.as_ref().is_some_and(|m| m.id == id)
+                    });
+                    if let Some(i) = found {
+                        self.mods.screen = None;
+                        self.open_mod_screen(i, true);
+                    }
+                }
+                horizon_mods::UiRequest::ShaderPack(name) => {
+                    if self.settings.horizon.shader_pack != name {
+                        self.settings.horizon.shader_pack = name.clone();
+                        self.settings.save(&Self::options_path());
+                        horizon_mods::set_shader_directory(
+                            horizon_client::shader_pack_list::scan(&Self::shader_packs_dir())
+                                .into_iter()
+                                .map(|p| p.file)
+                                .collect(),
+                            name,
+                        );
+                    }
+                }
+                horizon_mods::UiRequest::ShaderOptions => {
+                    if !self.settings.horizon.shader_pack.is_empty() {
+                        self.open_shader_page(Page::ShaderOptions);
+                        self.open_shader_options();
+                    }
+                }
+                horizon_mods::UiRequest::ShaderPacks => self.open_shader_page(Page::ShaderPacks),
+                horizon_mods::UiRequest::ReloadShaderPack => {
+                    self.pack_ids = None;
+                    super::shader_packs::reload_shader_pack_job();
+                    if let Some(renderer) = &mut self.renderer {
+                        renderer.drop_shader_packs();
+                    }
+                }
+            }
+        }
+    }
+    fn open_shader_page(&mut self, page: Page) {
+        self.mods.screen = None;
+        if self.screen == Screen::Playing && self.title.is_none() {
+            self.capture(false);
+        }
+        self.open_options(self.title.is_some());
+        self.ui.options.show(Page::ShaderPacks);
+        self.settings.shader_packs =
+            horizon_client::shader_pack_list::scan(&Self::shader_packs_dir());
+        if page == Page::ShaderOptions {
+            self.settings.shader_options = None;
+            self.ui.options.show(Page::ShaderOptions);
+        }
     }
     /// `/command` typed in chat: true when a mod owns it.
     pub(super) fn mod_command(&mut self, command: &str) -> bool {

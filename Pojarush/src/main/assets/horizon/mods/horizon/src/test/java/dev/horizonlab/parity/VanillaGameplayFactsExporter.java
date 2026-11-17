@@ -26,8 +26,7 @@ public final class VanillaGameplayFactsExporter {
         return result;
     }
 
-    private static JsonArray states() {
-        var states = new JsonArray();
+    private static void states(java.util.function.Consumer<JsonObject> states) {
         var level = EmptyBlockGetter.INSTANCE;
         for (var state : Block.BLOCK_STATE_REGISTRY) {
             var o = new JsonObject();
@@ -89,16 +88,28 @@ public final class VanillaGameplayFactsExporter {
             sounds.add("hit", sound(sound.getHitSound()));
             sounds.add("fall", sound(sound.getFallSound()));
             o.add("sound", sounds);
-            states.add(o);
+            states.accept(o);
         }
-        return states;
     }
 
     public static void main(String[] args) throws Exception {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
-        var result = new JsonObject();
-        result.add("states", states());
-        Files.writeString(Path.of(args[0]), new Gson().toJson(result), StandardCharsets.UTF_8);
+        var gson = new Gson();
+        try (var out = new java.io.BufferedWriter(new java.io.OutputStreamWriter(
+                Files.newOutputStream(Path.of(args[0])), StandardCharsets.UTF_8), 1 << 16)) {
+            out.write("{\"states\":[");
+            var first = new boolean[] {true};
+            states(o -> {
+                try {
+                    if (!first[0]) out.write(',');
+                    first[0] = false;
+                    gson.toJson(o, out);
+                } catch (java.io.IOException e) {
+                    throw new java.io.UncheckedIOException(e);
+                }
+            });
+            out.write("]}");
+        }
     }
 }

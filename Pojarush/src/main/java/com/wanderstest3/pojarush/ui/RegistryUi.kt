@@ -57,6 +57,10 @@ private object RegistryState {
 
 @Composable
 fun RegistryBrowser(kind: PackKind, onInstalled: () -> Unit) {
+    if (kind != PackKind.MOD) {
+        ModrinthBrowser(kind, onInstalled)
+        return
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var entries by remember { mutableStateOf(ModRegistry.cachedEntries()) }
@@ -165,7 +169,8 @@ private fun RegistryRow(entry: RegistryEntry, installed: Boolean, progress: Floa
             Column(modifier = Modifier.weight(1f)) {
                 Text(entry.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, modifier = Modifier.basicMarquee())
                 Text(
-                    "${entry.version} · ${entry.authors} · ${formatSize(entry.size)}",
+                    if (entry.source == RegistryEntry.MODRINTH) "Minecraft ${entry.game} · ${entry.authors} · ${formatCount(entry.downloads)} ⬇"
+                    else "${entry.version} · ${entry.authors} · ${formatSize(entry.size)}",
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     modifier = Modifier.basicMarquee(),
@@ -182,6 +187,89 @@ private fun RegistryRow(entry: RegistryEntry, installed: Boolean, progress: Floa
             Text(entry.summary, style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
         if (progress != null) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+private fun formatCount(n: Long): String = when {
+    n >= 1_000_000 -> "%.1fM".format(n / 1_000_000.0)
+    n >= 1_000 -> "%.1fK".format(n / 1_000.0)
+    else -> n.toString()
+}
+
+@Composable
+private fun ModrinthBrowser(kind: PackKind, onInstalled: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var query by rememberSaveable(kind) { mutableStateOf("") }
+    var entries by remember(kind) { mutableStateOf<List<RegistryEntry>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var more by remember(kind) { mutableStateOf(true) }
+    var reload by remember { mutableIntStateOf(0) }
+    var installedVersion by remember { mutableIntStateOf(0) }
+    suspend fun load(offset: Int) {
+        loading = true
+        error = null
+        runCatching { withContext(Dispatchers.IO) { com.wanderstest3.pojarush.horizon.Modrinth.search(kind, query, offset) } }
+            .onSuccess { page ->
+                entries = if (offset == 0) page else (entries + page).distinctBy { it.id }
+                more = page.size >= com.wanderstest3.pojarush.horizon.Modrinth.PAGE
+            }
+            .onFailure { error = it.message ?: it.javaClass.simpleName }
+        loading = false
+    }
+    LaunchedEffect(kind, query, reload) {
+        kotlinx.coroutines.delay(if (query.isBlank()) 0L else 400L)
+        load(0)
+    }
+    val failedText = stringResource(R.string.registry_failed, "%s")
+    val doneText = stringResource(R.string.registry_installed_toast, "%s")
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = { reload++ }, enabled = !loading) { Text(stringResource(R.string.registry_refresh)) }
+        OutlinedButton(onClick = {
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(com.wanderstest3.pojarush.horizon.Modrinth.site(kind)))) }
+        }) { Text(stringResource(R.string.registry_open_modrinth), maxLines = 1, modifier = Modifier.basicMarquee()) }
+    }
+    OutlinedTextField(
+        value = query,
+        onValueChange = { query = it },
+        singleLine = true,
+        label = { Text(stringResource(R.string.registry_search)) },
+        modifier = Modifier.fillMaxWidth(),
+    )
+    error?.let { Hint(stringResource(R.string.registry_failed, it)) }
+    if (entries.isEmpty() && !loading && error == null) Hint(stringResource(R.string.registry_empty))
+    entries.forEach { entry ->
+        val installed = remember(entry.id, installedVersion) { ModRegistry.installedFile(entry) != null }
+        val progress = RegistryState.progress[entry.id]
+        RegistryRow(entry, installed, progress) {
+            RegistryState.progress[entry.id] = 0f
+            scope.launch {
+                val result = runCatching {
+                    withContext(Dispatchers.IO) {
+                        com.wanderstest3.pojarush.horizon.Modrinth.install(entry) { p -> scope.launch { RegistryState.progress[entry.id] = p } }
+                    }
+                }
+                RegistryState.progress.remove(entry.id)
+                result.onSuccess {
+                    installedVersion++
+                    onInstalled()
+                    Toast.makeText(context, doneText.replace("%s", entry.name), Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(context, failedText.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+    if (loading) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Hint(stringResource(R.string.registry_loading))
+        }
+    } else if (more && entries.isNotEmpty()) {
+        OutlinedButton(onClick = { scope.launch { load(entries.size) } }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.registry_load_more))
+        }
     }
 }
 
