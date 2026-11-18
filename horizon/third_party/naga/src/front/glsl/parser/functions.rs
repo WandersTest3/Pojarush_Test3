@@ -100,8 +100,17 @@ impl ParsingContext<'_> {
                         let mut stmt = ctx.stmt_ctx();
                         let expr = self.parse_expression(frontend, ctx, &mut stmt)?;
                         self.expect(frontend, TokenValue::Semicolon)?;
-                        let (handle, meta) =
+                        let (mut handle, meta) =
                             ctx.lower_expect(stmt, frontend, expr, ExprPos::Rhs)?;
+                        let scalar = ctx.return_ty.and_then(|ty| match ctx.module.types[ty].inner {
+                            crate::TypeInner::Scalar(s) | crate::TypeInner::Vector { scalar: s, .. } => {
+                                Some(s)
+                            }
+                            _ => None,
+                        });
+                        if let Some(scalar) = scalar {
+                            ctx.implicit_conversion(&mut handle, meta, scalar)?;
+                        }
                         (Some(handle), meta)
                     }
                 };

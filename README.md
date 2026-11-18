@@ -306,7 +306,18 @@ O jogo aceita dois formatos na pasta `shaderpacks/`:
 | Formato | Arquivo | Estado |
 |---|---|---|
 | Horizon | `.hshader` (WGSL) | Verificado antes de rodar; é o formato recomendado |
-| OptiFine/Iris | `.zip` ou pasta com `shaders/` | Tradutor do Starling 0.7.8; packs pesados podem ter falhas visuais |
+| OptiFine/Iris | `.zip` ou pasta com `shaders/` | Tradutor do Starling 0.7.8 com correções; packs pesados podem ter falhas visuais |
+
+Para conferir um pack OptiFine/Iris no PC (tradução e criação dos pipelines; não mostra a imagem), ponha os
+`.zip` numa pasta e rode, dentro de `horizon/`:
+
+```
+HORIZON_TEST_SHADER_PACKS=/caminho/dos/packs cargo test -p horizon-shaders --release --test real_packs -- --ignored --nocapture
+HORIZON_TEST_SHADER_PACKS=/caminho/dos/packs cargo test -p horizon-client-render --release --lib real_packs_build -- --ignored --nocapture
+```
+
+O segundo precisa de uma GPU Vulkan (o lavapipe do Mesa serve) e usa o limite de 26 varyings de um celular;
+`ONLY=nome` testa só os packs com esse nome. `HORIZON_SHADER_DUMP=pasta` grava o GLSL que vai para o naga.
 
 ## 1. Ferramenta
 

@@ -36,3 +36,6 @@ trademarks; Horizon is not affiliated with AMD.
 `third_party/naga` is [naga](https://github.com/gfx-rs/wgpu) 30.0.1 by the gfx-rs developers, with
 fixes to its GLSL frontend that shader packs need (taken from Starling 0.7.8). It is licensed under MIT
 or Apache-2.0; both licenses are in that folder (`LICENSE.MIT`, `LICENSE.APACHE`).
+Horizon adds: `return`'s implicit conversion to the function's type (`return 1;` in a
+`float` function), and a matrix built from one vector of as many components (`mat2(vec4)`), and a repeated
+prototype taken as GLSL takes it.

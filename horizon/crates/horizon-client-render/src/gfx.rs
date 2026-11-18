@@ -1143,7 +1143,8 @@ async fn open_backend(
     // Mappable primary buffers: section pages that no longer fit in
     // video memory go to system memory. Shader packs' 16-bit normalized buffers (render
     // targets with the adapter's own format features) and R11F_G11F_B10F: a float
-    // stand-in neither clamps nor drops NaN.
+    // stand-in neither clamps nor drops NaN. Vertex-stage image writes and image atomics: packs
+    // that voxelize the world in their shadow pass (Solas, Rethinking Voxels).
     let features = timing::GpuTimer::features(&adapter)
         | cull::Cull::features(&adapter)
         | (adapter.features()
@@ -1151,7 +1152,9 @@ async fn open_backend(
                 | wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
                 | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM
                 | wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
-                | wgpu::Features::RG11B10UFLOAT_RENDERABLE));
+                | wgpu::Features::RG11B10UFLOAT_RENDERABLE
+                | wgpu::Features::VERTEX_WRITABLE_STORAGE
+                | wgpu::Features::TEXTURE_ATOMIC));
     let driver = format!("{} {}", info.driver, info.driver_info);
     startup_step(format_args!(
         "requesting the device (driver {}) with features [{features}] and the adapter's \
@@ -1183,6 +1186,9 @@ async fn open_backend(
     };
     match opened {
         Ok((device, queue)) => {
+            device.set_device_lost_callback(|reason, message| {
+                log::error!("Horizon renderer: the GPU device was lost ({reason:?}): {message}");
+            });
             crate::hud::set_atlas_limit(device.limits().max_texture_dimension_2d);
             set_split_limit(device.limits().max_texture_array_layers);
             Ok(Opened {

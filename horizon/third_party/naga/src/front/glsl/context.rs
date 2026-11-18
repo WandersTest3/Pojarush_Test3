@@ -84,6 +84,8 @@ pub(crate) struct Context<'a> {
     pub local_expression_kind_tracker: crate::proc::ExpressionKindTracker,
     /// Tracks the expression kind of `Expression`s residing in `self.module.global_expressions`
     pub global_expression_kind_tracker: &'a mut crate::proc::ExpressionKindTracker,
+    /// The return type of the function being parsed, for `return`'s implicit conversion.
+    pub return_ty: Option<Handle<Type>>,
 }
 
 impl<'a> Context<'a> {
@@ -114,6 +116,7 @@ impl<'a> Context<'a> {
             is_const: false,
             local_expression_kind_tracker: crate::proc::ExpressionKindTracker::new(),
             global_expression_kind_tracker,
+            return_ty: None,
         };
 
         this.emit_start();

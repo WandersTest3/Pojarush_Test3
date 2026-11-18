@@ -910,6 +910,17 @@ fn helper(
     (pipeline, layout)
 }
 
+/// Whether gbuffers program `p` writes neither a buffer nor an image.
+fn writes_nothing(p: &horizon_shaders::PostProgram) -> bool {
+    p.program.as_ref().is_some_and(|g| {
+        g.interface.images.is_empty()
+            && g.interface
+                .outputs
+                .iter()
+                .all(|&l| p.buffers.get(l as usize).is_none())
+    })
+}
+
 fn entry(binding: u32, ty: wgpu::BindingType) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
@@ -1507,7 +1518,12 @@ fn build_pass(
             write_mask: wgpu::ColorWrites::empty(),
         })];
     } else if !final_pass && writes.is_empty() && !sink {
-        notes.push(format!("{}: writes no buffer; skipped", p.name));
+        let what = if geometry.is_some() {
+            "draws nothing"
+        } else {
+            "skipped"
+        };
+        notes.push(format!("{}: writes no buffer; {what}", p.name));
         return None;
     }
     let written = writes.iter().fold(0u16, |m, w| m | 1 << w.1);
@@ -2112,6 +2128,10 @@ impl PackPost {
             .and_then(|(p, g)| build(p, Some(g)));
         let (mut hides_sky, mut hides_celestial) =
             (post.sky.is_some(), post.sky_textured.is_some());
+        // A sky program that writes no buffer (`void main() { discard; }`) means the pack draws
+        // its own sky later: vanilla's is left out, not drawn in its place.
+        let silent_sky = post.sky.as_ref().is_some_and(writes_nothing);
+        let silent_celestial = post.sky_textured.as_ref().is_some_and(writes_nothing);
         let sky = (post.sky.is_some() || post.sky_textured.is_some()).then(|| {
             let geometry = PackSky::new(device, queue);
             let basic = Geometry {
@@ -2139,10 +2159,10 @@ impl PackPost {
             }
         });
         let sky = sky.filter(|s| s.basic.is_some() || s.textured.is_some());
-        if sky.as_ref().and_then(|s| s.basic.as_ref()).is_none() {
+        if sky.as_ref().and_then(|s| s.basic.as_ref()).is_none() && !silent_sky {
             hides_sky = false;
         }
-        if sky.as_ref().and_then(|s| s.textured.as_ref()).is_none() {
+        if sky.as_ref().and_then(|s| s.textured.as_ref()).is_none() && !silent_celestial {
             hides_celestial = false;
         }
         let programs = [
@@ -4198,6 +4218,164 @@ impl PackPost {
 mod tests {
     use super::*;
     use wgpu::TextureFormat as T;
+
+    /// Builds every pack under `HORIZON_TEST_SHADER_PACKS` (zips or folders) for each
+    /// dimension on the first adapter, with a phone's limits, and prints the notes: the
+    /// pipelines wgpu refuses show up here as they do in the game's log.
+    #[test]
+    #[ignore = "needs HORIZON_TEST_SHADER_PACKS and a GPU (lavapipe works)"]
+    fn real_packs_build() {
+        let Some(dir) = std::env::var_os("HORIZON_TEST_SHADER_PACKS") else {
+            return;
+        };
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let mut limits = adapter.limits();
+        limits.max_inter_stage_shader_variables = limits.max_inter_stage_shader_variables.min(26);
+        limits.max_color_attachments = limits.max_color_attachments.min(8);
+        limits.max_bind_groups = limits.max_bind_groups.min(
+            std::env::var("BIND_GROUPS").ok().and_then(|v| v.parse().ok()).unwrap_or(8),
+        );
+        let features = adapter.features()
+            & (wgpu::Features::INDIRECT_FIRST_INSTANCE
+                | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM
+                | wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
+                | wgpu::Features::RG11B10UFLOAT_RENDERABLE
+                | wgpu::Features::VERTEX_WRITABLE_STORAGE
+                | wgpu::Features::TEXTURE_ATOMIC);
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            required_features: features,
+            required_limits: limits,
+            ..Default::default()
+        }))
+        .unwrap();
+        let texture = |w: u32, layers: u32, dim: wgpu::TextureDimension| {
+            device.create_texture(&wgpu::TextureDescriptor {
+                label: None,
+                size: wgpu::Extent3d {
+                    width: w,
+                    height: w,
+                    depth_or_array_layers: layers,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: dim,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING
+                    | wgpu::TextureUsages::COPY_SRC
+                    | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            })
+        };
+        let sprites = texture(16, 4, wgpu::TextureDimension::D2);
+        let mut encoder = device.create_command_encoder(&Default::default());
+        let atlas = super::super::pack_atlas::PackAtlas::new(
+            &device,
+            &mut encoder,
+            std::slice::from_ref(&sprites),
+            super::super::sprite_split(),
+            4,
+            16,
+        )
+        .unwrap();
+        queue.submit([encoder.finish()]);
+        let lightmap = texture(16, 1, wgpu::TextureDimension::D2).create_view(&Default::default());
+        let celestial = texture(16, 1, wgpu::TextureDimension::D2).create_view(&Default::default());
+        let clouds = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let inputs = horizon_shaders::GameInputs {
+            terrain: Some(atlas.terrain_inputs(false)),
+            terrain_geometry: None,
+            sky: Some(super::super::pack_sky::inputs()),
+            celestial: Some(super::super::pack_sky::celestial_inputs()),
+            entities: Some(super::super::pack_entities::inputs()),
+            clouds: Some(super::super::pack_entities::cloud_inputs()),
+            weather: Some(super::super::pack_weather::inputs()),
+            hand: Some(super::super::pack_hand::inputs()),
+        };
+        let only = std::env::var("ONLY").unwrap_or_default();
+        for found in horizon_shaders::discover(std::path::Path::new(&dir)) {
+            if found.problem.is_some() || !found.name.contains(only.as_str()) {
+                continue;
+            }
+            let pack = horizon_shaders::Pack::open(&found.path).unwrap();
+            for dimension in [0, -1, 1] {
+                let mut macros = horizon_shaders::Macros::standard();
+                let properties = horizon_shaders::Properties::parse(
+                    &pack.read_text("shaders.properties").unwrap_or_default(),
+                    &horizon_shaders::with_options(&pack, &macros),
+                );
+                let mut notes = macros.define_features(&properties);
+                let folder = horizon_shaders::dimension_folder(&pack, dimension);
+                let post = horizon_shaders::load_post(&pack, &folder, &properties, &macros, &inputs);
+                let instance_attr = wgpu::vertex_attr_array![5=>Float32x4];
+                let vertex = wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<crate::mesher::TerrainVertex>() as u64,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &super::super::TERRAIN_ATTRIBUTES,
+                };
+                let instances = wgpu::VertexBufferLayout {
+                    array_stride: 16,
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &instance_attr,
+                };
+                let buffers = [Some(vertex), Some(instances)];
+                let ids = vec![0i32; 8];
+                let world = World {
+                    atlas: Some((atlas.view.clone(), atlas.size())),
+                    lightmap: lightmap.clone(),
+                    terrain: Some(Geometry {
+                        buffers: &buffers,
+                        table: None,
+                        depth_write: true,
+                        atlas: None,
+                        ids: None,
+                        cull: true,
+                    }),
+                    block_ids: &ids,
+                    celestial: Some(celestial.clone()),
+                    clouds: Some(&clouds),
+                    weather: true,
+                    hand: true,
+                };
+                let start = std::time::Instant::now();
+                let built = PackPost::new(
+                    &device,
+                    &queue,
+                    &adapter,
+                    post,
+                    wgpu::TextureFormat::Rgba8Unorm,
+                    world,
+                );
+                notes.extend(built.notes.iter().cloned());
+                println!(
+                    "{} dimension {dimension} (`{folder}`): {} passes, sky {} celestial {} clouds {}, {:.0} ms",
+                    found.name,
+                    built.programs().len(),
+                    built.has_sky(),
+                    built.has_celestial(),
+                    built.has_clouds(),
+                    start.elapsed().as_secs_f64() * 1000.0
+                );
+                for n in notes.iter().filter(|n| {
+                    !n.contains(" draws with ") && !n.contains("casts shadows") && !n.contains("draw with")
+                }) {
+                    println!("    {}", n.chars().take(400).collect::<String>());
+                }
+            }
+        }
+    }
 
     #[test]
     fn shadow_cache_key_tracks_world_and_time_changes() {

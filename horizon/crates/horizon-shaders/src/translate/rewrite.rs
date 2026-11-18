@@ -211,7 +211,9 @@ impl Stage<'_> {
                     out.push_str(t);
                     continue;
                 }
-                if before.is_some_and(|b| is_ident(b) && !matches!(b, "return" | "case" | "else" | "in" | "out" | "inout")) {
+                if before.is_some_and(|b| is_ident(b) && !matches!(b, "return" | "case" | "else" | "in" | "out" | "inout"))
+                    || (before == Some(",") && depth > 0 && self.later_declarator(i))
+                {
                     hidden.push(t);
                 }
             }
@@ -325,7 +327,14 @@ impl Stage<'_> {
                 _ if !fragment && VERTEX_INPUTS.iter().any(|b| t.starts_with(b)) => {
                     Some(format!("hz_{}", &t[3..]))
                 }
-                _ if old && LATER_KEYWORDS.contains(&t) => Some(format!("hz_kw_{t}")),
+                // A name, unless a word follows (`buffer Data {`, `shared vec3 s[9]`: the keyword,
+                // through an extension).
+                _ if old
+                    && LATER_KEYWORDS.contains(&t)
+                    && !next(i).is_some_and(|j| is_ident(self.tokens[j])) =>
+                {
+                    Some(format!("hz_kw_{t}"))
+                }
                 _ => None,
             };
             out.push_str(replaced.as_deref().unwrap_or(t));
@@ -352,6 +361,37 @@ impl Stage<'_> {
 
     /// The element count of an unsized array whose `[]` ends at `close`: the arguments of the
     /// constructor that follows (`[] = T[](...)` or `[](...)`).
+    /// Whether token `i`, after a `,`, is a further variable of a declaration (`vec3 a, b`):
+    /// the statement starts with a type and a name, and the `,` is not inside parentheses.
+    fn later_declarator(&self, i: usize) -> bool {
+        let mut parens = 0i32;
+        let mut k = i;
+        while k > 0 {
+            k -= 1;
+            match self.tokens[k] {
+                ")" | "]" => parens += 1,
+                "(" | "[" => {
+                    parens -= 1;
+                    if parens < 0 {
+                        return false;
+                    }
+                }
+                ";" | "{" | "}" if parens == 0 => break,
+                _ => {}
+            }
+        }
+        let mut words = self.tokens[k..i]
+            .iter()
+            .filter(|t| significant(t))
+            .skip_while(|t| {
+                matches!(**t, ";" | "{" | "}" | "const" | "highp" | "mediump" | "lowp" | "flat")
+            });
+        matches!(
+            (words.next(), words.next()),
+            (Some(a), Some(b)) if is_ident(a) && is_ident(b) && *a != "return"
+        )
+    }
+
     pub(super) fn array_length(&self, close: usize) -> Option<usize> {
         let mut j = close + 1;
         let mut seen_eq = false;

@@ -334,6 +334,7 @@ impl ParsingContext<'_> {
                                 ctx.global_expression_kind_tracker,
                             )?;
 
+                            context.return_ty = ty;
                             self.parse_function_args(frontend, &mut context)?;
 
                             let end_meta = self.expect(frontend, TokenValue::RightParen)?.meta;

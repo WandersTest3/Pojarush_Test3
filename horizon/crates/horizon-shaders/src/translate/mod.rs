@@ -18,7 +18,7 @@
 //! Composite-style programs draw one quad from (0,0) to (1,1) with an identity model-view and an
 //! orthographic projection onto it, the texture coordinate equal to the position (OQ-6).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 
 use naga::ShaderStage;
@@ -308,9 +308,22 @@ fn translate(
     // struct as its members packed into vectors (`struct_parts`).
     let mut locations: BTreeMap<String, (u32, String)> = BTreeMap::new();
     let mut split: BTreeMap<String, (String, Vec<(String, String)>)> = BTreeMap::new();
+    // A varying only one stage declares needs no location (a phone has few): it becomes a
+    // plain global, so a fragment input the vertex stage never writes reads 0.
+    let mut private: Vec<String> = Vec::new();
     let vars = v.outs.iter().map(|o| (&v, o));
     for (stage, var) in vars.chain(f.ins.iter().map(|i| (&f, i))) {
         if locations.contains_key(&var.name) || split.contains_key(&var.name) {
+            continue;
+        }
+        let other = if stage.kind == ShaderStage::Vertex { &f.ins } else { &v.outs };
+        if !var.structure && !other.iter().any(|o| o.name == var.name) {
+            let words: Vec<&str> = var.decl.split(' ').collect();
+            let start = words
+                .iter()
+                .position(|w| !matches!(*w, "flat" | "smooth" | "noperspective" | "centroid" | "sample" | "invariant"))
+                .unwrap_or(0);
+            private.push(words[start..].join(" ").replace("@", &var.name));
             continue;
         }
         if var.structure {
@@ -353,6 +366,10 @@ fn translate(
         }
     }
 
+    if locations.len() > 15 {
+        pack_varyings(&mut locations, &mut split);
+    }
+
     let header = |stage: &Stage| {
         let mut h = resources(&uniforms, &samplers, &images);
         if let Some(reference) = alpha_test_ref {
@@ -379,6 +396,10 @@ fn translate(
         }
         for (name, (global, _)) in split.iter().filter(|(_, (g, _))| !g.is_empty()) {
             writeln!(h, "{}", global.replace("@", name)).unwrap();
+        }
+        // Both stages: one may use a varying only the other declares, which GL drivers take.
+        for decl in &private {
+            writeln!(h, "{decl}").unwrap();
         }
         if let (Some(inputs), ShaderStage::Vertex) = (gbuffers, stage.kind) {
             h.push_str(&inputs.declarations);
@@ -795,6 +816,92 @@ fn constant(stage: &Stage, name: &str) -> Option<Vec<f64>> {
     )
 }
 
+/// Many varyings outrun a phone's locations (wgpu's minimum is 16): floats, `vec2`s and `vec3`s
+/// with the same qualifiers share `vec4`s (`hz_pk_<n>`), copied in and out as split varyings
+/// are; locations are numbered again from 0.
+#[allow(clippy::type_complexity)]
+fn pack_varyings(
+    locations: &mut BTreeMap<String, (u32, String)>,
+    split: &mut BTreeMap<String, (String, Vec<(String, String)>)>,
+) {
+    let size = |ty: &str| match ty {
+        "float" => Some(1),
+        "vec2" => Some(2),
+        "vec3" => Some(3),
+        _ => None,
+    };
+    // Matrix and array parts are copied whole; a struct's parts already hold four components.
+    let whole_part = |name: &str| {
+        split
+            .values()
+            .any(|(_, copies)| copies.iter().any(|(part, _)| part == name))
+    };
+    let mut candidates: Vec<(String, String, String, usize)> = Vec::new();
+    for (name, (_, decl)) in locations.iter() {
+        let Some(before) = decl.strip_suffix(" @;") else {
+            continue;
+        };
+        let mut words: Vec<&str> = before.split_whitespace().collect();
+        let Some(ty) = words.pop() else { continue };
+        let Some(n) = size(ty) else { continue };
+        if name.starts_with("hz_v_") && !whole_part(name) {
+            continue;
+        }
+        if name.starts_with("hz_") && !name.starts_with("hz_v_") {
+            continue;
+        }
+        candidates.push((name.clone(), words.join(" "), ty.to_owned(), n));
+    }
+    candidates.sort_by(|a, b| a.1.cmp(&b.1).then(b.3.cmp(&a.3)).then(a.0.cmp(&b.0)));
+    let mut slots: Vec<(String, usize, Vec<(String, String, usize, usize)>)> = Vec::new();
+    for (name, qualifiers, ty, n) in candidates {
+        let slot = slots
+            .iter_mut()
+            .find(|(q, used, _)| *q == qualifiers && used + n <= 4);
+        match slot {
+            Some((_, used, members)) => {
+                members.push((name, ty, *used, n));
+                *used += n;
+            }
+            None => slots.push((qualifiers, n, vec![(name, ty, 0, n)])),
+        }
+    }
+    let mut renamed: HashMap<String, String> = HashMap::new();
+    for (k, (qualifiers, used, members)) in slots.into_iter().enumerate() {
+        if members.len() < 2 {
+            continue;
+        }
+        let part = format!("hz_pk_{k}");
+        let q = if qualifiers.is_empty() {
+            String::new()
+        } else {
+            format!("{qualifiers} ")
+        };
+        let ty = if used == 1 { "float".to_owned() } else { format!("vec{used}") };
+        locations.insert(part.clone(), (0, format!("{q}{ty} @;")));
+        for (name, member_ty, at, n) in members {
+            locations.remove(&name);
+            let swizzle: String = "xyzw"[at..at + n].to_owned();
+            let target = format!("{part}.{swizzle}");
+            if name.starts_with("hz_v_") {
+                renamed.insert(name, target);
+            } else {
+                split.insert(name, (format!("{member_ty} @;"), vec![(target, String::new())]));
+            }
+        }
+    }
+    for (_, copies) in split.values_mut() {
+        for (part, _) in copies.iter_mut() {
+            if let Some(to) = renamed.get(part) {
+                *part = to.clone();
+            }
+        }
+    }
+    for (n, (_, (location, _))) in locations.iter_mut().enumerate() {
+        *location = n as u32;
+    }
+}
+
 /// A matrix or array varying (`flat mat3 @[2];`): wgpu's stage interfaces take only scalars
 /// and vectors (WGSL), so it becomes a private global (`mat3 @[2];`) and one varying per
 /// column or element, each with the qualifiers and how to reach it (`[1][2]`). `None` for
@@ -1011,6 +1118,16 @@ fn compile(stage: &Stage, text: &str, header_lines: usize) -> Result<naga::Modul
     // matrix column's component written to (`m[1].y =`) and `min`/`max`/`clamp` of a `uint` and
     // integer literals. Each refusal is rewritten where naga points, and the source parsed again.
     let text = const_in_parameters(text);
+    if let Some(dir) = std::env::var_os("HORIZON_SHADER_DUMP") {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        text.hash(&mut h);
+        let kind = if stage.kind == ShaderStage::Vertex { "vsh" } else { "fsh" };
+        let _ = std::fs::write(
+            std::path::Path::new(&dir).join(format!("{:016x}.{kind}", h.finish())),
+            &text,
+        );
+    }
     let mut text = std::borrow::Cow::Borrowed(text.as_str());
     let mut tries = 0;
     let mut module = loop {
@@ -1228,6 +1345,65 @@ mod tests {
             Target::Window,
         );
         assert!(p.is_ok(), "{:?}", p.err());
+    }
+
+    /// IterationT's `Weather_FS`: a local named like the sampler its initializer reads.
+    #[test]
+    fn a_local_initialized_from_the_global_it_shadows() {
+        let fsh = "#version 330\nuniform sampler2D tex;\nin vec2 texcoord;\n/* DRAWBUFFERS:0 */\n\
+                   layout(location = 0) out vec4 o;\nvoid main() {\n    vec4 tex = texture(tex, texcoord);\n    \
+                   if (tex.a < 0.1) discard;\n    o = vec4(tex.rgb, 1.0);\n}\n";
+        let vsh = "#version 330\nout vec2 texcoord;\nvoid main() { gl_Position = ftransform(); texcoord = gl_MultiTexCoord0.xy; }\n";
+        let p = program(&[("composite.vsh", vsh), ("composite.fsh", fsh)], Target::Buffers);
+        assert!(p.is_ok(), "{:?}", p.err());
+    }
+
+    /// Twenty floats, a `mat3` and a flat `int`: packed into few enough locations.
+    #[test]
+    fn many_varyings_are_packed() {
+        let names: Vec<String> = (0..20).map(|i| format!("v{i}")).collect();
+        let decl = |dir: &str| {
+            names.iter().map(|n| format!("{dir} float {n};\n")).collect::<String>()
+                + &format!("{dir} mat3 tbn;\nflat {dir} int id;\n{dir} vec2 uv;\n")
+        };
+        let writes: String = names.iter().enumerate().map(|(i, n)| format!("    {n} = {i}.0;\n")).collect();
+        let sum: String = names.iter().map(|n| format!(" + {n}")).collect();
+        let vsh = format!(
+            "#version 330\n{}void main() {{\n    gl_Position = ftransform();\n{writes}    tbn = mat3(1.0);\n    id = 3;\n    uv = vec2(0.5);\n}}\n",
+            decl("out")
+        );
+        let fsh = format!(
+            "#version 330\n{}/* DRAWBUFFERS:0 */\nlayout(location = 0) out vec4 o;\nvoid main() {{\n    o = vec4(tbn[1] * (0.0{sum}), float(id) + uv.x);\n}}\n",
+            decl("in")
+        );
+        let p = program(&[("composite.vsh", &vsh), ("composite.fsh", &fsh)], Target::Buffers);
+        let p = p.unwrap_or_else(|e| panic!("{e:?}"));
+        let inputs = p.fragment.entry_points[0].function.arguments.len();
+        assert!(inputs <= 12, "{inputs} fragment inputs");
+    }
+
+    /// Shrimple's `out VertexData { ... flat mat2 atlasBounds; } vOut;`, read as `vIn`; a
+    /// sampler named `texture` (bloop); a later declarator named like a sampler (`vec3 a, specular`).
+    #[test]
+    fn interface_blocks_and_old_names() {
+        let vsh = "#version 330\nout VertexData {\n    vec4 color;\n    vec2 a, b;\n    flat mat2 bounds;\n} vOut;\n\
+                   void main() {\n    gl_Position = ftransform();\n    vOut.color = gl_Color;\n    vOut.a = vec2(1.0);\n    \
+                   vOut.b = vec2(2.0);\n    vOut.bounds = mat2(1.0);\n}\n";
+        let fsh = "#version 330\nin VertexData {\n    vec4 color;\n    vec2 a, b;\n    flat mat2 bounds;\n} vIn;\n\
+                   uniform sampler2D texture;\nuniform sampler2D specular;\n/* DRAWBUFFERS:0 */\nlayout(location = 0) out vec4 o;\n\
+                   void main() {\n    vec3 d, specular = vec3(0.5);\n    \
+                   o = vIn.color * texture(texture, vIn.a + vIn.b * vIn.bounds[0].x) + vec4(specular, 0.0);\n}\n";
+        let p = program(&[("composite.vsh", vsh), ("composite.fsh", fsh)], Target::Buffers);
+        assert!(p.is_ok(), "{:?}", p.err());
+    }
+
+    /// Derivative's `ColorSaturation(in vec3 color, in const float saturation)`.
+    #[test]
+    fn const_after_in_on_a_parameter() {
+        assert_eq!(
+            const_in_parameters("vec3 f(in const float s, const in float t, const float u) { const float k = 1.0; }"),
+            "vec3 f(in       float s,       in float t,       float u) { const float k = 1.0; }"
+        );
     }
 
     #[test]
@@ -1894,8 +2070,8 @@ mod tests {
     }
 }
 
-/// `const in` on a parameter (GLSL takes it, naga's frontend does not): the `const` is blanked
-/// with spaces, so every offset stays where it was.
+/// `const` on a parameter (`const in`, `in const`, `(const float`; GLSL takes it, naga's
+/// frontend does not): the `const` is blanked with spaces, so every offset stays where it was.
 fn const_in_parameters(text: &str) -> String {
     let bytes = text.as_bytes();
     let mut out = text.to_owned().into_bytes();
@@ -1908,12 +2084,26 @@ fn const_in_parameters(text: &str) -> String {
         while j < bytes.len() && (bytes[j] == b' ' || bytes[j] == b'\t') {
             j += 1;
         }
-        if boundary && j > at + 5 && text[j..].starts_with("in") {
-            let after = bytes.get(j + 2).copied();
-            if after.is_none_or(|c| !(c.is_ascii_alphanumeric() || c == b'_')) {
-                for b in &mut out[at..at + 5] {
-                    *b = b' ';
-                }
+        let word_end = bytes
+            .get(at + 5)
+            .is_none_or(|&c| !(c.is_ascii_alphanumeric() || c == b'_'));
+        let mut k = at;
+        while k > 0 && bytes[k - 1].is_ascii_whitespace() {
+            k -= 1;
+        }
+        let parameter = text[..k].ends_with('(')
+            || text[..k].ends_with(',')
+            || (text[..k].ends_with("in")
+                && (k < 3 || !(bytes[k - 3].is_ascii_alphanumeric() || bytes[k - 3] == b'_')));
+        let followed_by_in = j > at + 5
+            && text[j..].starts_with("in")
+            && bytes
+                .get(j + 2)
+                .copied()
+                .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == b'_'));
+        if boundary && word_end && (followed_by_in || parameter) {
+            for b in &mut out[at..at + 5] {
+                *b = b' ';
             }
         }
         i = at + 5;

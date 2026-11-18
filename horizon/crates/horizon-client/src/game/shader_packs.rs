@@ -183,6 +183,37 @@ fn clear_pending_shader_job() {
     }
 }
 
+/// `texture.*` naming a game texture (`minecraft:textures/environment/clouds.png`): read from
+/// the game's resources, as the pack's own textures are. Dynamic ones (the lightmap, the
+/// atlas) stay for the renderer.
+fn resolve_game_textures(textures: &mut [horizon_shaders::CustomTexture], resources: &std::path::Path) {
+    for t in textures {
+        let horizon_shaders::TextureSource::Resource(location) = &t.source else {
+            continue;
+        };
+        let (namespace, path) = location.split_once(':').unwrap_or(("minecraft", location));
+        if !path.starts_with("textures/") || !path.ends_with(".png") {
+            continue;
+        }
+        let file = resources.join("assets").join(namespace).join(path);
+        let Some(mut texture) = std::fs::read(&file)
+            .ok()
+            .and_then(|b| horizon_shaders::decode_png(&b))
+        else {
+            continue;
+        };
+        let meta = std::fs::read_to_string(file.with_extension("png.mcmeta")).unwrap_or_default();
+        let flag = |key: &str| {
+            meta.split_once(&format!("\"{key}\""))
+                .map(|(_, after)| after.trim_start().trim_start_matches(':').trim_start())
+                .is_some_and(|v| v.starts_with("true"))
+        };
+        texture.blur = flag("blur");
+        texture.clamp = flag("clamp");
+        t.source = horizon_shaders::TextureSource::Image(texture);
+    }
+}
+
 fn compile_shader_pack_cpu(
     path: &std::path::Path,
     name: &str,
@@ -190,6 +221,7 @@ fn compile_shader_pack_cpu(
     mut macros: Macros,
     inputs: horizon_shaders::GameInputs,
     biome_names: &[String],
+    resources: &std::path::Path,
 ) -> std::result::Result<PreparedShaderPack, String> {
     let pack = Pack::open(path)
         .map(|p| p.with_chosen(chosen_shader_options(name)))
@@ -208,6 +240,7 @@ fn compile_shader_pack_cpu(
     }
     let folder = dimension_folder(&pack, dimension);
     let mut post = load_post(&pack, &folder, &properties, &macros, &inputs);
+    resolve_game_textures(&mut post.textures, resources);
     let biome_refs: Vec<&str> = biome_names.iter().map(String::as_str).collect();
     post.custom.set_biomes(&biome_refs);
     let text = pack.read_text("block.properties").unwrap_or_default();
@@ -369,6 +402,7 @@ impl Game<'_> {
                             biomes.list.iter().map(|b| b.name.clone()).collect();
                         let (tx, rx) = std::sync::mpsc::channel();
                         let job_path = path.clone();
+                        let resources = self.options.resources.clone();
                         let job_name = name.clone();
                         let started = std::time::Instant::now();
                         let _ = std::thread::Builder::new()
@@ -382,6 +416,7 @@ impl Game<'_> {
                                         macros,
                                         inputs,
                                         &biome_names,
+                                        &resources,
                                     )
                                 });
                                 let _ = tx.send(res);
@@ -523,7 +558,15 @@ impl Game<'_> {
                 let biomes = self.res.biomes();
                 let biome_names: Vec<String> = biomes.list.iter().map(|b| b.name.clone()).collect();
                 let loaded = horizon_client::crash::contain(|| {
-                    compile_shader_pack_cpu(&path, &name, dimension, macros, inputs, &biome_names)
+                    compile_shader_pack_cpu(
+                        &path,
+                        &name,
+                        dimension,
+                        macros,
+                        inputs,
+                        &biome_names,
+                        &self.options.resources,
+                    )
                 });
                 self.apply_prepared_shader_pack(&name, dimension, started, loaded);
             }

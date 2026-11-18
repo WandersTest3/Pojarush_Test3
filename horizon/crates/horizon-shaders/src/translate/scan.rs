@@ -265,6 +265,8 @@ impl<'p> Stage<'p> {
             errors: Vec::new(),
         };
         s.rename_vulkan_types();
+        s.rename_texture_sampler();
+        s.flatten_interface_blocks();
         let (mut start, mut depth, mut parens) = (0, 0usize, 0usize);
         let mut own_inverse = false;
         for i in 0..s.tokens.len() {
@@ -330,7 +332,369 @@ impl<'p> Stage<'p> {
             }
         }
         s.inverse &= !own_inverse;
+        s.rename_self_shadowing();
+        s.inline_local_array_sizes();
         s
+    }
+
+    /// `const int n = 6; vec3[n] c = vec3[n](...);` in a function: naga sizes arrays with
+    /// global constants only, so a local one's literal is written where it sizes or indexes.
+    fn inline_local_array_sizes(&mut self) {
+        let tokens = &self.tokens;
+        let next = |i: usize| (i + 1..tokens.len()).find(|&k| significant(tokens[k]));
+        let prev = |i: usize| (0..i).rev().find(|&k| significant(tokens[k]));
+        let mut replace: Vec<(usize, &'p str)> = Vec::new();
+        let mut depth = 0usize;
+        for i in 0..tokens.len() {
+            match tokens[i] {
+                "{" => depth += 1,
+                "}" => depth = depth.saturating_sub(1),
+                "const" if depth > 0 => {
+                    let Some(ty) = next(i).filter(|&k| matches!(tokens[k], "int" | "uint")) else {
+                        continue;
+                    };
+                    let Some(name) = next(ty).filter(|&k| is_ident(tokens[k])) else { continue };
+                    let Some(eq) = next(name).filter(|&k| tokens[k] == "=") else { continue };
+                    let Some(value) = next(eq).filter(|&k| {
+                        tokens[k].trim_end_matches(['u', 'U']).parse::<u64>().is_ok()
+                    }) else {
+                        continue;
+                    };
+                    if next(value).is_none_or(|k| tokens[k] != ";") {
+                        continue;
+                    }
+                    let mut d = 0usize;
+                    for k in value + 1..tokens.len() {
+                        match tokens[k] {
+                            "{" => d += 1,
+                            "}" if d == 0 => break,
+                            "}" => d -= 1,
+                            t if t == tokens[name]
+                                && prev(k).is_some_and(|p| tokens[p] == "[")
+                                && next(k).is_some_and(|n| tokens[n] == "]") =>
+                            {
+                                replace.push((k, tokens[value]));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        for (k, v) in replace {
+            self.tokens[k] = v;
+        }
+    }
+
+    /// `out VertexData { flat mat2 bounds; vec3 pos; } vOut;`: each member becomes a varying of
+    /// its own (`flat out mat2 hz_b_VertexData_bounds;`), named by block so the stages match,
+    /// and `vOut.bounds` that name. Lines stay where they were. Arrays of blocks (a geometry
+    /// stage's) are left alone.
+    fn flatten_interface_blocks(&mut self) {
+        let n = self.tokens.len();
+        let sig = |tokens: &[&str], from: usize| (from..tokens.len()).find(|&k| significant(tokens[k]));
+        let mut renames: Vec<(String, String)> = Vec::new();
+        let mut blocks: Vec<(usize, usize, &'static str)> = Vec::new();
+        let mut depth = 0usize;
+        let mut i = 0usize;
+        while i < n {
+            let t = self.tokens[i];
+            match t {
+                "{" => depth += 1,
+                "}" => depth = depth.saturating_sub(1),
+                _ => {}
+            }
+            if depth != 0 || !matches!(t, "in" | "out" | "varying") {
+                i += 1;
+                continue;
+            }
+            let tokens = &self.tokens;
+            let Some(name_at) = sig(tokens, i + 1).filter(|&k| is_ident(tokens[k])) else {
+                i += 1;
+                continue;
+            };
+            let Some(open) = sig(tokens, name_at + 1).filter(|&k| tokens[k] == "{") else {
+                i += 1;
+                continue;
+            };
+            let Some(close) = (open + 1..n).find(|&k| tokens[k] == "}") else {
+                i += 1;
+                continue;
+            };
+            let Some(after) = sig(tokens, close + 1) else { break };
+            let (instance, end) = if tokens[after] == ";" {
+                (None, after)
+            } else if is_ident(tokens[after])
+                && let Some(semi) = sig(tokens, after + 1).filter(|&k| tokens[k] == ";")
+            {
+                (Some(tokens[after]), semi)
+            } else {
+                i += 1;
+                continue;
+            };
+            let block = tokens[name_at];
+            // The qualifiers before the storage: `layout(...)`, `flat`, `centroid`...
+            let mut start = i;
+            loop {
+                let Some(p) = (0..start).rev().find(|&k| significant(tokens[k])) else { break };
+                let w = tokens[p];
+                if QUALIFIERS.contains(&w) || matches!(w, "flat" | "smooth" | "noperspective" | "centroid" | "sample") {
+                    start = p;
+                } else if w == ")" {
+                    let Some(open) = (0..p).rev().find(|&k| tokens[k] == "(") else { break };
+                    match (0..open).rev().find(|&k| significant(tokens[k])) {
+                        Some(l) if tokens[l] == "layout" => start = l,
+                        _ => break,
+                    }
+                } else {
+                    break;
+                }
+            }
+            let prefix: Vec<&str> = (start..i)
+                .map(|k| tokens[k])
+                .filter(|t| significant(t))
+                .collect();
+            let prefix = prefix.join(" ");
+            let mut out = String::new();
+            let mut member: Vec<&str> = Vec::new();
+            for k in open + 1..close {
+                let w = tokens[k];
+                if !significant(w) {
+                    continue;
+                }
+                if w != ";" {
+                    member.push(w);
+                    continue;
+                }
+                let ty_at = member
+                    .iter()
+                    .position(|w| !QUALIFIERS.contains(w) && !matches!(*w, "flat" | "smooth" | "noperspective" | "centroid" | "sample"))
+                    .unwrap_or(0);
+                let (quals, rest) = member.split_at(ty_at);
+                if let Some((ty, declarators)) = rest.split_first() {
+                    let mut name = String::new();
+                    let mut array = String::new();
+                    let mut flush = |name: &mut String, array: &mut String, out: &mut String| {
+                        if name.is_empty() {
+                            return;
+                        }
+                        let new = match instance {
+                            Some(_) => format!("hz_b_{block}_{name}"),
+                            None => name.clone(),
+                        };
+                        out.push_str(&format!(
+                            "{} {prefix} {t} {ty} {new}{array}; ",
+                            quals.join(" ")
+                        ));
+                        renames.push((format!("{}.{name}", instance.unwrap_or("")), new));
+                        name.clear();
+                        array.clear();
+                    };
+                    let mut nesting = 0;
+                    for &d in declarators {
+                        match d {
+                            "," if nesting == 0 => flush(&mut name, &mut array, &mut out),
+                            "[" => {
+                                nesting += 1;
+                                array.push('[');
+                            }
+                            "]" => {
+                                nesting -= 1;
+                                array.push(']');
+                            }
+                            _ if name.is_empty() => name = d.to_owned(),
+                            _ => array.push_str(d),
+                        }
+                    }
+                    flush(&mut name, &mut array, &mut out);
+                }
+                member.clear();
+            }
+            blocks.push((start, end, Box::leak(out.into_boxed_str())));
+            i = end + 1;
+        }
+        if blocks.is_empty() {
+            return;
+        }
+        let old = std::mem::take(&mut self.tokens);
+        let mut at = 0;
+        for (start, end, generated) in blocks {
+            self.tokens.extend_from_slice(&old[at..start]);
+            self.tokens.extend(lex(generated));
+            self.tokens.push(" ");
+            self.tokens
+                .extend(old[start..=end].iter().filter(|t| t.contains('\n')).copied());
+            at = end + 1;
+        }
+        self.tokens.extend_from_slice(&old[at..]);
+        let n = self.tokens.len();
+        if renames.iter().all(|(from, _)| from.starts_with('.')) {
+            return;
+        }
+        for k in 0..n {
+            let Some(instance) = Some(self.tokens[k]).filter(|t| is_ident(t)) else {
+                continue;
+            };
+            let Some(dot) = sig(&self.tokens, k + 1).filter(|&d| self.tokens[d] == ".") else {
+                continue;
+            };
+            let Some(member) = sig(&self.tokens, dot + 1) else { continue };
+            let key = format!("{instance}.{}", self.tokens[member]);
+            if let Some((_, new)) = renames.iter().find(|(from, _)| *from == key) {
+                self.tokens[k] = Box::leak(new.clone().into_boxed_str());
+                self.tokens[dot] = "";
+                self.tokens[member] = "";
+            }
+        }
+    }
+
+    /// `uniform sampler2D texture;` (GLSL 1.20's name, which OptiFine and Iris take as
+    /// `gtexture`): where `texture` is not called it is the sampler, renamed `gtexture`.
+    fn rename_texture_sampler(&mut self) {
+        let tokens = &self.tokens;
+        let next = |i: usize| (i + 1..tokens.len()).find(|&k| significant(tokens[k]));
+        let prev = |i: usize| (0..i).rev().find(|&k| significant(tokens[k]));
+        let declared = (0..tokens.len()).any(|i| {
+            tokens[i] == "texture"
+                && prev(i).is_some_and(|p| tokens[p] == "sampler2D")
+                && prev(i)
+                    .and_then(prev)
+                    .is_some_and(|p| tokens[p] == "uniform" || tokens[p] == "highp" || tokens[p] == "lowp" || tokens[p] == "mediump")
+        });
+        if !declared {
+            return;
+        }
+        let renamed: Vec<usize> = (0..tokens.len())
+            .filter(|&i| {
+                tokens[i] == "texture"
+                    && next(i).is_none_or(|n| tokens[n] != "(")
+                    && prev(i).is_none_or(|p| tokens[p] != ".")
+            })
+            .collect();
+        for i in renamed {
+            self.tokens[i] = "gtexture";
+        }
+    }
+
+    /// `vec4 tex = texture(tex, uv);` in a function: in GLSL the local's scope starts after its
+    /// initializer, so `tex` there is still the global; naga already sees the local. The local
+    /// is renamed (`hz_l_tex`) from its declaration to the end of its block.
+    fn rename_self_shadowing(&mut self) {
+        let mut globals: BTreeSet<&str> = BTreeSet::new();
+        for (name, ..) in &self.uniforms {
+            globals.insert(name);
+        }
+        for (name, _) in &self.samplers {
+            globals.insert(name);
+        }
+        for v in self.ins.iter().chain(&self.outs) {
+            globals.insert(&v.name);
+        }
+        for i in &self.images {
+            globals.insert(&i.name);
+        }
+        for (name, ..) in &self.attributes {
+            globals.insert(name);
+        }
+        let globals: BTreeSet<String> = globals.into_iter().map(str::to_owned).collect();
+        let tokens = &self.tokens;
+        let prev = |i: usize| (0..i).rev().find(|&k| significant(tokens[k]));
+        let next = |i: usize| (i + 1..tokens.len()).find(|&k| significant(tokens[k]));
+        let is_type = |t: &str, structs: &HashMap<String, Vec<(String, String)>>| {
+            matches!(t, "float" | "int" | "uint" | "bool" | "double")
+                || ["vec", "ivec", "uvec", "bvec", "dvec"]
+                    .iter()
+                    .any(|p| t.strip_prefix(p).is_some_and(|n| matches!(n, "2" | "3" | "4")))
+                || t.strip_prefix("mat").is_some_and(|n| {
+                    matches!(n, "2" | "3" | "4" | "2x2" | "2x3" | "2x4" | "3x2" | "3x3" | "3x4" | "4x2" | "4x3" | "4x4")
+                })
+                || structs.contains_key(t)
+        };
+        let mut renames: Vec<(usize, usize, String)> = Vec::new();
+        let mut depth = 0usize;
+        // The parameters of the function being read, which a local may shadow as well.
+        let mut params: BTreeSet<&str> = BTreeSet::new();
+        for i in 0..tokens.len() {
+            match tokens[i] {
+                "{" => {
+                    if depth == 0 {
+                        params.clear();
+                        if let Some(close) = prev(i).filter(|&c| tokens[c] == ")")
+                            && let Some(open) = (0..close).rev().find(|&k| tokens[k] == "(")
+                        {
+                            for k in open + 1..close {
+                                let after = next(k).map(|n| tokens[n]);
+                                if is_ident(tokens[k])
+                                    && matches!(after, Some("," | ")" | "["))
+                                    && prev(k).is_some_and(|p| is_ident(tokens[p]))
+                                {
+                                    params.insert(tokens[k]);
+                                }
+                            }
+                        }
+                    }
+                    depth += 1;
+                }
+                "}" => depth = depth.saturating_sub(1),
+                t if depth > 0 && (globals.contains(t) || params.contains(t)) => {
+                    let Some(eq) = next(i) else { continue };
+                    if tokens[eq] != "=" || tokens.get(eq + 1).is_some_and(|t| *t == "=") {
+                        continue;
+                    }
+                    let Some(ty) = prev(i) else { continue };
+                    if !is_type(tokens[ty], &self.structs) {
+                        continue;
+                    }
+                    let before = prev(ty).map(|k| tokens[k]);
+                    if !matches!(
+                        before,
+                        Some(";" | "{" | "}" | "(" | "const" | "highp" | "mediump" | "lowp")
+                    ) {
+                        continue;
+                    }
+                    let mut parens = 0usize;
+                    let mut end = eq + 1;
+                    while end < tokens.len() {
+                        match tokens[end] {
+                            "(" | "[" => parens += 1,
+                            ")" | "]" => parens = parens.saturating_sub(1),
+                            ";" => break,
+                            "," if parens == 0 => break,
+                            _ => {}
+                        }
+                        end += 1;
+                    }
+                    let uses = (eq + 1..end).any(|k| {
+                        tokens[k] == t && prev(k).is_none_or(|p| tokens[p] != ".")
+                    });
+                    if !uses {
+                        continue;
+                    }
+                    let mut d = 0usize;
+                    let mut close = end;
+                    while close < tokens.len() {
+                        match tokens[close] {
+                            "{" => d += 1,
+                            "}" if d == 0 => break,
+                            "}" => d -= 1,
+                            _ => {}
+                        }
+                        close += 1;
+                    }
+                    renames.push((i, end, format!("hz_l_{t}")));
+                    for k in end..close {
+                        if tokens[k] == t && prev(k).is_none_or(|p| tokens[p] != ".") {
+                            renames.push((k, k, format!("hz_l_{t}")));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        for (i, _, name) in renames {
+            self.tokens[i] = Box::leak(name.into_boxed_str());
+        }
     }
 
     /// Names that desktop GLSL leaves free but Vulkan GLSL takes for its separate texture and

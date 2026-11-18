@@ -564,7 +564,11 @@ pub fn load_post(
             }
         }
     }
+    let terrain_geometry = inputs.terrain_geometry.clone();
     let mut gbuffers = |names: &[&str], group, inputs: &GbuffersInputs| {
+        // Terrain and water may have a geometry stage: their vertices are pulled, as the
+        // shadow pass's are.
+        let terrain = matches!(names.first(), Some(&"gbuffers_terrain" | &"gbuffers_water"));
         names.iter().find_map(|name| {
             // `alphaTest.<program>` replaces the geometry's default test (OQ-23).
             let key = properties.get(&format!("alphaTest.{name}"));
@@ -573,9 +577,15 @@ pub fn load_post(
             if let Some(test) = test {
                 inputs.alpha_test = test;
             }
-            loader.load(name.to_string(), group, |v, f| {
+            loader.geometry = terrain_geometry.clone().filter(|_| terrain).map(|mut g| {
+                g.inputs.alpha_test = inputs.alpha_test;
+                g
+            });
+            let p = loader.load(name.to_string(), group, |v, f| {
                 translate_gbuffers(v, f, Target::Buffers, &inputs)
-            })
+            });
+            loader.geometry = None;
+            p
         })
     };
     // The sky blends as vanilla draws its sunset fan and stars unless `blend.*` says otherwise.
@@ -882,7 +892,7 @@ impl Loader<'_> {
         if self.pack.exists(&path("gsh")) {
             let Some(inputs) = self.geometry.clone() else {
                 self.post.notes.push(format!(
-                    "{name}: uses a geometry stage (supported for terrain's shadow only); skipped"
+                    "{name}: uses a geometry stage (supported for terrain, water and their shadow only); skipped"
                 ));
                 return None;
             };
@@ -1036,11 +1046,13 @@ impl Loader<'_> {
         self.post.config.read(vertex);
         self.post.config.read(fragment);
         let mut buffers = config::draw_buffers(fragment).unwrap_or_else(|| (0..8).collect());
-        let kept = buffers
-            .iter()
-            .position(|&b| b >= 2)
-            .unwrap_or(buffers.len());
-        buffers.truncate(kept);
+        if group.shadow() {
+            let kept = buffers
+                .iter()
+                .position(|&b| b >= 2)
+                .unwrap_or(buffers.len());
+            buffers.truncate(kept);
+        }
         Some(PostProgram {
             flips: flips(self.properties, &name),
             name,
@@ -1316,7 +1328,7 @@ mod tests {
         let notes = post.notes.join("\n");
         assert!(
             notes.contains(
-                "composite4: uses a geometry stage (supported for terrain's shadow only)"
+                "composite4: uses a geometry stage (supported for terrain, water and their shadow only)"
             ),
             "{notes}"
         );
