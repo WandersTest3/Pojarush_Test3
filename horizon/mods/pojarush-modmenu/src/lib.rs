@@ -153,7 +153,7 @@ impl Mod for Menu {
             if let Event::KeyDown(k) = event
                 && k == KEY
             {
-                self.screen();
+                ui::open_mod_list();
             }
         }
     }
@@ -177,7 +177,7 @@ impl Mod for Menu {
                     self.open = false;
                 }
             }
-            OPEN | TITLE => self.screen(),
+            OPEN | TITLE => ui::open_mod_list(),
             _ => {}
         }
     }

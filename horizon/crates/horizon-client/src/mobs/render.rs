@@ -1410,7 +1410,7 @@ fn render_visible(
     let s = anim::state(m, alpha);
     let (model_key, mut texture) = body(m);
     let layered = m.kind.layer(&model_key).cloned();
-    let custom = if layered.is_none() { super::cem::get(&m.kind.id) } else { None };
+    let custom = if layered.is_none() { super::cem::get(&m.kind.id, &m.kind.model) } else { None };
     let model = layered.unwrap_or_else(|| m.kind.model.clone());
     let mut poses = Poses::new(&model);
     anim::setup(m, &s, &mut poses, &data.animations);
@@ -1420,6 +1420,12 @@ fn render_visible(
         }
         cem.animate(&cem_inputs(m, &s), &mut poses);
     }
+    // Entity Texture Features: `<texture>_blink` (and `_blink2`, half shut) for a few
+    // ticks every few seconds, `<texture>_e` drawn again at full brightness.
+    if let Some(t) = etf_blink(m, s.age, &texture, &atlas) {
+        texture = t;
+    }
+    let emissive = atlas(&format!("{texture}_e"));
     let draw_body = |out: &mut Vec<Vertex>| {
         // A player or mannequin whose skin has no atlas sprite (an evicted or
         // never stored download) draws with its default skin, not invisibly.
@@ -1447,6 +1453,9 @@ fn render_visible(
     let shell_last = m.species() == Species::SulfurCube;
     if !shell_last {
         draw_body(out);
+    }
+    if body_visible && let Some(uv) = emissive {
+        draw(&model, base, &poses, uv, body_color(m, alpha), 240 | 240 << 8, body_overlay(m, alpha), out);
     }
     for (part, uv, color, layer_overlay) in extra {
         draw(part, base, &poses, *uv, *color, light, *layer_overlay, out);
@@ -1575,10 +1584,28 @@ fn armor_slot(model: &str) -> Option<usize> {
     })
 }
 /// Render with a fixed texture rect (the earlier API).
+/// ETF's blinking: `<texture>_blink` while the eyes shut (for 3 ticks at random every 4 to
+/// 9 seconds, per mob), `_blink2` on the first and last of them when the pack has it.
+fn etf_blink(m: &Mob, age: f32, texture: &str, atlas: &impl Fn(&str) -> Option<[f32; 4]>) -> Option<String> {
+    let blink = format!("{texture}_blink");
+    atlas(&blink)?;
+    let seed = (m.id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 33;
+    let period = 80 + (seed % 100) as u32;
+    let tick = (age.max(0.0) as u32).wrapping_add(seed as u32) % period;
+    if tick >= 3 {
+        return None;
+    }
+    let half = format!("{texture}_blink2");
+    if tick != 1 && atlas(&half).is_some() {
+        return Some(half);
+    }
+    Some(blink)
+}
+
 /// The parameters CEM animations read for `m` this frame.
 fn cem_inputs(m: &Mob, s: &anim::State) -> super::cem::Inputs {
     use super::cem::Param as P;
-    let mut v = [0.0f32; 27];
+    let mut v = [0.0f32; 40];
     let b = |x: bool| if x { 1.0 } else { 0.0 };
     v[P::LimbSwing as usize] = s.pos;
     v[P::LimbSpeed as usize] = s.speed;
@@ -1605,6 +1632,12 @@ fn cem_inputs(m: &Mob, s: &anim::State) -> super::cem::Inputs {
     v[P::IsInWater as usize] = b(m.fluids.in_water);
     v[P::IsInvisible as usize] = b(m.invisible);
     v[P::IsBurning as usize] = b(m.is_on_fire());
+    v[P::IsRiding as usize] = b(m.extra.mount.is_some());
+    v[P::IsRidden as usize] = b(m.extra.rider.is_some());
+    v[P::IsSitting as usize] = b(m.extra.sitting);
+    v[P::IsTamed as usize] = b(m.extra.tame);
+    v[P::IsAggressive as usize] = b(m.ai.aggressive);
+    v[P::IsInLava as usize] = b(m.fluids.in_lava);
     super::cem::Inputs { values: v, id: m.id }
 }
 

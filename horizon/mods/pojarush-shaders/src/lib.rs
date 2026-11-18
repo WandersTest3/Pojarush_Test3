@@ -15,14 +15,15 @@ const RELOAD_BUTTON: u32 = 4;
 const FOLDER: u32 = 5;
 const OPEN: u32 = 6;
 const FILE: &str = "pojarush_shaders.txt";
+const VIDEO: u32 = 0xFFFF_FF01;
 
-const LANGS: [(&str, [&str; 11]); 3] = [
-    ("en", ["Shader Packs", "Shaders: On", "Shaders: Off", "Shader Pack Settings...", "Reload", "Options > Shader Packs...", "Open the shader pack list", "In use", "No shader packs in the shaderpacks folder.", "Shaders off", "Shaders on"]),
-    ("pt_br", ["Pacotes de shaders", "Shaders: ligados", "Shaders: desligados", "Configurações do shader...", "Recarregar", "Opções > Pacotes de shaders...", "Abrir a lista de shaders", "Em uso", "Nenhum shader na pasta shaderpacks.", "Shaders desligados", "Shaders ligados"]),
-    ("pt_pt", ["Pacotes de shaders", "Shaders: ligados", "Shaders: desligados", "Definições do shader...", "Recarregar", "Opções > Pacotes de shaders...", "Abrir a lista de shaders", "Em uso", "Nenhum shader na pasta shaderpacks.", "Shaders desligados", "Shaders ligados"]),
+const LANGS: [(&str, [&str; 12]); 3] = [
+    ("en", ["Shader Packs", "Shaders: On", "Shaders: Off", "Shader Pack Settings...", "Reload", "Options > Shader Packs...", "Open the shader pack list", "In use", "No shader packs in the shaderpacks folder.", "Shaders off", "Shaders on", "Shader Packs..."]),
+    ("pt_br", ["Pacotes de shaders", "Shaders: ligados", "Shaders: desligados", "Configurações do shader...", "Recarregar", "Opções > Pacotes de shaders...", "Abrir a lista de shaders", "Em uso", "Nenhum shader na pasta shaderpacks.", "Shaders desligados", "Shaders ligados", "Pacotes de shaders..."]),
+    ("pt_pt", ["Pacotes de shaders", "Shaders: ligados", "Shaders: desligados", "Definições do shader...", "Recarregar", "Opções > Pacotes de shaders...", "Abrir a lista de shaders", "Em uso", "Nenhum shader na pasta shaderpacks.", "Shaders desligados", "Shaders ligados", "Pacotes de shaders..."]),
 ];
 
-fn strings() -> &'static [&'static str; 11] {
+fn strings() -> &'static [&'static str; 12] {
     let code = ui::language().to_lowercase();
     let find = |c: &str| LANGS.iter().find(|(l, _)| *l == c).map(|(_, s)| s);
     find(&code)
@@ -114,13 +115,14 @@ impl Mod for Shaders {
             .unwrap_or_default();
         let shaders = Shaders { last, packs: Vec::new(), open: false };
         shaders.page();
+        ui::set_video_button(strings()[11]);
         Ok((shaders, Registration::new().on_frame()))
     }
 
     fn frame(&mut self, _seconds: f32) {
         for event in input::poll() {
             match event {
-                Event::KeyDown(k) if k == MENU => self.screen(None),
+                Event::KeyDown(k) if k == MENU => ui::open_shader_packs(),
                 Event::KeyDown(k) if k == TOGGLE => self.toggle(),
                 Event::KeyDown(k) if k == RELOAD => ui::reload_shader_pack(),
                 _ => {}
@@ -154,6 +156,7 @@ impl Mod for Shaders {
                 self.open = false;
             }
             OPEN => self.screen(None),
+            VIDEO => ui::open_shader_packs(),
             _ => {}
         }
     }

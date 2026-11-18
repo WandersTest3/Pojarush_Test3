@@ -219,5 +219,12 @@
   "horizon.shader_options.open": "Opções do shader...",
   "horizon.shader_options.profile": "Perfil",
   "horizon.shader_options.loading": "A ler as opções do shader pack...",
-  "horizon.options.render_distance_memory": "%s chunks (limite da memória)"
+  "horizon.options.render_distance_memory": "%s chunks (limite da memória)",
+  "horizon.shader_packs.shaders": "Sombreadores",
+  "horizon.shader_packs.apply": "Aplicar",
+  "horizon.modmenu.by": "Por",
+  "horizon.modmenu.website": "Site",
+  "horizon.modmenu.issues": "Problemas",
+  "horizon.modmenu.license": "Licença",
+  "horizon.modmenu.credits": "Créditos"
 }

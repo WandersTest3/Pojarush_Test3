@@ -268,11 +268,19 @@ interface ui {
     open-shader-packs: func();
     /// Loads the shader pack in use again, from its files.
     reload-shader-pack: func();
-    /// A button on the title screen where Realms is (as Mod Menu's "Mods"),
-    /// with this label; empty takes it away. A click calls `ui-events.select`
+    /// An icon button (the mod's icon, this label as its name) in the title
+    /// screen's and pause menu's icon rows, as Mod Menu adds; empty takes it
+    /// away. A click calls `ui-events.select`
     /// with id 4294967040 (`0xFFFFFF00`), and a screen the mod opens then
     /// shows over the title screen.
     set-title-button: func(label: string);
+    /// A full-width button at the top of Options > Video Settings with this
+    /// label (as Iris's "Shader Packs..."); empty takes it away. A click calls
+    /// `ui-events.select` with id 4294967041 (`0xFFFFFF01`).
+    set-video-button: func(label: string);
+    /// Opens the game's Mod Menu screen (API level 11): the installed mods in a
+    /// list with their icons, the picked one's details, links and settings.
+    open-mod-list: func();
 }
 
 /// What the game calls on a mod that shows widgets (capability `ui`):
@@ -520,6 +528,23 @@ interface render {
     /// `getBone(...).setRot` and `setHidden`).
     set-bone: func(id: u32, bone: string, rotation: tuple<f32, f32, f32>, visible: bool);
     remove-model: func(id: u32);
+    /// A model from Bedrock geometry text the mod builds itself (as 3D Skin
+    /// Layers builds voxels), textured by a PNG in `models/` or by
+    /// `player:skin`, the local player's skin.
+    spawn-model-json: func(geometry: string, texture: string, place: model-place) -> result<u32, string>;
+    /// Hangs the model on a part of the local player's model (`head`, `body`,
+    /// `right_arm`, `left_arm`, `right_leg`, `left_leg`), drawn with it in third
+    /// person and moving with it; empty puts it back in the world. In the part's
+    /// own space a Bedrock point (x, y, z) is (-x, 24 - y, z) in Java's.
+    attach-model: func(id: u32, part: string);
+    /// Hides these parts of the local player's model (`hat`, `jacket`,
+    /// `left_sleeve`, ...), as 3D Skin Layers hides the flat second layer.
+    hide-player-parts: func(parts: list<string>);
+    /// Whether the local player's skin has slim (3 pixel) arms.
+    player-skin-slim: func() -> bool;
+    /// The local player's skin as drawn: 64x64 RGBA, row by row; none before a
+    /// world is open.
+    player-skin: func() -> option<list<u8>>;
     record minimap {
         corner: corner,
         /// Its side in GUI pixels, 16 to 256.

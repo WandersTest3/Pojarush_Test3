@@ -265,6 +265,8 @@ pub struct Title {
     pub skip_multiplayer_warning: bool,
     /// A mod's button where Realms is, by its label (Mod Menu's "Mods").
     pub mod_button: Option<String>,
+    /// The atlas rectangle of that mod's icon.
+    pub mod_icon: Option<[f32; 4]>,
     pub saves: PathBuf,
     /// The prepared resource root: the flat preset list and block registry.
     resources: PathBuf,
@@ -431,6 +433,7 @@ impl Title {
             last_server: String::new(),
             skip_multiplayer_warning: false,
             mod_button: None,
+            mod_icon: None,
             saves,
             resources: resources.to_owned(),
             started: now,
@@ -1000,17 +1003,14 @@ impl Title {
                         true,
                         4,
                     ),
-                    match &self.mod_button {
-                        Some(label) => b(cx - 100.0, y + 48.0, 200.0, label, true, 20),
-                        None => b(
-                            cx - 100.0,
-                            y + 48.0,
-                            200.0,
-                            &lang::get_or("menu.online", "Minecraft Realms"),
-                            false,
-                            0,
-                        ),
-                    },
+                    b(
+                        cx - 100.0,
+                        y + 48.0,
+                        200.0,
+                        &lang::get_or("menu.online", "Minecraft Realms"),
+                        false,
+                        0,
+                    ),
                     b(
                         cx - 100.0,
                         y + 96.0,
@@ -1043,8 +1043,9 @@ impl Title {
                 .into_iter()
                 .enumerate()
                 {
+                    let left = if self.mod_button.is_some() { cx - 46.0 } else { cx - 34.0 };
                     let mut button = b(
-                        cx - 34.0 + i as f32 * 24.0,
+                        left + i as f32 * 24.0,
                         y + 72.0,
                         20.0,
                         &lang::get_or(key, plain),
@@ -1053,6 +1054,10 @@ impl Title {
                     );
                     button.icon = Some((icon, 15.0));
                     buttons.push(button);
+                }
+                // A mod's icon button after them, as Mod Menu adds its own.
+                if let Some(label) = &self.mod_button {
+                    buttons.push(b(cx + 26.0, y + 72.0, 20.0, label, true, 20));
                 }
                 buttons
             }
@@ -1885,6 +1890,15 @@ impl Title {
             } else {
                 rgba(160, 160, 160, 255)
             };
+            if b.id == 20 && matches!(self.mode, Mode::Main) {
+                if let Some([u0, v0, u1, v1]) = self.mod_icon
+                    && let Some(mut r) = atlas.sprites.get("gui/sprites/icon/language").copied()
+                {
+                    (r.u0, r.v0, r.u1, r.v1) = (u0, v0, u1, v1);
+                    batch.rect_uv(b.x + 3.0, b.y + 3.0, 15.0, 15.0, r, u32::MAX);
+                }
+                continue;
+            }
             if let Some((icon, size)) = b.icon {
                 // CenteredIcon divides the button and sprite sizes separately:
                 // a 15px icon in a 20px button starts at 10 - 7 = 3, not 2.

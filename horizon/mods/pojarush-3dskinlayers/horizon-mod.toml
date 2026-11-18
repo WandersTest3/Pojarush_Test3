@@ -1,0 +1,17 @@
+id = "pojarush_3dskinlayers"
+name = "3D Skin Layers (Test Port)"
+version = "1.0.0"
+description = "Unofficial test port of tr7zw's 3D Skin Layers to Horizon, made only to test the mod API. The flat second layer of your skin (hat, jacket, sleeves and pants) becomes a 3D model of voxels, transparent pixels included, so glasses and visors stand out. Each layer can be turned off and the voxel sizes changed in its settings. Shown on your own player in third person. All credit for the original idea and design goes to tr7zw; not for redistribution."
+authors = ["tr7zw (original 3D Skin Layers)", "Wanders_Test3 (Horizon test port)"]
+api = "0.1"
+side = "client"
+capabilities = ["render", "ui", "storage"]
+experimental = ["render", "ui"]
+minecraft = "26.3"
+license = "tr7zw Protective License (original mod); test port, not for redistribution"
+icon = "assets/pojarush_3dskinlayers/icon.png"
+
+[contact]
+homepage = "https://github.com/tr7zw/3d-Skin-Layers"
+sources = "https://github.com/tr7zw/3d-Skin-Layers"
+issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"

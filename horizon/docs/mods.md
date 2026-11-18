@@ -81,6 +81,13 @@ Mods that list or open other mods (API level 10, capability `ui`): `ui::mods()` 
 installed mod's manifest and whether it runs, `ui::open_mod_settings(id)` opens one's page.
 Shader packs: `ui::shader_packs()`, `ui::shader_pack()`, `ui::set_shader_pack(name)`,
 `ui::open_shader_options()`, `ui::open_shader_packs()` and `ui::reload_shader_pack()`.
+API level 11 adds `ui::set_title_button(label)` (an icon in the title screen's and pause menu's
+icon rows), `ui::set_video_button(label)` (a button at the top of Video Settings),
+`ui::open_mod_list()` (the game's Mod Menu screen), the model calls `render::spawn_model`,
+`render::play_animation`, `render::set_bone`, `render::place_model`, `render::remove_model`,
+and for models built in code and hung on the local player `render::spawn_model_json`,
+`render::attach_model`, `render::hide_player_parts`, `render::player_skin` and
+`render::player_skin_slim`.
 
 ### Content mods (API 0.2)
 

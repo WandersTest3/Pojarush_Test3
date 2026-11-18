@@ -1,7 +1,7 @@
 id = "pojarush_modmenu"
 name = "Pojarush Mod Menu"
-version = "1.1.0"
-description = "The installed mods with their version, authors, Minecraft and API versions, license and links, and a button to each one's settings. Press M in game, the Mods button on the title screen, or open it from its settings page."
+version = "1.2.0"
+description = "The installed mods with their version, authors, Minecraft and API versions, license and links, and a button to each one's settings. Press M in game, its icon beside Accessibility on the title screen and the pause menu, or open it from its settings page."
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"

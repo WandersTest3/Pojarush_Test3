@@ -1031,6 +1031,8 @@ pub enum Page {
     Font,
     Packs,
     Mods,
+    /// Mod Menu's screen: the mods in a list, the picked one's details beside it.
+    ModMenu,
     /// A native mod's settings page: its index in `mods.installed`.
     NativeMod(usize),
     /// Horizon's shader packs, either kind (`shader_pack_list`).
@@ -1074,6 +1076,14 @@ enum Act {
     ToggleMod(usize),
     /// Pick `s.shader_packs[i]`, or turn it off when it is the pick.
     PickShaderPack(usize),
+    /// Iris's shader pack screen: Shaders On/Off, Apply, Cancel.
+    ShaderToggle,
+    ShaderApply,
+    ShaderCancel,
+    OpenUrl(String),
+    PickMod(usize),
+    /// A mod's button on the Video Settings page (`ui.set-video-button`).
+    ModVideoButton,
     OpenShaderPackFolder,
     /// Open the picked pack's Shader Options page.
     ShaderOptions,
@@ -1120,6 +1130,19 @@ enum WKind {
         selected: bool,
         code: String,
     },
+    /// Mod Menu's list entry: icon, name and description.
+    ModEntry {
+        icon: Option<[f32; 4]>,
+        name: Text,
+        description: Text,
+        selected: bool,
+        index: usize,
+    },
+    /// An atlas rectangle drawn as is (a mod's icon), clickable when `act` is set.
+    Image {
+        rect: [f32; 4],
+        act: Option<Act>,
+    },
 }
 struct Widget {
     x: f32,
@@ -1134,6 +1157,10 @@ struct Widget {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
     ModSettings(usize),
+    /// The mod button on Video Settings was pressed.
+    ModVideoButton,
+    /// Open this link in the browser (Mod Menu's Website and Issues).
+    OpenUrl(String),
     /// An accepted button press or the release of a slider.
     ButtonClick,
     /// Close the options screens (back to the pause menu or title).
@@ -1193,6 +1220,8 @@ fn slider_unsnapped(opt: Opt, held: bool, moved: Instant) -> bool {
     }
 }
 pub struct OptionsUi {
+    /// A mod's button on Video Settings, by its label.
+    pub video_button: Option<String>,
     pub stack: Vec<Page>,
     scroll: f32,
     pub(crate) dragging: Option<Opt>,
@@ -1216,6 +1245,10 @@ pub struct OptionsUi {
     pub pad_style: GlyphStyle,
     pub languages: Vec<LanguageInfo>,
     language_choice: Option<String>,
+    /// The shader pack screen's pick before Apply or Done: (pack file, shaders on).
+    shader_choice: Option<(String, bool)>,
+    /// The mod Mod Menu's screen shows.
+    mod_pick: usize,
     language_search: ui::EditBox,
     pub(crate) settings_search: ui::EditBox,
     /// Packs: the packs found and the selection the screen opens with.
@@ -1260,6 +1293,9 @@ impl Default for OptionsUi {
             pad_style: GlyphStyle::Xbox,
             languages: Vec::new(),
             language_choice: None,
+            video_button: None,
+            shader_choice: None,
+            mod_pick: 0,
             language_search: search,
             settings_search,
             pack_infos: Vec::new(),
@@ -1544,7 +1580,7 @@ impl OptionsUi {
             Page::Language => "options.language.title",
             Page::Font => "options.font.title",
             Page::Packs => "resourcePack.title",
-            Page::Mods => "horizon.pages.mods",
+            Page::Mods | Page::ModMenu => "horizon.pages.mods",
             Page::NativeMod(_) => "Mod Settings",
             Page::ShaderPacks => "horizon.pages.shader_packs",
             Page::ShaderOptions => "horizon.pages.shader_options",
@@ -1760,6 +1796,12 @@ impl OptionsUi {
                         Act::Push(Page::GraphicsAdvanced),
                     )),
                 )];
+                if let Some(label) = &self.video_button {
+                    rows.push(Row::Buttons(
+                        button(0.0, 0.0, 310.0, Text::literal(label.clone()), Act::ModVideoButton),
+                        None,
+                    ));
+                }
                 rows.push(Row::Header("options.video.display.header"));
                 rows.extend(pairs(&[
                     Opt::MaxFps,
@@ -2380,6 +2422,198 @@ impl OptionsUi {
                 ));
                 out.push(button(cx + 4.0, h - 28.0, 150.0, tr("gui.done"), Act::Done));
             }
+            Page::ModMenu => {
+                let half = (w / 2.0).floor();
+                top = 32.0;
+                bottom = h - 33.0;
+                let count = s.mods.installed.len();
+                let pick = self.mod_pick.min(count.saturating_sub(1));
+                out.push(Widget {
+                    x: 0.0,
+                    y: 8.0,
+                    w: half,
+                    h: 9.0,
+                    kind: WKind::Text {
+                        text: Text::literal(format!("{} ({count})", lang::get_or("horizon.pages.mods", "Mods"))),
+                        color: u32::MAX,
+                        centered: true,
+                    },
+                    list: false,
+                });
+                let list_start = out.len();
+                let mut y = top + 2.0 - self.scroll;
+                for (i, m) in s.mods.installed.iter().enumerate() {
+                    let name = if m.details.name.is_empty() { m.title.clone() } else { m.details.name.clone() };
+                    let desc = if m.details.description.is_empty() { m.description.clone() } else { m.details.description.clone() };
+                    out.push(Widget {
+                        x: 6.0,
+                        y,
+                        w: half - 12.0,
+                        h: 36.0,
+                        kind: WKind::ModEntry {
+                            icon: m.details.icon,
+                            name: Text::literal(name),
+                            description: Text::literal(desc),
+                            selected: i == pick,
+                            index: i,
+                        },
+                        list: false,
+                    });
+                    y += 38.0;
+                }
+                content = y + self.scroll - top + 2.0;
+                out[list_start..].iter_mut().for_each(|w| w.list = true);
+                if let Some(m) = s.mods.installed.get(pick) {
+                    let d = &m.details;
+                    let x = half + 6.0;
+                    let mut ry = top + 2.0;
+                    if let Some(rect) = d.icon {
+                        out.push(Widget {
+                            x,
+                            y: ry,
+                            w: 32.0,
+                            h: 32.0,
+                            kind: WKind::Image { rect, act: m.has_settings.then_some(Act::ModSettings(pick)) },
+                            list: false,
+                        });
+                    }
+                    let text = |x: f32, y: f32, t: String, color: u32| Widget {
+                        x,
+                        y,
+                        w: w - x - 6.0,
+                        h: 9.0,
+                        kind: WKind::Text { text: Text::literal(t), color, centered: false },
+                        list: false,
+                    };
+                    let name = if d.name.is_empty() { m.title.clone() } else { d.name.clone() };
+                    out.push(text(x + 38.0, ry + 1.0, name, u32::MAX));
+                    if !d.version.is_empty() {
+                        out.push(text(x + 38.0, ry + 12.0, format!("v{}", d.version), rgba(0xAA, 0xAA, 0xAA, 255)));
+                    }
+                    if !d.authors.is_empty() {
+                        out.push(text(x + 38.0, ry + 23.0, format!("{} {}", lang::get_or("horizon.modmenu.by", "By"), d.authors.join(", ")), rgba(0xAA, 0xAA, 0xAA, 255)));
+                    }
+                    if m.has_settings || m.native.is_some() {
+                        out.push(button(w - 26.0, ry, 20.0, Text::literal("⚙"), Act::ModSettings(pick)));
+                    }
+                    ry += 38.0;
+                    let links: Vec<(&str, &String)> = [("horizon.modmenu.website", &d.homepage), ("horizon.modmenu.issues", &d.issues)]
+                        .into_iter()
+                        .filter(|(_, u)| u.starts_with("https://") || u.starts_with("http://"))
+                        .collect();
+                    let bw = ((w - x - 6.0 - 4.0) / 2.0).floor();
+                    for (k, (key, url)) in links.iter().enumerate() {
+                        out.push(button(x + k as f32 * (bw + 4.0), ry, bw, tr(key), Act::OpenUrl((*url).clone())));
+                    }
+                    if !links.is_empty() {
+                        ry += 26.0;
+                    }
+                    let width = w - x - 6.0;
+                    let mut para = |t: &str, color: u32, ry: &mut f32| {
+                        for (line, _) in atlas_free_wrap(t, width) {
+                            out.push(text(x, *ry, line, color));
+                            *ry += 10.0;
+                        }
+                        *ry += 4.0;
+                    };
+                    let desc = if d.description.is_empty() { m.description.clone() } else { d.description.clone() };
+                    para(&desc, u32::MAX, &mut ry);
+                    if let Some(problem) = &m.problem {
+                        para(problem, rgba(0xFF, 0x55, 0x55, 255), &mut ry);
+                    }
+                    if !d.minecraft.is_empty() {
+                        para(&format!("Minecraft: {}", d.minecraft), rgba(0xAA, 0xAA, 0xAA, 255), &mut ry);
+                    }
+                    if !d.license.is_empty() {
+                        para(&format!("{}: {}", lang::get_or("horizon.modmenu.license", "License"), d.license), rgba(0xAA, 0xAA, 0xAA, 255), &mut ry);
+                    }
+                    if !d.authors.is_empty() {
+                        para(&format!("{}: {}", lang::get_or("horizon.modmenu.credits", "Credits"), d.authors.join(", ")), rgba(0xAA, 0xAA, 0xAA, 255), &mut ry);
+                    }
+                }
+                out.push(button(cx - 154.0, h - 27.0, 150.0, tr("horizon.mods.open_folder"), Act::OpenModFolder));
+                out.push(button(cx + 4.0, h - 27.0, 150.0, tr("gui.done"), Act::Done));
+            }
+            Page::ShaderPacks => {
+                top = 56.0;
+                bottom = h - 58.0;
+                out.push(Widget {
+                    x: 0.0,
+                    y: 8.0,
+                    w,
+                    h: 9.0,
+                    kind: WKind::Text { text: tr(Self::title(page)), color: u32::MAX, centered: true },
+                    list: false,
+                });
+                let (file, on) = self.shader_choice.clone().unwrap_or_else(|| {
+                    let current = s.horizon.shader_pack.clone();
+                    let on = !current.is_empty();
+                    let file = if on {
+                        current
+                    } else {
+                        s.shader_packs.first().map(|p| p.file.clone()).unwrap_or_default()
+                    };
+                    (file, on)
+                });
+                self.shader_choice = Some((file.clone(), on));
+                let state = if on { tr("options.on") } else { tr("options.off") };
+                out.push(button(
+                    cx - 150.0,
+                    28.0,
+                    300.0,
+                    Text::literal(format!("{}: ", lang::get_or("horizon.shader_packs.shaders", "Shaders")))
+                        .append(state),
+                    Act::ShaderToggle,
+                ));
+                let list_start = out.len();
+                let mut y = top + 2.0 - self.scroll;
+                if s.shader_packs.is_empty() {
+                    out.push(Widget {
+                        x: 0.0,
+                        y,
+                        w,
+                        h: 9.0,
+                        kind: WKind::Text { text: tr("horizon.shader_packs.empty"), color: rgba(0xBA, 0xBA, 0xBA, 255), centered: true },
+                        list: false,
+                    });
+                    y += 18.0;
+                }
+                for pack in &s.shader_packs {
+                    let kind = match pack.kind {
+                        crate::shader_pack_list::Kind::Horizon => lang::get("horizon.shader_packs.kind_horizon"),
+                        crate::shader_pack_list::Kind::Classic => String::new(),
+                    };
+                    out.push(Widget {
+                        x: cx - 160.0,
+                        y,
+                        w: 320.0,
+                        h: 20.0,
+                        kind: WKind::LanguageRow {
+                            label: Text::literal(format!("{}{kind}", pack.title)),
+                            selected: pack.file == file,
+                            code: format!("shader:{}", pack.file),
+                        },
+                        list: false,
+                    });
+                    y += 20.0;
+                }
+                content = y + self.scroll - top + 2.0;
+                out[list_start..].iter_mut().for_each(|w| w.list = true);
+                let classic = s
+                    .shader_packs
+                    .iter()
+                    .find(|p| p.file == file)
+                    .is_some_and(|p| p.kind == crate::shader_pack_list::Kind::Classic);
+                out.push(button(cx - 154.0, h - 51.0, 150.0, tr("pack.openFolder"), Act::OpenShaderPackFolder));
+                let mut settings = button(cx + 4.0, h - 51.0, 150.0, tr("horizon.shader_options.open"), Act::ShaderOptions);
+                if !(on && classic) {
+                    settings = inactive(settings);
+                }
+                out.push(settings);
+                out.push(button(cx - 154.0, h - 27.0, 98.0, tr("gui.cancel"), Act::ShaderCancel));
+                out.push(button(cx - 49.0, h - 27.0, 98.0, tr("horizon.shader_packs.apply"), Act::ShaderApply));
+                out.push(button(cx + 56.0, h - 27.0, 98.0, tr("gui.done"), Act::Done));
+            }
             // Drawn by `pack_screen`.
             Page::Packs => {}
             _ => {
@@ -2760,8 +2994,37 @@ impl OptionsUi {
                         batch.text_styled(atlas, text, wd.x, wd.y, *color, true);
                     }
                 }
+                WKind::ModEntry {
+                    icon, name, description, selected, ..
+                } => {
+                    let rect = [wd.x, wd.y, wd.w, wd.h];
+                    crate::widgets::record_as(&name.plain(), rect, true, crate::widgets::Kind::Row);
+                    crate::widgets::target_as(rect, crate::widgets::Kind::Row);
+                    if *selected {
+                        batch.fill(atlas, wd.x, wd.y, wd.w, wd.h, rgba(0x80, 0x80, 0x80, 255));
+                        batch.fill(atlas, wd.x + 1.0, wd.y + 1.0, wd.w - 2.0, wd.h - 2.0, rgba(0, 0, 0, 255));
+                    }
+                    if let Some([u0, v0, u1, v1]) = icon
+                        && let Some(mut r) = atlas.sprites.get("gui/sprites/icon/language").copied()
+                    {
+                        (r.u0, r.v0, r.u1, r.v1) = (*u0, *v0, *u1, *v1);
+                        batch.rect_uv(wd.x + 2.0, wd.y + 2.0, 32.0, 32.0, r, u32::MAX);
+                    }
+                    let tx = wd.x + 38.0;
+                    let room = wd.w - 40.0;
+                    batch.text_styled(atlas, &clip_text(atlas, name, room), tx, wd.y + 4.0, u32::MAX, true);
+                    for (k, (line, _)) in atlas.font.split_lines(description, room).into_iter().take(2).enumerate() {
+                        batch.text_styled(atlas, &line, tx, wd.y + 15.0 + k as f32 * 10.0, rgba(0x80, 0x80, 0x80, 255), true);
+                    }
+                }
+                WKind::Image { rect: [u0, v0, u1, v1], .. } => {
+                    if let Some(mut r) = atlas.sprites.get("gui/sprites/icon/language").copied() {
+                        (r.u0, r.v0, r.u1, r.v1) = (*u0, *v0, *u1, *v1);
+                        batch.rect_uv(wd.x, wd.y, wd.w, wd.h, r, u32::MAX);
+                    }
+                }
                 WKind::LanguageRow {
-                    label, selected, ..
+                    label, selected, code,
                 } => {
                     let rect = [wd.x, wd.y, wd.w, wd.h];
                     crate::widgets::record_as(
@@ -2783,12 +3046,18 @@ impl OptionsUi {
                         );
                     }
                     let tw = atlas.font.width_text(label);
+                    // Iris's shader pack list: the picked pack in yellow.
+                    let color = if *selected && code.starts_with("shader:") {
+                        rgba(0xFF, 0xFF, 0x55, 255)
+                    } else {
+                        u32::MAX
+                    };
                     batch.text_styled(
                         atlas,
                         label,
                         wd.x + ((wd.w - tw) / 2.0).floor(),
-                        wd.y + 2.0 + 7.0 - 4.0,
-                        u32::MAX,
+                        wd.y + ((wd.h - 8.0) / 2.0).floor(),
+                        color,
                         true,
                     );
                 }
@@ -3088,6 +3357,31 @@ impl OptionsUi {
                             }
                         }
                         Act::OpenShaderPackFolder => events.push(Event::OpenShaderPackFolder),
+                        Act::ModVideoButton => events.push(Event::ModVideoButton),
+                        Act::OpenUrl(url) => events.push(Event::OpenUrl(url)),
+                        Act::PickMod(i) => self.mod_pick = i,
+                        Act::ShaderToggle => {
+                            if let Some(c) = &mut self.shader_choice {
+                                c.1 = !c.1;
+                            }
+                        }
+                        Act::ShaderApply => {
+                            if self.apply_shader_choice(s) {
+                                events.push(Event::ShaderPack);
+                            }
+                        }
+                        Act::ShaderCancel => {
+                            self.shader_choice = None;
+                            events.extend(self.back(s));
+                        }
+                        Act::ShaderOptions if self.page() == Page::ShaderPacks => {
+                            if self.apply_shader_choice(s) {
+                                events.push(Event::ShaderPack);
+                            }
+                            s.shader_options = None;
+                            self.push(Page::ShaderOptions);
+                            events.push(Event::OpenShaderOptions);
+                        }
                         Act::ShaderOptions => {
                             s.shader_options = None;
                             self.push(Page::ShaderOptions);
@@ -3131,6 +3425,18 @@ impl OptionsUi {
                     let v = ui::slider_value(wd.x, wd.w, x);
                     self.slider_value = Some((opt, v, Instant::now()));
                     drag_slider(opt, s, v, &mut events);
+                }
+                WKind::ModEntry { index, .. } => {
+                    if self.mod_pick == index && s.mods.installed.get(index).is_some_and(|m| m.has_settings) {
+                        events.push(Event::ModSettings(index));
+                    }
+                    self.mod_pick = index;
+                }
+                WKind::Image { act: Some(Act::ModSettings(i)), .. } => events.push(Event::ModSettings(i)),
+                WKind::LanguageRow { code, .. } if code.starts_with("shader:") => {
+                    let file = code["shader:".len()..].to_owned();
+                    let on = self.shader_choice.as_ref().is_none_or(|c| c.1);
+                    self.shader_choice = Some((file, on || self.shader_choice.is_none()));
                 }
                 WKind::LanguageRow { code, .. } => {
                     if self.language_choice.as_deref() == Some(code.as_str()) {
@@ -3318,8 +3624,25 @@ impl OptionsUi {
         self.pack_screen.as_mut().expect("made above")
     }
     /// Escape or Done: leave the current page, applying page results.
+    /// Makes the shader pack screen's pick the pack in use; true when it changed.
+    fn apply_shader_choice(&mut self, s: &mut Settings) -> bool {
+        let Some((file, on)) = self.shader_choice.clone() else { return false };
+        let pack = if on { file } else { String::new() };
+        if s.horizon.shader_pack == pack {
+            return false;
+        }
+        s.horizon.shader_pack = pack;
+        true
+    }
     pub fn back(&mut self, s: &mut Settings) -> Vec<Event> {
         let mut events = Vec::new();
+        // Done on the shader pack screen applies its pick; Cancel cleared it.
+        if self.page() == Page::ShaderPacks {
+            if self.apply_shader_choice(s) {
+                events.push(Event::ShaderPack);
+            }
+            self.shader_choice = None;
+        }
         // A pack's screen goes back to the one that opened it.
         if self.page() == Page::ShaderOptions
             && let Some(options) = &mut s.shader_options
@@ -3853,6 +4176,7 @@ mod tests {
                 dev,
                 has_settings: false,
                 native: None,
+                details: Default::default(),
             });
         }
         let (widgets, ..) = ui.layout(&s, size.0, size.1);
@@ -3921,6 +4245,7 @@ mod tests {
             dev: false,
             has_settings: false,
             native: Some(crate::mod_list::NativePage::default()),
+            details: Default::default(),
         });
         ui.show(Page::Mods);
         let (widgets, ..) = ui.layout(&s, size.0, size.1);
@@ -3969,6 +4294,7 @@ mod tests {
                 keys: vec![["zoom".into(), "Zoom key".into(), "key.keyboard.z".into()]],
                 buttons: Vec::new(),
             }),
+            details: Default::default(),
         });
         ui.show(Page::NativeMod(0));
         let key_label = |ui: &mut OptionsUi, s: &Settings| {
@@ -5099,4 +5425,39 @@ mod tests {
         }
         assert_eq!(s.sound_device, "");
     }
+}
+
+/// Words of `t` in lines of about `width` GUI pixels (6 per character), for text laid out
+/// before the font is at hand.
+fn atlas_free_wrap(t: &str, width: f32) -> Vec<(String, ())> {
+    let max = ((width / 6.0).floor() as usize).max(8);
+    let mut out = Vec::new();
+    for para in t.split('\n') {
+        let mut cur = String::new();
+        for word in para.split_whitespace() {
+            if !cur.is_empty() && cur.chars().count() + 1 + word.chars().count() > max {
+                out.push((std::mem::take(&mut cur), ()));
+            }
+            if !cur.is_empty() {
+                cur.push(' ');
+            }
+            cur.push_str(word);
+        }
+        if !cur.is_empty() {
+            out.push((cur, ()));
+        }
+    }
+    out
+}
+
+/// `t` cut with "..." to fit `width`.
+fn clip_text(atlas: &HudAtlas, t: &Text, width: f32) -> Text {
+    if atlas.font.width_text(t) <= width {
+        return t.clone();
+    }
+    let mut plain: Vec<char> = t.plain().chars().collect();
+    while !plain.is_empty() && atlas.font.width_text(&Text::literal(format!("{}...", plain.iter().collect::<String>()))) > width {
+        plain.pop();
+    }
+    Text::literal(format!("{}...", plain.iter().collect::<String>()))
 }

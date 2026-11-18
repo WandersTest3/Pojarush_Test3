@@ -510,10 +510,9 @@ impl MobTypes {
                 },
             );
         }
-        cem::reset();
         for (id, t) in out.iter_mut() {
             if let Some(model) = cem::apply(root, id, &t.model) {
-                t.model = Arc::new(model);
+                t.model = model;
             }
         }
         Ok(Self { types: out })

@@ -287,6 +287,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                 }
                 com.wanderstest3.pojarush.ui.VisualKeyboard(showSpecials = false) { action ->
                     if (action is com.wanderstest3.pojarush.controls.Action.Key) {
+                        panel = Panel.NONE
                         activity.tapKey(action.code)
                     }
                 }

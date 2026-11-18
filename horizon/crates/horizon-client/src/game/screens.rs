@@ -197,6 +197,27 @@ impl Game<'_> {
                 tooltip = Some(Text::literal(horizon_client::friends_screen::TITLE));
             }
         }
+        // A mod's icon button after them (Mod Menu's).
+        if let Some((_, label)) = self.mods_title_button() {
+            let (x, y) = {
+                let first = pause_icons(w, h, links)[3];
+                (first.0 + 24.0, first.1)
+            };
+            let icon = self.mod_button_icon();
+            let atlas = &self.gui.atlas;
+            let hover = ui::hovered(self.cursor, x, y, 20.0, 20.0);
+            ui::button(batch, atlas, x, y, 20.0, 20.0, &Text::empty(), true, hover);
+            if let Some([u0, v0, u1, v1]) = icon
+                && let Some(mut r) = atlas.sprites.get("gui/sprites/friends/friends").copied()
+            {
+                (r.u0, r.v0, r.u1, r.v1) = (u0, v0, u1, v1);
+                batch.rect_uv(x + 3.0, y + 3.0, 15.0, 15.0, r, u32::MAX);
+            }
+            if hover {
+                tooltip = Some(Text::literal(label));
+            }
+        }
+        let atlas = &self.gui.atlas;
         // SpriteIconButton.withTootip: the label as a tooltip.
         if let Some(tip) = tooltip {
             let lines: Vec<Text> = atlas
@@ -219,6 +240,13 @@ impl Game<'_> {
         };
         let links = !self.server_links().is_empty();
         let friends = pause_icons(w, h, links)[FRIENDS_ICON];
+        let last = pause_icons(w, h, links)[3];
+        if self.mods_title_button().is_some()
+            && ui::hovered(self.cursor, last.0 + 24.0, last.1, 20.0, 20.0)
+        {
+            self.mod_title_button();
+            return Ok(());
+        }
         let hit = pause_buttons(w, h, self.external_server(), links)
             .into_iter()
             .find(|b| b.5 && ui::hovered(self.cursor, b.0, b.1, b.2, 20.0))

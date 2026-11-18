@@ -22,26 +22,21 @@ pub struct Cem {
     vars: Vec<String>,
 }
 
-static TYPES: RwLock<Option<HashMap<String, Arc<Cem>>>> = RwLock::new(None);
+/// Each mob type's custom model, with the address of the model part tree it belongs to:
+/// the server thread loads the mob types again without the resource packs.
+static TYPES: RwLock<Option<HashMap<String, (usize, Arc<Cem>)>>> = RwLock::new(None);
 static VARS: Mutex<Option<HashMap<u32, Vec<f32>>>> = Mutex::new(None);
 
-/// The custom model of mob type `id` (`minecraft:creeper`), if a pack has one.
-pub fn get(id: &str) -> Option<Arc<Cem>> {
-    TYPES.read().ok()?.as_ref()?.get(id).cloned()
+/// The custom model of mob type `id` (`minecraft:creeper`) drawn with `model`, if a pack has one.
+pub fn get(id: &str, model: &Arc<Part>) -> Option<Arc<Cem>> {
+    let t = TYPES.read().ok()?;
+    let (at, cem) = t.as_ref()?.get(id)?;
+    (*at == Arc::as_ptr(model) as usize).then(|| cem.clone())
 }
 
-/// Forgets the custom models of the previous resources (before [`apply`] runs again).
-pub fn reset() {
-    if let Ok(mut t) = TYPES.write() {
-        *t = Some(HashMap::new());
-    }
-    if let Ok(mut v) = VARS.lock() {
-        *v = None;
-    }
-}
-
-/// Applies `<root>/assets/minecraft/optifine/cem/<name>.jem` to `model`; returns the new model.
-pub fn apply(root: &Path, id: &str, model: &Part) -> Option<Part> {
+/// Applies `<root>/assets/minecraft/optifine/cem/<name>.jem` to `model`: the new model, its
+/// animations registered for it.
+pub fn apply(root: &Path, id: &str, model: &Part) -> Option<Arc<Part>> {
     let name = id.rsplit(':').next().unwrap_or(id);
     let dir = root.join("assets/minecraft/optifine/cem");
     let path = dir.join(format!("{name}.jem"));
@@ -52,8 +47,13 @@ pub fn apply(root: &Path, id: &str, model: &Part) -> Option<Part> {
     if !ok {
         return None;
     }
+    let model = Arc::new(model);
     if let Ok(mut t) = TYPES.write() {
-        t.get_or_insert_with(HashMap::new).insert(id.to_owned(), Arc::new(cem));
+        t.get_or_insert_with(HashMap::new)
+            .insert(id.to_owned(), (Arc::as_ptr(&model) as usize, Arc::new(cem)));
+    }
+    if let Ok(mut v) = VARS.lock() {
+        *v = None;
     }
     Some(model)
 }
@@ -456,6 +456,13 @@ pub enum Param {
     IsInWater,
     IsInvisible,
     IsBurning,
+    IsRiding,
+    IsRidden,
+    IsSitting,
+    IsTamed,
+    IsAggressive,
+    IsInLava,
+    IsOnShoulder,
 }
 
 #[derive(Clone, Debug)]
@@ -586,6 +593,13 @@ fn param(name: &str) -> Option<Param> {
         "is_in_water" | "is_wet" => IsInWater,
         "is_invisible" => IsInvisible,
         "is_burning" => IsBurning,
+        "is_riding" => IsRiding,
+        "is_ridden" => IsRidden,
+        "is_sitting" => IsSitting,
+        "is_tamed" => IsTamed,
+        "is_aggressive" => IsAggressive,
+        "is_in_lava" => IsInLava,
+        "is_on_shoulder" => IsOnShoulder,
         _ => Zero,
     })
 }
@@ -733,7 +747,7 @@ impl Parser<'_, '_> {
 
 /// The values of the parameters for one mob in one frame.
 pub struct Inputs {
-    pub values: [f32; 27],
+    pub values: [f32; 40],
     pub id: u32,
 }
 
@@ -874,6 +888,53 @@ fn eval(e: &Expr, inp: &Inputs, poses: &mut Poses, vars: &[f32]) -> f32 {
 mod tests {
     use super::*;
 
+    /// Parses every jem of a real pack (`HORIZON_CEM_PACK=<pack root>`) and prints what fails.
+    #[test]
+    #[ignore]
+    fn real_pack_parses() {
+        let Ok(root) = std::env::var("HORIZON_CEM_PACK") else { return };
+        let root = PathBuf::from(root);
+        let dir = root.join("assets/minecraft/optifine/cem");
+        let mut failed = 0;
+        let mut total = 0;
+        for e in std::fs::read_dir(&dir).unwrap().flatten() {
+            let p = e.path();
+            if p.extension().and_then(|x| x.to_str()) != Some("jem") {
+                continue;
+            }
+            let jem: Value = serde_json::from_slice(&std::fs::read(&p).unwrap()).unwrap();
+            let mut b = Builder { root: &root, dir: &dir, count: 0, ids: Vec::new(), tex: [64.0, 32.0] };
+            let mut model = head();
+            let mut names = Vec::new();
+            for entry in jem["models"].as_array().into_iter().flatten() {
+                let part = b.part(entry, [64.0, 64.0]);
+                names.push(part.name.clone());
+                model.children.push(part);
+            }
+            let mut vars = Vec::new();
+            for entry in jem["models"].as_array().into_iter().flatten() {
+                let resolved = b.resolved(entry);
+                for block in resolved["animations"].as_array().into_iter().flatten() {
+                    for (k, e) in block.as_object().into_iter().flatten() {
+                        total += 1;
+                        let text = e.as_str().map(str::to_owned).unwrap_or_else(|| e.to_string());
+                        let mut scope = Scope { this: &names[0], part: &names[0], model: &model, ids: &b.ids, vars: &mut vars };
+                        if let Err(err) = parse(&text, &mut scope) {
+                            failed += 1;
+                            if failed < 40 {
+                                println!("{}: {k} = {text}: {err}", p.file_name().unwrap().to_string_lossy());
+                            }
+                        }
+                        if scope.target(k).is_none() && failed < 40 {
+                            println!("{}: target {k} unresolved", p.file_name().unwrap().to_string_lossy());
+                        }
+                    }
+                }
+            }
+        }
+        println!("{failed} of {total} expressions failed");
+    }
+
     fn head() -> Part {
         Part {
             name: "root".into(),
@@ -922,7 +983,7 @@ mod tests {
         assert_eq!(extent(&model, [0.0; 3]), vanilla);
         assert_eq!(cem.animations.len(), 3);
         let mut poses = Poses::new(&model);
-        let mut values = [0.0; 27];
+        let mut values = [0.0; 40];
         values[Param::HeadPitch as usize] = 45.0;
         values[Param::IsOnGround as usize] = 1.0;
         cem.animate(&Inputs { values, id: 7 }, &mut poses);
@@ -938,7 +999,7 @@ mod tests {
         let mut scope = Scope { this: "head", part: "head", model: &model, ids: &[], vars: &mut vars };
         let e = parse("1 + 2 * 3 - -1 > 7 && !false || clamp(5, 0, 2) == 9", &mut scope).unwrap();
         let mut poses = Poses::new(&model);
-        let inp = Inputs { values: [0.0; 27], id: 0 };
+        let inp = Inputs { values: [0.0; 40], id: 0 };
         assert_eq!(eval(&e, &inp, &mut poses, &[]), 1.0);
         let e = parse("if(0, 1, 0, 2, 3) + min(4, 2, 8) + fmod(-1, 3)", &mut scope).unwrap();
         assert_eq!(eval(&e, &inp, &mut poses, &[]), 3.0 + 2.0 + 2.0);

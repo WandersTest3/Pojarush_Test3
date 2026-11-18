@@ -121,6 +121,8 @@ pub const MINIMAP_SPRITE: &str = "horizon/minimap";
 /// Vanilla registers a texture per skin. Here the slots are shared
 /// (`skins::SkinSlots`): skins drawn in the last frame keep theirs, and a
 /// skin past them shows the default skin until a slot frees up.
+/// Atlas slots (32x32) for mods' icons.
+pub const MOD_ICON_SLOTS: usize = 64;
 /// Atlas slots (128x128) for the textures of mods' models.
 pub const MODEL_SLOTS: usize = 8;
 pub const SKIN_SLOTS: usize = 128;
@@ -390,6 +392,10 @@ impl HudAtlas {
             crate::minimap::SIZE as u32,
             vec![0; crate::minimap::SIZE * crate::minimap::SIZE * 4],
         ));
+        // Mods' icons for Mod Menu's screen (game/mod_models.rs).
+        for i in 0..MOD_ICON_SLOTS {
+            images.push((format!("horizon/modicon{i}"), 32, 32, vec![0; 32 * 32 * 4]));
+        }
         // Mods' model textures (game/mod_models.rs).
         for i in 0..MODEL_SLOTS {
             images.push((format!("horizon/model{i}"), 128, 128, vec![0; 128 * 128 * 4]));

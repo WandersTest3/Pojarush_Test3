@@ -102,7 +102,7 @@ private fun PixelKey(label: String, enabled: Boolean, blocked: Boolean, modifier
     val live = enabled && !blocked
     Box(
         modifier = modifier
-            .height(34.dp)
+            .height(LocalKeyHeight.current)
             .drawBehind {
                 val px = 2.dp.toPx()
                 drawRect(Outline)
@@ -131,6 +131,8 @@ private fun PixelKey(label: String, enabled: Boolean, blocked: Boolean, modifier
         )
     }
 }
+
+private val LocalKeyHeight = androidx.compose.runtime.compositionLocalOf { 34.dp }
 
 @Composable
 private fun KeyRow(keys: List<Key>, disabled: Set<Action>, modifier: Modifier = Modifier, onPick: (Action) -> Unit) {
@@ -172,7 +174,10 @@ fun VisualKeyboard(
         modifier = Modifier.fillMaxWidth().background(Panel).padding(6.dp).verticalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        androidx.compose.foundation.layout.BoxWithConstraints(modifier = Modifier.weight(1f)) {
+        val unit = (maxWidth - 16.dp) / 23f
+        androidx.compose.runtime.CompositionLocalProvider(LocalKeyHeight provides (unit * 0.9f).coerceIn(22.dp, 34.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             for (row in board.main.indices) {
                 val spacing = if (row == 1) 4.dp else 0.dp
                 Row(modifier = Modifier.fillMaxWidth().padding(top = spacing), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -181,6 +186,8 @@ fun VisualKeyboard(
                     KeyRow(board.pad[row], disabled, Modifier.weight(4f), onPick)
                 }
             }
+        }
+        }
         }
         if (showSpecials) {
             Column(modifier = Modifier.width(150.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {

@@ -32,6 +32,47 @@ use std::path::{Path, PathBuf};
 /// Where progress lines go: the terminal for the binary, the log pane for the launcher.
 pub type Log<'a> = &'a dyn Fn(&str);
 
+/// Prints a line each minute while a long step runs, so a launcher watching for silence
+/// (Pojarush stops a prepare that says nothing for 12 minutes) knows it is alive.
+struct Heartbeat {
+    stop: std::sync::Arc<(std::sync::Mutex<bool>, std::sync::Condvar)>,
+}
+
+impl Heartbeat {
+    fn start(what: &str) -> Self {
+        let stop = std::sync::Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
+        let (flag, what) = (stop.clone(), what.to_owned());
+        std::thread::spawn(move || {
+            let started = std::time::Instant::now();
+            let (lock, cvar) = &*flag;
+            let mut done = lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+            loop {
+                let (d, timeout) = cvar
+                    .wait_timeout(done, std::time::Duration::from_secs(60))
+                    .unwrap_or_else(std::sync::PoisonError::into_inner);
+                done = d;
+                if *done {
+                    return;
+                }
+                if timeout.timed_out() {
+                    println!("{what}: still running ({} min)", started.elapsed().as_secs() / 60);
+                }
+            }
+        });
+        Self { stop }
+    }
+}
+
+impl Drop for Heartbeat {
+    fn drop(&mut self) {
+        let (lock, cvar) = &*self.stop;
+        if let Ok(mut d) = lock.lock() {
+            *d = true;
+        }
+        cvar.notify_all();
+    }
+}
+
 /// The manifest's `schema`: the prepared files' layout, which the launcher compares.
 pub const SCHEMA: i64 = 7;
 
@@ -822,6 +863,7 @@ fn steps(
         mkdir(&datagen)?;
         let log_path = datagen.join("datagen.log");
         let log = run.log_file(&log_path)?;
+        let _alive = Heartbeat::start("Running vanilla's data generator reports");
         run.jdk
             .java(
                 &[

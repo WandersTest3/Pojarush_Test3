@@ -68,5 +68,12 @@
   "horizon.shader_options.open": "Shader Options...",
   "horizon.shader_options.profile": "Profile",
   "horizon.shader_options.loading": "Reading the shader pack's options...",
-  "horizon.options.render_distance_memory": "%s chunks (memory limit)"
+  "horizon.options.render_distance_memory": "%s chunks (memory limit)",
+  "horizon.shader_packs.shaders": "Shaders",
+  "horizon.shader_packs.apply": "Apply",
+  "horizon.modmenu.by": "By",
+  "horizon.modmenu.website": "Website",
+  "horizon.modmenu.issues": "Issues",
+  "horizon.modmenu.license": "License",
+  "horizon.modmenu.credits": "Credits"
 }

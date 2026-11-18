@@ -1,0 +1,16 @@
+3D Skin Layers (Test Port) for Horizon
+
+This is an unofficial, independent reimplementation of the idea of the
+Minecraft mod "3D Skin Layers", made only to test the Horizon mod API in the
+Pojarush_Test3 launcher. It contains no code, textures or other files from the
+original mod.
+
+Original mod: 3D Skin Layers by tr7zw
+  https://github.com/tr7zw/3d-Skin-Layers
+  Licensed under the tr7zw Protective License.
+
+All credit for the original idea, design and behaviour goes to tr7zw. This
+port is for testing only and must not be redistributed or published as the
+original mod or as a replacement for it.
+
+Port by Wanders_Test3.

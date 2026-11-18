@@ -283,6 +283,13 @@ impl Game<'_> {
     pub(super) fn draw_mod_panels(&self, _batch: &mut HudBatch, _corners: &mut Corners) {}
     pub(super) fn open_mod_screen(&mut self, _owner: usize, _settings: bool) {}
     pub(super) fn mod_title_button(&mut self) {}
+    pub(super) fn mod_button_icon(&mut self) -> Option<[f32; 4]> {
+        None
+    }
+    pub(super) fn mods_title_button(&self) -> Option<(usize, String)> {
+        None
+    }
+    pub(super) fn mod_video_button(&mut self) {}
     pub(super) fn close_mod_screen(&mut self, _tell: bool) {}
     pub(super) fn draw_mod_screen(&mut self, _batch: &mut HudBatch) {}
     pub(super) fn mod_screen_click(&mut self, _button: winit::event::MouseButton) {}
@@ -365,6 +372,7 @@ impl Game<'_> {
                         dev: false,
                         has_settings: false,
                         native: None,
+                        details: Default::default(),
                     };
                 };
                 // What it may do first: the row cuts long descriptions.
@@ -382,6 +390,18 @@ impl Game<'_> {
                     dev: dev.contains(&e.path),
                     has_settings: e.has_ui_settings(),
                     native: None,
+                    details: mod_list::ModDetails {
+                        name: m.name.clone(),
+                        version: m.version.clone(),
+                        description: m.description.clone(),
+                        authors: m.authors.clone(),
+                        license: m.license.clone(),
+                        minecraft: m.minecraft.clone(),
+                        homepage: m.contact.homepage.clone(),
+                        issues: m.contact.issues.clone(),
+                        sources: m.contact.sources.clone(),
+                        icon: None,
+                    },
                 }
             })
             .collect();
@@ -668,10 +688,31 @@ impl Game<'_> {
             due
         });
         let button = self.mods.mods.title_button();
+        let icon = self.mod_button_icon();
         if let Some(title) = self.title.as_mut() {
             let label = button.map(|(_, l)| l);
             if title.mod_button != label {
                 title.mod_button = label;
+            }
+            title.mod_icon = icon;
+        }
+        let video = self.mods.mods.video_button().map(|(_, l)| l);
+        if self.ui.options.video_button != video {
+            self.ui.options.video_button = video;
+        }
+        if self.ui.options.page() == horizon_client::options_ui::Page::ModMenu {
+            let icons: Vec<(PathBuf, String)> = self
+                .mods
+                .mods
+                .entries()
+                .iter()
+                .map(|e| (e.path.clone(), e.manifest.as_ref().map(|m| m.icon.clone()).unwrap_or_default()))
+                .collect();
+            for (i, (path, icon)) in icons.iter().enumerate() {
+                let rect = self.mod_icon(i, path, icon);
+                if let Some(row) = self.settings.mods.installed.get_mut(i) {
+                    row.details.icon = rect;
+                }
             }
         }
         if due {
@@ -713,6 +754,14 @@ impl Game<'_> {
                     }
                 }
                 horizon_mods::UiRequest::ShaderPacks => self.open_shader_page(Page::ShaderPacks),
+                horizon_mods::UiRequest::ModList => {
+                    self.mods.screen = None;
+                    if self.screen == Screen::Playing && self.title.is_none() {
+                        self.capture(false);
+                    }
+                    self.open_options(self.title.is_some());
+                    self.ui.options.show(Page::ModMenu);
+                }
                 horizon_mods::UiRequest::ReloadShaderPack => {
                     self.pack_ids = None;
                     super::shader_packs::reload_shader_pack_job();
@@ -722,6 +771,27 @@ impl Game<'_> {
                 }
             }
         }
+    }
+    /// The mod button of the title screen and pause menu: its mod and label.
+    pub(super) fn mods_title_button(&self) -> Option<(usize, String)> {
+        self.mods.mods.title_button()
+    }
+    /// The atlas rectangle of the icon of the mod with the title-screen button.
+    pub(super) fn mod_button_icon(&mut self) -> Option<[f32; 4]> {
+        let (owner, _) = self.mods.mods.title_button()?;
+        let e = self.mods.mods.entries().get(owner)?;
+        let icon = e.manifest.as_ref()?.icon.clone();
+        if icon.is_empty() {
+            return None;
+        }
+        let path = e.path.clone();
+        self.model_texture(&path, &icon)
+    }
+    /// The Video Settings mod button: its mod hears the click.
+    pub(super) fn mod_video_button(&mut self) {
+        let Some((owner, _)) = self.mods.mods.video_button() else { return };
+        self.mods.mods.ui_select(owner, horizon_mods::VIDEO_BUTTON, 0);
+        self.show_mod_output();
     }
     /// The title screen's mod button: its mod hears the click, and may open its screen.
     pub(super) fn mod_title_button(&mut self) {
@@ -1584,6 +1654,7 @@ fn not_built(
                 dev: false,
                 native: None,
                 has_settings: false,
+                details: Default::default(),
             });
         }
     }

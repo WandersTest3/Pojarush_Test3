@@ -42,6 +42,24 @@ pub struct Installed {
     /// A native mod (`game/native_hooks.rs`): built into the game, on until
     /// the player turns it off, and its settings page.
     pub native: Option<NativePage>,
+    /// What Mod Menu's screen shows of it.
+    pub details: ModDetails,
+}
+
+/// A mod's manifest as Mod Menu's screen shows it.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ModDetails {
+    pub name: String,
+    pub version: String,
+    pub description: String,
+    pub authors: Vec<String>,
+    pub license: String,
+    pub minecraft: String,
+    pub homepage: String,
+    pub issues: String,
+    pub sources: String,
+    /// Its icon's atlas rectangle, once uploaded.
+    pub icon: Option<[f32; 4]>,
 }
 
 /// A native mod's settings page: its keys as Key Binds rows, then its
@@ -178,6 +196,7 @@ mod tests {
             dev,
             has_settings: false,
             native: None,
+            details: Default::default(),
         };
         let mut list = ModList {
             installed: vec![installed("a", false), installed("b", true)],

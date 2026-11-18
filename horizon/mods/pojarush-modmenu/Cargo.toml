@@ -1,6 +1,6 @@
 [package]
 name = "pojarush_modmenu"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2024"
 license-file = "LICENSE.txt"
 description = "Pojarush Mod Menu: the installed mods, their details and settings, in game."

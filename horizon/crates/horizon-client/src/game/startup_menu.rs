@@ -429,6 +429,8 @@ impl Loading {
                         super::shader_packs::write_shader_options(&options);
                     }
                 }
+                Event::ModVideoButton => {}
+                Event::OpenUrl(url) => super::packs::open_uri(&url),
                 Event::OpenShaderPackFolder => {
                     let dir = Game::shader_packs_dir();
                     let _ = std::fs::create_dir_all(&dir);

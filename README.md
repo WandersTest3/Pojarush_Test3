@@ -239,7 +239,9 @@ O `cargo horizon-mod build` empacota o ícone. Um mod feito para outra versão d
 para a qual foi feito. Nível de API 10 (capacidade `ui`): `ui::mods()` e `ui::open_mod_settings(id)` para listas de
 mods; `ui::shader_packs()`, `ui::shader_pack()`, `ui::set_shader_pack(nome)`, `ui::open_shader_options()`,
 `ui::open_shader_packs()` e `ui::reload_shader_pack()` para shaders. Nível 11: `ui::set_title_button(rótulo)` põe um
-botão do mod no lugar do Realms na tela inicial (o clique chega em `ui_select` com o id `0xFFFFFF00`).
+mini ícone do mod ao lado dos ícones de idioma e acessibilidade na tela inicial e no menu de pausa (o clique chega em
+`ui_select` com o id `0xFFFFFF00`); `ui::set_video_button(rótulo)` põe um botão no topo de Gráficos (id `0xFFFFFF01`);
+`ui::open_mod_list()` abre a tela do Mod Menu do jogo (lista à esquerda, detalhes à direita).
 
 Modelos no estilo GeckoLib (nível 11, capacidade `render`): ponha na pasta `models/` do mod a geometria Bedrock
 (`<nome>.geo.json`, o formato do GeckoLib e do Blockbench), as animações (`<nome>.animation.json`) e a textura PNG (até
@@ -253,6 +255,12 @@ render::place_model(id, novo_lugar);
 render::remove_model(id);
 ```
 
+Modelos montados pelo próprio mod e presos no jogador (nível 11): `render::spawn_model_json(geometria, "player:skin",
+lugar)` usa geometria Bedrock em texto e a skin do jogador como textura; `render::attach_model(id, "head")` prende o
+modelo numa parte do jogador (desenhado em terceira pessoa); `render::hide_player_parts(&["hat".into()])` esconde partes
+do modelo; `render::player_skin()` dá a skin (64x64 RGBA) e `render::player_skin_slim()` diz se os braços são finos.
+Exemplo: `horizon/mods/pojarush-3dskinlayers`.
+
 Expressões Molang nas animações ainda contam como 0; valores numéricos, `lerp_mode` `catmullrom`, `loop` e
 `animation_length` funcionam. Exemplo completo: `horizon/mods/pojarush-geckodemo` (tecla J).
 
@@ -264,8 +272,9 @@ Exemplos completos neste repositório:
 
 - `horizon/mods/pojarush-zoom`: tecla própria, roda do mouse, zoom, página de ajustes e ajustes salvos.
 - `horizon/mods/pojarush-fps`: texto na fonte do Minecraft no HUD, ampliado com `render::set_hud_scale` (função do Horizon do Pojarush), tamanho e posição ajustáveis e ajustes salvos. Com ele instalado, o launcher desliga a sobreposição do próprio Horizon.
-- `horizon/mods/pojarush-modmenu`: lista dos mods instalados no jogo (tecla M), com versão, autores, versões do Minecraft e da API, licença, links e botão para as configurações de cada um.
-- `horizon/mods/pojarush-shaders`: atalhos do Iris para shaders (O lista, K liga e desliga, R recarrega) e uma tela para escolher o pack e abrir as opções dele.
+- `horizon/mods/pojarush-modmenu`: Mod Menu como o do Fabric (tecla M ou o mini ícone na tela inicial e no menu de pausa): lista com ícone, nome e descrição à esquerda, detalhes, links e configurações do mod escolhido à direita.
+- `horizon/mods/pojarush-shaders`: atalhos do Iris para shaders (O abre os pacotes, K liga e desliga, R recarrega) e o botão "Pacotes de shaders..." em Gráficos, que abre a tela de pacotes no estilo do Iris.
+- `horizon/mods/pojarush-3dskinlayers`: porte de teste não oficial do 3D Skin Layers, de tr7zw (todo o crédito ao autor original; não redistribuir): a segunda camada da skin em voxels 3D.
 - `horizon/crates/horizon-mod-sdk/examples/`: `welcome`, `coords-hud`, `beacons`, `ruby-content`, `predator-missile`.
 - Contrato completo da API: `horizon/crates/horizon-mod-sdk/wit/horizon.wit`.
 
@@ -395,3 +404,4 @@ OAuth do Azure em `.oauth_client_id.txt` ou `OAUTH_CLIENT_ID`; sem ele o app jog
 | `horizon/mods/pojarush-modmenu/` | Mod Menu do Pojarush |
 | `horizon/mods/pojarush-shaders/` | Mod de shaders do Pojarush (atalhos do Iris) |
 | `horizon/mods/pojarush-geckodemo/` | Exemplo da API de modelos no estilo GeckoLib |
+| `horizon/mods/pojarush-3dskinlayers/` | Porte de teste do 3D Skin Layers (tr7zw) |

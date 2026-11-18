@@ -4002,6 +4002,10 @@ impl Game<'_> {
         };
         if let Some(old) = evicted {
             self.gui.atlas.sprites.remove(&old);
+            self.mod_models.downloaded.remove(&old);
+        }
+        if location.starts_with("skins/") && rgba.len() == 64 * 64 * 4 {
+            self.mod_models.downloaded.insert(location.clone(), std::sync::Arc::from(rgba.as_slice()));
         }
         let Some(mut rect) = self
             .gui

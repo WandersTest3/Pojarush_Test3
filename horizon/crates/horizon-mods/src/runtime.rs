@@ -80,6 +80,8 @@ pub struct Directory {
 
 /// The `ui-events.select` id of a click on a mod's title-screen button.
 pub const TITLE_BUTTON: u32 = 0xFFFF_FF00;
+/// The `ui-events.select` id of a click on a mod's Video Settings button.
+pub const VIDEO_BUTTON: u32 = 0xFFFF_FF01;
 
 /// What mods asked of the game's menus during their hooks, for it to act on.
 #[derive(Clone, Debug, PartialEq)]
@@ -89,6 +91,7 @@ pub enum UiRequest {
     ShaderOptions,
     ShaderPacks,
     ReloadShaderPack,
+    ModList,
 }
 
 static DIRECTORY: Mutex<Directory> = Mutex::new(Directory {
@@ -163,7 +166,20 @@ pub struct ModModel {
     pub animation: Option<(String, String, bool, u64)>,
     /// Bone turns (degrees, Bedrock axes) and visibility set by the mod.
     pub bones: BTreeMap<String, ([f32; 3], bool)>,
+    /// Geometry the mod built (`render.spawn-model-json`), in place of a file.
+    pub json: Option<Arc<str>>,
+    /// The local player's part it hangs on.
+    pub attach: Option<String>,
 }
+
+/// The local player's model as mods see and change it: the parts they hide
+/// (`render.hide-player-parts`), whether its skin is slim and the skin's pixels.
+pub struct PlayerSkin {
+    pub hidden: Vec<String>,
+    pub slim: bool,
+    pub pixels: Option<Arc<[u8]>>,
+}
+pub static PLAYER_SKIN: Mutex<PlayerSkin> = Mutex::new(PlayerSkin { hidden: Vec::new(), slim: false, pixels: None });
 
 /// Models one mod may have at once.
 pub const MAX_MODELS: usize = 64;
@@ -506,6 +522,7 @@ struct State {
     hud_always: bool,
     hud_drag: Option<RenderRect>,
     title_button: Option<String>,
+    video_button: Option<String>,
     models: BTreeMap<u32, ModModel>,
     next_model: u32,
     drag: Option<(f32, f32, bool)>,
@@ -720,6 +737,7 @@ impl Mods {
             hud_always: false,
             hud_drag: None,
             title_button: None,
+            video_button: None,
             models: BTreeMap::new(),
             next_model: 1,
             drag: None,
@@ -1365,6 +1383,12 @@ impl Mods {
         self.entries.iter().enumerate().filter_map(|(i, e)| Some((i, e.path.as_path(), e.run.as_ref()?)))
             .flat_map(|(i, path, run)| run.store.data().models.values().map(move |m| (i, path, m)))
     }
+    /// The Video Settings button a running mod asked for: its index and label.
+    pub fn video_button(&self) -> Option<(usize, String)> {
+        self.entries.iter().enumerate().find_map(|(i, e)| {
+            Some((i, e.run.as_ref()?.store.data().video_button.clone()?))
+        })
+    }
     /// The title-screen button a running mod asked for: its index and label.
     pub fn title_button(&self) -> Option<(usize, String)> {
         self.entries.iter().enumerate().find_map(|(i, e)| {
@@ -1978,7 +2002,7 @@ impl render::Host for State {
         self.next_model = self.next_model.wrapping_add(1).max(1);
         self.models.insert(
             id,
-            ModModel { geometry, texture, place, animation: None, bones: BTreeMap::new() },
+            ModModel { geometry, texture, place, animation: None, bones: BTreeMap::new(), json: None, attach: None },
         );
         Ok(id)
     }
@@ -2014,6 +2038,36 @@ impl render::Host for State {
     }
     fn remove_model(&mut self, id: u32) {
         self.models.remove(&id);
+    }
+    fn spawn_model_json(&mut self, geometry: String, texture: String, place: ModelPlace) -> Result<u32, String> {
+        if geometry.len() > 4 << 20 {
+            return Err("geometry over 4 MiB".into());
+        }
+        if texture != "player:skin" && !model_file(&texture) {
+            return Err("the texture is a file in models/ or player:skin".into());
+        }
+        let id = self.spawn_model("generated.geo.json".into(), "generated.png".into(), place)?;
+        if let Some(m) = self.models.get_mut(&id) {
+            m.texture = texture;
+            m.json = Some(Arc::from(geometry));
+        }
+        Ok(id)
+    }
+    fn attach_model(&mut self, id: u32, part: String) {
+        if let Some(m) = self.models.get_mut(&id) {
+            m.attach = (!part.is_empty() && part.len() <= 64).then_some(part);
+        }
+    }
+    fn hide_player_parts(&mut self, parts: Vec<String>) {
+        if let Ok(mut p) = PLAYER_SKIN.lock() {
+            p.hidden = parts.into_iter().filter(|s| s.len() <= 64).take(32).collect();
+        }
+    }
+    fn player_skin_slim(&mut self) -> bool {
+        PLAYER_SKIN.lock().is_ok_and(|p| p.slim)
+    }
+    fn player_skin(&mut self) -> Option<Vec<u8>> {
+        PLAYER_SKIN.lock().ok()?.pixels.as_ref().map(|p| p.to_vec())
     }
     fn set_hud(&mut self, shapes: Vec<Shape>) {
         self.shapes = clip_shapes(shapes);
@@ -2213,6 +2267,13 @@ impl ui::Host for State {
     }
     fn reload_shader_pack(&mut self) {
         request(UiRequest::ReloadShaderPack);
+    }
+    fn open_mod_list(&mut self) {
+        request(UiRequest::ModList);
+    }
+    fn set_video_button(&mut self, label: String) {
+        let label = clip(label);
+        self.video_button = (!label.trim().is_empty()).then_some(label);
     }
     fn set_title_button(&mut self, label: String) {
         let label = clip(label);

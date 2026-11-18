@@ -1,7 +1,7 @@
 id = "pojarush_shaders"
 name = "Pojarush Shaders"
-version = "1.0.0"
-description = "Iris's shortcuts for shader packs: O opens the pack list, K turns shaders on and off, R reloads the pack. A screen lists the packs to pick one and opens the pack's options."
+version = "1.1.0"
+description = "Iris's shortcuts for shader packs: O opens the pack list, K turns shaders on and off, R reloads the pack. Adds a Shader Packs button to Video Settings, opening an Iris-style pack screen."
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"
