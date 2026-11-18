@@ -238,7 +238,27 @@ issues = "https://..."
 O `cargo horizon-mod build` empacota o ícone. Um mod feito para outra versão do Minecraft é recusado com a versão
 para a qual foi feito. Nível de API 10 (capacidade `ui`): `ui::mods()` e `ui::open_mod_settings(id)` para listas de
 mods; `ui::shader_packs()`, `ui::shader_pack()`, `ui::set_shader_pack(nome)`, `ui::open_shader_options()`,
-`ui::open_shader_packs()` e `ui::reload_shader_pack()` para shaders.
+`ui::open_shader_packs()` e `ui::reload_shader_pack()` para shaders. Nível 11: `ui::set_title_button(rótulo)` põe um
+botão do mod no lugar do Realms na tela inicial (o clique chega em `ui_select` com o id `0xFFFFFF00`).
+
+Modelos no estilo GeckoLib (nível 11, capacidade `render`): ponha na pasta `models/` do mod a geometria Bedrock
+(`<nome>.geo.json`, o formato do GeckoLib e do Blockbench), as animações (`<nome>.animation.json`) e a textura PNG (até
+128x128). O `cargo horizon-mod build` empacota a pasta. No código:
+
+```rust
+let id = render::spawn_model("totem.geo.json", "totem.png", ModelPlace { x, y, z, yaw, pitch: 0.0, scale: 1.0 })?;
+render::play_animation(id, "totem.animation.json", "animation.totem.spin", true);
+render::set_bone(id, "head", (0.0, 45.0, 0.0), true); // girar ou esconder um osso por código
+render::place_model(id, novo_lugar);
+render::remove_model(id);
+```
+
+Expressões Molang nas animações ainda contam como 0; valores numéricos, `lerp_mode` `catmullrom`, `loop` e
+`animation_length` funcionam. Exemplo completo: `horizon/mods/pojarush-geckodemo` (tecla J).
+
+CEM do OptiFine: resource packs com `assets/minecraft/optifine/cem/<entidade>.jem` (e `.jpm`) trocam ou acrescentam
+partes dos modelos dos mobs e as animam com expressões (`cem_animation.txt`: funções, `var.*`, `this`/`part`/ids,
+`limb_swing`, `head_pitch`, `health`, `is_on_ground`...). Texturas da jem precisam estar em `textures/entity/`.
 
 Exemplos completos neste repositório:
 
@@ -374,3 +394,4 @@ OAuth do Azure em `.oauth_client_id.txt` ou `OAUTH_CLIENT_ID`; sem ele o app jog
 | `horizon/mods/pojarush-fps/` | Mod de FPS do Pojarush |
 | `horizon/mods/pojarush-modmenu/` | Mod Menu do Pojarush |
 | `horizon/mods/pojarush-shaders/` | Mod de shaders do Pojarush (atalhos do Iris) |
+| `horizon/mods/pojarush-geckodemo/` | Exemplo da API de modelos no estilo GeckoLib |

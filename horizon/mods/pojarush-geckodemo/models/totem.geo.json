@@ -1,0 +1,5 @@
+{"format_version":"1.12.0","minecraft:geometry":[{"description":{"identifier":"geometry.totem","texture_width":32,"texture_height":32},
+"bones":[
+{"name":"base","pivot":[0,0,0],"cubes":[{"origin":[-4,0,-4],"size":[8,4,8],"uv":[0,0]}]},
+{"name":"pillar","parent":"base","pivot":[0,4,0],"cubes":[{"origin":[-2,4,-2],"size":[4,10,4],"uv":[0,12]}]},
+{"name":"top","parent":"pillar","pivot":[0,14,0],"cubes":[{"origin":[-3,14,-3],"size":[6,6,6],"uv":[16,12]}]}]}]}

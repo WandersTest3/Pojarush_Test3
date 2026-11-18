@@ -170,4 +170,9 @@
     <string name="color_slots_hint">Chạm vào vòng tròn trống để lưu màu hiện tại; chạm vào màu đã lưu để dùng, giữ để xóa.</string>
     <string name="registry_open_modrinth">Mở Modrinth</string>
     <string name="registry_load_more">Tải thêm</string>
+    <string name="menu_music_title">Nhạc menu</string>
+    <string name="menu_music_none">Không có nhạc. Khi có nhạc, âm thanh video hình nền bị tắt.</string>
+    <string name="menu_music_choose">Chọn nhạc (MP3)</string>
+    <string name="menu_music_volume">Âm lượng nhạc</string>
+    <string name="overlay_close_game_confirm">Đóng trò chơi? Tiến trình chưa lưu của phiên này có thể bị mất.</string>
 </resources>

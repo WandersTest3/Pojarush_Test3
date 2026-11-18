@@ -32,28 +32,28 @@ class LoadingCover(context: Context) : FrameLayout(context) {
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding((24 * dp).toInt(), (20 * dp).toInt(), (24 * dp).toInt(), (20 * dp).toInt())
+            setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt())
             background = GradientDrawable().apply {
-                cornerRadius = 16 * dp
+                cornerRadius = 12 * dp
                 setColor(Color.argb(150, 0, 0, 0))
                 setStroke((1 * dp).toInt().coerceAtLeast(1), Color.argb(200, 0x57, 0x19, 0x7f))
             }
         }
         column.addView(ImageView(context).apply {
             setImageResource(R.mipmap.ic_launcher)
-        }, LinearLayout.LayoutParams((72 * dp).toInt(), (72 * dp).toInt()))
+        }, LinearLayout.LayoutParams((40 * dp).toInt(), (40 * dp).toInt()))
         column.addView(TextView(context).apply {
             text = context.getString(R.string.app_name)
             setTextColor(Color.WHITE)
-            textSize = 20f
+            textSize = 15f
             typeface = font ?: Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
-            setPadding(0, (10 * dp).toInt(), 0, (4 * dp).toInt())
+            setPadding(0, (6 * dp).toInt(), 0, (2 * dp).toInt())
         })
         status = TextView(context).apply {
             text = context.getString(R.string.loading_game)
             setTextColor(Color.argb(220, 255, 255, 255))
-            textSize = 14f
+            textSize = 12f
             typeface = font ?: Typeface.DEFAULT
             gravity = Gravity.CENTER
         }
@@ -61,10 +61,12 @@ class LoadingCover(context: Context) : FrameLayout(context) {
         column.addView(ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = true
             indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.rgb(0x9b, 0x4d, 0xd0))
-        }, LinearLayout.LayoutParams((220 * dp).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = (12 * dp).toInt()
+        }, LinearLayout.LayoutParams((150 * dp).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = (6 * dp).toInt()
         })
-        addView(column, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        addView(column, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+            topMargin = (16 * dp).toInt()
+        })
     }
 
     fun start(onReady: () -> Unit) {

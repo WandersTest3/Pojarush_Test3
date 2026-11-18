@@ -157,6 +157,7 @@ mod mob_sounds;
 mod mod_input;
 #[cfg(feature = "mods")]
 mod mod_panel;
+mod mod_models;
 mod mod_render;
 mod mods;
 mod mount_menu;
@@ -2081,6 +2082,7 @@ struct Game<'a> {
     dragon_model: Option<horizon_client::mobs::Part>,
     /// Map textures waiting for the next HUD batch to upload them.
     map_patches: Vec<horizon_client::font::Patch>,
+    mod_models: mod_models::ModModels,
     text_displays: std::collections::HashMap<i32, text_displays::RemoteTextDisplay>,
     interactions: std::collections::HashMap<i32, interactions::RemoteInteraction>,
     /// The fence knots a server tracks to this client, by entity id, at their
@@ -9928,6 +9930,7 @@ impl Game<'_> {
     fn title_action(&mut self, event_loop: &ActiveEventLoop, action: Action) -> Result<()> {
         match action {
             Action::Quit => event_loop.exit(),
+            Action::ModButton => self.mod_title_button(),
             Action::Options => self.open_options(true),
             Action::Accessibility => {
                 self.open_options_at(true, horizon_client::options_ui::Page::Accessibility)
@@ -13114,6 +13117,7 @@ impl Game<'_> {
         };
         if !title {
             self.end_geometry(camera, &mut entities);
+            self.mod_model_geometry(camera, &mut entities);
         }
         let weather = if !title && self.dim == Dim::Overworld && self.settings.horizon.weather {
             horizon_client::spans::time("weather", || self.weather_geometry(camera, alpha))
@@ -15395,6 +15399,7 @@ impl<'a> Game<'a> {
             breath_clouds: Vec::new(),
             dragon_model: prepared.dragon_model,
             map_patches: Vec::new(),
+            mod_models: Default::default(),
             text_displays: Default::default(),
             interactions: Default::default(),
             remote_knots: Default::default(),

@@ -159,7 +159,6 @@ fun Modifier.liquidGlass(shape: androidx.compose.ui.graphics.Shape = RoundedCorn
     return this
         .glassShadow(shape, strength)
         .clip(shape)
-        .frostedBackdrop()
         .background(body)
         .background(sheen)
         .border(1.dp, rim, shape)

@@ -170,4 +170,9 @@
     <string name="color_slots_hint">点按空圆圈保存当前颜色；点按已保存的颜色使用它，长按可清除。</string>
     <string name="registry_open_modrinth">打开 Modrinth</string>
     <string name="registry_load_more">加载更多</string>
+    <string name="menu_music_title">菜单音乐</string>
+    <string name="menu_music_none">没有音乐。设置音乐后，壁纸视频的声音会静音。</string>
+    <string name="menu_music_choose">选择音乐 (MP3)</string>
+    <string name="menu_music_volume">音乐音量</string>
+    <string name="overlay_close_game_confirm">关闭游戏？本次未保存的进度可能会丢失。</string>
 </resources>

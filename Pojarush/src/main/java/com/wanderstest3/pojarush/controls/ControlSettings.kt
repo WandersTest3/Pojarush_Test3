@@ -172,6 +172,12 @@ class ControlSettings(context: Context) {
     var wallpaperVolume: Float
         get() = prefs.getFloat("wallpaper_volume", 0f).coerceIn(0f, 1f)
         set(v) = prefs.edit().putFloat("wallpaper_volume", v.coerceIn(0f, 1f)).apply()
+    var menuMusic: String
+        get() = prefs.getString("menu_music", "").orEmpty()
+        set(v) = prefs.edit().putString("menu_music", v).apply()
+    var menuMusicVolume: Float
+        get() = prefs.getFloat("menu_music_volume", 0.6f).coerceIn(0f, 1f)
+        set(v) = prefs.edit().putFloat("menu_music_volume", v.coerceIn(0f, 1f)).apply()
     var keepAlive: Boolean
         get() = prefs.getBoolean("keep_alive", true)
         set(v) = prefs.edit().putBoolean("keep_alive", v).apply()

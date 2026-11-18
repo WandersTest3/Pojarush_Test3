@@ -170,4 +170,9 @@
     <string name="color_slots_hint">Нажмите на пустой круг, чтобы сохранить текущий цвет; нажмите на сохранённый цвет, чтобы выбрать его, удерживайте, чтобы удалить.</string>
     <string name="registry_open_modrinth">Открыть Modrinth</string>
     <string name="registry_load_more">Загрузить ещё</string>
+    <string name="menu_music_title">Музыка меню</string>
+    <string name="menu_music_none">Музыки нет. С музыкой звук видеообоев отключается.</string>
+    <string name="menu_music_choose">Выбрать музыку (MP3)</string>
+    <string name="menu_music_volume">Громкость музыки</string>
+    <string name="overlay_close_game_confirm">Закрыть игру? Несохранённый прогресс этой сессии может быть потерян.</string>
 </resources>

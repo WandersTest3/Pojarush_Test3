@@ -170,4 +170,9 @@
     <string name="color_slots_hint">點按空圓圈儲存目前顏色；點按已儲存的顏色使用它，長按可清除。</string>
     <string name="registry_open_modrinth">開啟 Modrinth</string>
     <string name="registry_load_more">載入更多</string>
+    <string name="menu_music_title">選單音樂</string>
+    <string name="menu_music_none">沒有音樂。設定音樂後，桌布影片的聲音會靜音。</string>
+    <string name="menu_music_choose">選擇音樂 (MP3)</string>
+    <string name="menu_music_volume">音樂音量</string>
+    <string name="overlay_close_game_confirm">關閉遊戲？本次未儲存的進度可能會遺失。</string>
 </resources>

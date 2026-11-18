@@ -565,6 +565,8 @@ private fun StickEditor(
 private fun ActionPickerDialog(context: android.content.Context, existing: List<Action>, onPick: (Action?) -> Unit) {
     AlertDialog(
         onDismissRequest = { onPick(null) },
+        modifier = Modifier.fillMaxWidth(0.94f),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         title = { Text(stringResource(R.string.editor_add_action)) },
         text = { VisualKeyboard(disabled = existing.toSet()) { onPick(it) } },
         confirmButton = {},

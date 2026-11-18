@@ -72,6 +72,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     private val controls = ControlsView(activity, this, settings, ControlLayouts.load(activity, settings.layout, defaultName))
     private val keyMap: KeyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
     private var panel by mutableStateOf(Panel.NONE)
+    private var confirmClose by mutableStateOf(false)
     private var mouseOn by mutableStateOf(controls.virtualMouse)
     private var hiddenOn by mutableStateOf(settings.controlsHidden)
 
@@ -173,6 +174,24 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
             Panel.SEND_KEY -> SendKeyPanel()
             Panel.EDITOR -> ControlEditor(controls, settings) { closeEditor() }
         }
+        if (confirmClose) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { confirmClose = false },
+                title = { androidx.compose.material3.Text(stringResource(R.string.overlay_close_game)) },
+                text = { androidx.compose.material3.Text(stringResource(R.string.overlay_close_game_confirm)) },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        confirmClose = false
+                        activity.finishAndRemoveTask()
+                    }) { androidx.compose.material3.Text(stringResource(R.string.overlay_close_game)) }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { confirmClose = false }) {
+                        androidx.compose.material3.Text(stringResource(android.R.string.cancel))
+                    }
+                },
+            )
+        }
     }
 
     @Composable
@@ -219,7 +238,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                         panel = Panel.SEND_KEY
                     }
                     QuickChip(stringResource(R.string.overlay_close_game)) {
-                        activity.finishAndRemoveTask()
+                        confirmClose = true
                     }
                     QuickChip(stringResource(R.string.overlay_hide_controls), hiddenOn) {
                         settings.controlsHidden = !settings.controlsHidden

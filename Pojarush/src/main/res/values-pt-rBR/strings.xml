@@ -364,4 +364,9 @@
     <string name="color_slots_hint">Toque num círculo vazio para salvar a cor atual; toque numa cor salva para usá-la e segure para apagar.</string>
     <string name="registry_open_modrinth">Abrir o Modrinth</string>
     <string name="registry_load_more">Carregar mais</string>
+    <string name="menu_music_title">Música do menu</string>
+    <string name="menu_music_none">Sem música. Com uma, o som do vídeo do papel de parede fica mudo.</string>
+    <string name="menu_music_choose">Escolher música (MP3)</string>
+    <string name="menu_music_volume">Volume da música</string>
+    <string name="overlay_close_game_confirm">Fechar o jogo? O progresso não salvo desta sessão pode ser perdido.</string>
 </resources>

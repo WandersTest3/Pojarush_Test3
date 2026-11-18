@@ -9,6 +9,7 @@ const LIST: u32 = 1;
 const SETTINGS: u32 = 2;
 const OPEN: u32 = 3;
 const FILTER: u32 = 4;
+const TITLE: u32 = 0xFFFF_FF00;
 const GRAY: u32 = 0xAAAAAA;
 const PURPLE: u32 = 0xB98CF2;
 
@@ -143,6 +144,7 @@ impl Mod for Menu {
         input::register_key(KEY, "Mod Menu", "key.keyboard.m")?;
         let menu = Menu { mods: Vec::new(), selected: 0, running_only: false, open: false };
         menu.page();
+        ui::set_title_button("Mods");
         Ok((menu, Registration::new().on_frame()))
     }
 
@@ -175,7 +177,7 @@ impl Mod for Menu {
                     self.open = false;
                 }
             }
-            OPEN => self.screen(),
+            OPEN | TITLE => self.screen(),
             _ => {}
         }
     }

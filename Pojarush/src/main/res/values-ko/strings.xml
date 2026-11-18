@@ -170,4 +170,9 @@
     <string name="color_slots_hint">빈 원을 탭하면 현재 색이 저장됩니다. 저장된 색을 탭하면 사용하고, 길게 누르면 지웁니다.</string>
     <string name="registry_open_modrinth">Modrinth 열기</string>
     <string name="registry_load_more">더 불러오기</string>
+    <string name="menu_music_title">메뉴 음악</string>
+    <string name="menu_music_none">음악 없음. 음악을 넣으면 배경 동영상 소리는 음소거됩니다.</string>
+    <string name="menu_music_choose">음악 선택 (MP3)</string>
+    <string name="menu_music_volume">음악 볼륨</string>
+    <string name="overlay_close_game_confirm">게임을 닫을까요? 이번 세션의 저장되지 않은 진행 상황이 사라질 수 있습니다.</string>
 </resources>

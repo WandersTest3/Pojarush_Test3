@@ -1,0 +1,17 @@
+id = "pojarush_geckodemo"
+name = "Pojarush Model Demo"
+version = "1.0.0"
+description = "Shows the GeckoLib-style model API: press J to place an animated model (a Bedrock geometry and animation from models/) in front of you, and again to take it away."
+authors = ["Wanders_Test3"]
+api = "0.1"
+side = "client"
+capabilities = ["game-read", "input", "render"]
+experimental = ["input", "render"]
+minecraft = "26.3"
+license = "Mod Test3 License V1.0"
+icon = "assets/pojarush_geckodemo/icon.png"
+
+[contact]
+homepage = "https://github.com/WandersTest3/Pojarush_Test3"
+sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/pojarush-geckodemo"
+issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"

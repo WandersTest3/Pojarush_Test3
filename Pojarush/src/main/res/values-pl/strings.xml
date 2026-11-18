@@ -170,4 +170,9 @@
     <string name="color_slots_hint">Dotknij pustego koła, aby zapisać bieżący kolor; dotknij zapisanego koloru, aby go użyć, przytrzymaj, aby usunąć.</string>
     <string name="registry_open_modrinth">Otwórz Modrinth</string>
     <string name="registry_load_more">Wczytaj więcej</string>
+    <string name="menu_music_title">Muzyka menu</string>
+    <string name="menu_music_none">Brak muzyki. Z muzyką dźwięk wideo tapety jest wyciszony.</string>
+    <string name="menu_music_choose">Wybierz muzykę (MP3)</string>
+    <string name="menu_music_volume">Głośność muzyki</string>
+    <string name="overlay_close_game_confirm">Zamknąć grę? Niezapisany postęp tej sesji może zostać utracony.</string>
 </resources>

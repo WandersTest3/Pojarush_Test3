@@ -170,4 +170,9 @@
     <string name="color_slots_hint">Торкніться порожнього кола, щоб зберегти поточний колір; торкніться збереженого кольору, щоб вибрати його, утримуйте, щоб видалити.</string>
     <string name="registry_open_modrinth">Відкрити Modrinth</string>
     <string name="registry_load_more">Завантажити ще</string>
+    <string name="menu_music_title">Музика меню</string>
+    <string name="menu_music_none">Музики немає. З музикою звук відеошпалер вимикається.</string>
+    <string name="menu_music_choose">Вибрати музику (MP3)</string>
+    <string name="menu_music_volume">Гучність музики</string>
+    <string name="overlay_close_game_confirm">Закрити гру? Незбережений прогрес цієї сесії може бути втрачено.</string>
 </resources>

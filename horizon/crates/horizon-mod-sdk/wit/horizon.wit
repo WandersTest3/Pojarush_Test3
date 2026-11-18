@@ -268,6 +268,11 @@ interface ui {
     open-shader-packs: func();
     /// Loads the shader pack in use again, from its files.
     reload-shader-pack: func();
+    /// A button on the title screen where Realms is (as Mod Menu's "Mods"),
+    /// with this label; empty takes it away. A click calls `ui-events.select`
+    /// with id 4294967040 (`0xFFFFFF00`), and a screen the mod opens then
+    /// shows over the title screen.
+    set-title-button: func(label: string);
 }
 
 /// What the game calls on a mod that shows widgets (capability `ui`):
@@ -490,6 +495,31 @@ interface render {
     /// wins) leave the camera vanilla's. With several mods, the strongest
     /// zoom counts.
     set-zoom: func(zoom: zoom);
+    /// Where a mod's model stands: its feet in world coordinates, its yaw and
+    /// pitch in degrees, and its size (1 = as modelled).
+    record model-place {
+        x: f64,
+        y: f64,
+        z: f64,
+        yaw: f32,
+        pitch: f32,
+        scale: f32,
+    }
+    /// GeckoLib-style models (API level 11): a Bedrock geometry from the mod's
+    /// `models/` folder (`models/<name>.geo.json`, GeckoLib's format) drawn with
+    /// a PNG of at most 128x128 from the same folder, in the world. Returns the
+    /// model's id; at most 64 per mod.
+    spawn-model: func(geometry: string, texture: string, place: model-place) -> result<u32, string>;
+    place-model: func(id: u32, place: model-place);
+    /// Plays animation `name` of `models/<file>.animation.json` (Bedrock
+    /// animations, GeckoLib's format) on the model, from its start.
+    play-animation: func(id: u32, file: string, name: string, looping: bool);
+    stop-animation: func(id: u32);
+    /// Turns a bone by `rotation` (degrees, Bedrock axes) on top of the
+    /// animation, and shows or hides it with its children (GeckoLib's
+    /// `getBone(...).setRot` and `setHidden`).
+    set-bone: func(id: u32, bone: string, rotation: tuple<f32, f32, f32>, visible: bool);
+    remove-model: func(id: u32);
     record minimap {
         corner: corner,
         /// Its side in GUI pixels, 16 to 256.

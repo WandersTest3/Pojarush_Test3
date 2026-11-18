@@ -170,4 +170,9 @@
     <string name="color_slots_hint">Tocca un cerchio vuoto per salvare il colore attuale; tocca un colore salvato per usarlo, tienilo premuto per cancellarlo.</string>
     <string name="registry_open_modrinth">Apri Modrinth</string>
     <string name="registry_load_more">Carica altri</string>
+    <string name="menu_music_title">Musica del menu</string>
+    <string name="menu_music_none">Nessuna musica. Con una musica, l\'audio del video di sfondo viene silenziato.</string>
+    <string name="menu_music_choose">Scegli musica (MP3)</string>
+    <string name="menu_music_volume">Volume della musica</string>
+    <string name="overlay_close_game_confirm">Chiudere il gioco? I progressi non salvati di questa sessione potrebbero andare persi.</string>
 </resources>

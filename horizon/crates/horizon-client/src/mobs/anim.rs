@@ -167,6 +167,10 @@ impl Poses {
             self.hidden.insert(n.to_owned());
         }
     }
+    /// Whether the part named `name` has `visible` cleared.
+    pub fn hidden(&self, name: &str) -> bool {
+        self.hidden.contains(name)
+    }
     pub fn is_hidden(&self, part: &Part) -> bool {
         self.hidden.contains(&part.name)
     }

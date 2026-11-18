@@ -170,4 +170,9 @@
     <string name="color_slots_hint">المس دائرة فارغة لحفظ اللون الحالي؛ المس لونًا محفوظًا لاستخدامه، واضغط مطولًا لمسحه.</string>
     <string name="registry_open_modrinth">فتح Modrinth</string>
     <string name="registry_load_more">تحميل المزيد</string>
+    <string name="menu_music_title">موسيقى القائمة</string>
+    <string name="menu_music_none">لا توجد موسيقى. مع الموسيقى يُكتم صوت فيديو الخلفية.</string>
+    <string name="menu_music_choose">اختيار موسيقى (MP3)</string>
+    <string name="menu_music_volume">مستوى صوت الموسيقى</string>
+    <string name="overlay_close_game_confirm">إغلاق اللعبة؟ قد يضيع التقدم غير المحفوظ في هذه الجلسة.</string>
 </resources>

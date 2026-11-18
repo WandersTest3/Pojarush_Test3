@@ -61,23 +61,19 @@ fun WallpaperBackground() {
     val version = WallpaperState.version
     val path = remember(version) { settings.wallpaper }
     val dim = remember(version) { settings.wallpaperDim }
-    val volume = remember(version) { settings.wallpaperVolume }
+    val music = remember(version) { settings.menuMusic.takeIf { it.isNotEmpty() && File(it).isFile } }
+    val volume = remember(version) { if (music != null) 0f else settings.wallpaperVolume }
+    MenuMusic(music, remember(version) { settings.menuMusicVolume })
     val found = remember(path, version) { File(path).takeIf { path.isNotEmpty() && it.isFile } }
-    BackdropSource(found, found?.lastModified() ?: 0L, dim, UiPrefs.menuBlur)
     val file = found ?: return
     val stamp = file.lastModified()
     val media = Modifier.fillMaxSize()
     Box(Modifier.fillMaxSize().backdropArea()) {
         if (ControlLayouts.isVideo(file.name)) {
             androidx.compose.runtime.key(file.absolutePath, stamp) {
-                val backdrop = LocalBackdrop.current
-                val blur = UiPrefs.menuBlur
                 AndroidView(
                     factory = { WallpaperVideoView(it, file, volume) },
-                    update = {
-                        it.setVolume(volume)
-                        it.setLiveBlur(if (backdrop != null && blur >= 1f) blur else 0f) { frame -> backdrop?.image = frame.asImageBitmap() }
-                    },
+                    update = { it.setVolume(volume) },
                     modifier = media,
                     onRelease = { it.release() }
                 )
@@ -298,10 +294,6 @@ fun InterfaceSettings(settings: ControlSettings) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
         }
-        SettingSlider(stringResource(R.string.menu_blur), settings.menuBlur, 0f..10f, 1f, { "${Math.round(it)}" }) {
-            settings.menuBlur = it
-            UiPrefs.menuBlur = it
-        }
         SettingSlider(stringResource(R.string.font_size), settings.fontScale, 0.70f..1.60f, 0.05f, { "${Math.round(it * 100)}%" }) {
             settings.fontScale = it
             UiPrefs.fontScale = it
@@ -518,7 +510,8 @@ fun WallpaperSettings(settings: ControlSettings) {
                 WallpaperState.version++
             }
         }
-        if (path.isNotEmpty() && ControlLayouts.isVideo(File(path).name)) {
+        MenuMusicSettings(settings)
+        if (path.isNotEmpty() && ControlLayouts.isVideo(File(path).name) && settings.menuMusic.isEmpty()) {
             SettingSlider(stringResource(R.string.wallpaper_volume), settings.wallpaperVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }) {
                 settings.wallpaperVolume = it
                 WallpaperState.version++
@@ -628,5 +621,91 @@ fun OnboardingWallpaperStep(onFinished: () -> Unit) {
             settings.wallpaperOnboardingDone = true
             onFinished()
         }) { Text(stringResource(R.string.onboarding_wallpaper_skip)) }
+    }
+}
+
+
+@Composable
+private fun MenuMusic(path: String?, volume: Float) {
+    val context = LocalContext.current
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val player = remember(path) {
+        path?.let { p ->
+            runCatching {
+                android.media.MediaPlayer().apply {
+                    setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_GAME)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
+                    setDataSource(context, android.net.Uri.fromFile(File(p)))
+                    isLooping = true
+                    prepare()
+                }
+            }.getOrNull()
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(player, volume) { player?.setVolume(volume, volume) }
+    androidx.compose.runtime.DisposableEffect(player, owner) {
+        val p = player
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> runCatching { p?.start() }
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> runCatching { if (p?.isPlaying == true) p.pause() }
+                else -> {}
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        if (owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) runCatching { p?.start() }
+        onDispose {
+            owner.lifecycle.removeObserver(observer)
+            runCatching { p?.stop() }
+            p?.release()
+        }
+    }
+}
+
+@Composable
+private fun MenuMusicSettings(settings: ControlSettings) {
+    val context = LocalContext.current
+    var music by remember { mutableStateOf(settings.menuMusic) }
+    val failed = stringResource(R.string.controls_import_failed, "%s")
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        runCatching {
+            val dir = File(context.filesDir, "menu_music").apply { mkdirs() }
+            dir.listFiles()?.forEach { it.delete() }
+            val name = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+                ?.replace(Regex("[^A-Za-z0-9._ -]"), "_")?.takeIf { it.isNotBlank() } ?: "music.mp3"
+            val out = File(dir, name)
+            context.contentResolver.openInputStream(uri)?.use { input -> out.outputStream().use { input.copyTo(it) } }
+                ?: error("No access to the file")
+            out
+        }.onSuccess {
+            settings.menuMusic = it.absolutePath
+            music = it.absolutePath
+            WallpaperState.version++
+        }.onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
+    }
+    Text(stringResource(R.string.menu_music_title), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+    Hint(if (music.isEmpty()) stringResource(R.string.menu_music_none) else File(music).name)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = { picker.launch(arrayOf("audio/*")) }) { Text(stringResource(R.string.menu_music_choose)) }
+        if (music.isNotEmpty()) {
+            OutlinedButton(onClick = {
+                File(music).delete()
+                settings.menuMusic = ""
+                music = ""
+                WallpaperState.version++
+            }) { Text(stringResource(R.string.wallpaper_remove)) }
+        }
+    }
+    if (music.isNotEmpty()) {
+        SettingSlider(stringResource(R.string.menu_music_volume), settings.menuMusicVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }) {
+            settings.menuMusicVolume = it
+            WallpaperState.version++
+        }
     }
 }

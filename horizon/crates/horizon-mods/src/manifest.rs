@@ -396,6 +396,23 @@ pub struct Package {
     pub wasm: Option<Vec<u8>>,
 }
 impl Package {
+    /// One file of the `.hmod` (or mod folder) at `path`, at most 8 MiB.
+    pub fn read_file(path: &Path, name: &str) -> Option<Vec<u8>> {
+        const MAX: u64 = 8 << 20;
+        if name.contains("..") || name.starts_with('/') {
+            return None;
+        }
+        if path.is_dir() {
+            let f = path.join(name);
+            return (f.metadata().ok()?.len() <= MAX).then(|| std::fs::read(f).ok()).flatten();
+        }
+        let file = std::fs::File::open(path).ok()?;
+        let mut zip = zip::ZipArchive::new(file).ok()?;
+        let f = zip.by_name(name).ok()?;
+        let mut out = Vec::new();
+        f.take(MAX + 1).read_to_end(&mut out).ok()?;
+        (out.len() as u64 <= MAX).then_some(out)
+    }
     /// A `.hmod` (a zip holding `horizon-mod.toml`, `mod.wasm` and, for
     /// content, `assets/` and `data/`) or a folder holding the same.
     pub fn read(path: &Path) -> Result<Self, String> {

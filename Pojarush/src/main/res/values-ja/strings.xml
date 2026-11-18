@@ -170,4 +170,9 @@
     <string name="color_slots_hint">空の円をタップすると現在の色を保存します。保存した色はタップで使用、長押しで削除します。</string>
     <string name="registry_open_modrinth">Modrinth を開く</string>
     <string name="registry_load_more">さらに読み込む</string>
+    <string name="menu_music_title">メニュー音楽</string>
+    <string name="menu_music_none">音楽なし。音楽を設定すると壁紙動画の音はミュートされます。</string>
+    <string name="menu_music_choose">音楽を選ぶ (MP3)</string>
+    <string name="menu_music_volume">音楽の音量</string>
+    <string name="overlay_close_game_confirm">ゲームを閉じますか？このセッションの未保存の進行状況は失われる可能性があります。</string>
 </resources>

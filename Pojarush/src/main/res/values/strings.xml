@@ -365,4 +365,9 @@
     <string name="color_slots_hint">Tap an empty circle to save the current color; tap a saved color to use it, hold it to clear.</string>
     <string name="registry_open_modrinth">Open Modrinth</string>
     <string name="registry_load_more">Load more</string>
+    <string name="menu_music_title">Menu music</string>
+    <string name="menu_music_none">No music. With one, the wallpaper video\'s sound is muted.</string>
+    <string name="menu_music_choose">Choose music (MP3)</string>
+    <string name="menu_music_volume">Music volume</string>
+    <string name="overlay_close_game_confirm">Close the game? Unsaved progress in this session may be lost.</string>
 </resources>

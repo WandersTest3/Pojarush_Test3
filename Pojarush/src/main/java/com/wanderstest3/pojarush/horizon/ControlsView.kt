@@ -636,6 +636,12 @@ class ControlsView(
         }
     }
 
+    private fun hotbarKey(code: Int): Boolean {
+        if (!captured || editMode || code !in android.view.KeyEvent.KEYCODE_1..android.view.KeyEvent.KEYCODE_9) return false
+        HorizonBridge.command("hotbar ${code - android.view.KeyEvent.KEYCODE_0}")
+        return true
+    }
+
     private fun mouse(button: Int, down: Boolean) {
         if (button !in 0..2) return
         if (down) {
@@ -664,7 +670,7 @@ class ControlsView(
 
     private fun down(a: Action) {
         when (a) {
-            is Action.Key -> key(a.code, true)
+            is Action.Key -> if (!hotbarKey(a.code)) key(a.code, true)
             is Action.Mouse -> holdMouse(a.button, true)
             is Action.Scroll -> if (a.repeat) {
                 val r = object : Runnable {
@@ -691,7 +697,7 @@ class ControlsView(
 
     private fun tap(a: Action) {
         when (a) {
-            is Action.Key -> {
+            is Action.Key -> if (!hotbarKey(a.code)) {
                 key(a.code, true)
                 key(a.code, false)
             }
@@ -837,12 +843,13 @@ class ControlsView(
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_BUTTON_PRESS -> {
                 if (mouseHudDrag) return true
-                if (!captured && (virtualMouse || physicalMouse)) {
+                if (!captured) {
                     cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
                     cursorY = e.y.coerceIn(0f, (height - 1).coerceAtLeast(0).toFloat())
                     HorizonBridge.cursor(cursorX, cursorY)
                     if (button == 0 && HorizonBridge.hudDragStart(cursorX, cursorY)) {
                         mouseHudDrag = true
+                        invalidate()
                         return true
                     }
                 }
@@ -975,7 +982,7 @@ class ControlsView(
             if (settings.hotbarTouch) {
                 val slot = HorizonBridge.hotbarSlot(x, y)
                 if (slot >= 0) {
-                    HorizonBridge.command("select ${slot + 1}")
+                    HorizonBridge.command("hotbar ${slot + 1}")
                     vibrate()
                     if (settings.hotbarSwap && slot == lastHotbarSlot && time - lastHotbarTime < 300) {
                         tap(Action.Key(android.view.KeyEvent.KEYCODE_F))

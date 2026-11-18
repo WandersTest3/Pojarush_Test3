@@ -86,6 +86,9 @@ pub(super) struct ModsState {
     /// A `ui` mod's screen or settings page while it is up.
     #[cfg(feature = "mods")]
     screen: Option<ModScreen>,
+    /// The mod whose title-screen button was just clicked: its screen may open over the title.
+    #[cfg(feature = "mods")]
+    title_click: Option<usize>,
     /// The HUD font's advances for `render.text-width`, made once.
     #[cfg(feature = "mods")]
     font_widths: std::sync::Arc<[f32]>,
@@ -279,6 +282,7 @@ impl Game<'_> {
     pub(super) fn mods_chat(&mut self, _line: &str) {}
     pub(super) fn draw_mod_panels(&self, _batch: &mut HudBatch, _corners: &mut Corners) {}
     pub(super) fn open_mod_screen(&mut self, _owner: usize, _settings: bool) {}
+    pub(super) fn mod_title_button(&mut self) {}
     pub(super) fn close_mod_screen(&mut self, _tell: bool) {}
     pub(super) fn draw_mod_screen(&mut self, _batch: &mut HudBatch) {}
     pub(super) fn mod_screen_click(&mut self, _button: winit::event::MouseButton) {}
@@ -663,6 +667,13 @@ impl Game<'_> {
             }
             due
         });
+        let button = self.mods.mods.title_button();
+        if let Some(title) = self.title.as_mut() {
+            let label = button.map(|(_, l)| l);
+            if title.mod_button != label {
+                title.mod_button = label;
+            }
+        }
         if due {
             self.mods.mods.publish_directory();
             let packs = horizon_client::shader_pack_list::scan(&Self::shader_packs_dir())
@@ -711,6 +722,14 @@ impl Game<'_> {
                 }
             }
         }
+    }
+    /// The title screen's mod button: its mod hears the click, and may open its screen.
+    pub(super) fn mod_title_button(&mut self) {
+        let Some((owner, _)) = self.mods.mods.title_button() else { return };
+        self.mods.title_click = Some(owner);
+        self.mods.mods.ui_select(owner, horizon_mods::TITLE_BUTTON, 0);
+        self.show_mod_output();
+        self.mods.title_click = None;
     }
     fn open_shader_page(&mut self, page: Page) {
         self.mods.screen = None;
@@ -1010,8 +1029,9 @@ impl Game<'_> {
     /// its settings page (`settings`, the mod's `installed` index).
     pub(super) fn open_mod_screen(&mut self, owner: usize, settings: bool) {
         // Only the settings page is drawn at the title (Options > Mods); a
-        // mod's own screen waits for a world.
-        if self.title.is_some() && !settings {
+        // mod's own screen waits for a world, unless its title button opened it.
+        let from_title = self.mods.title_click.take() == Some(owner);
+        if self.title.is_some() && !settings && !from_title {
             return;
         }
         if settings {

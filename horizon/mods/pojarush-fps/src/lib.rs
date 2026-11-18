@@ -35,6 +35,8 @@ const S_X: u32 = 21;
 const S_Y: u32 = 22;
 const S_PAD: u32 = 25;
 const S_OPACITY: u32 = 26;
+const MOVE: u32 = 13;
+const DONE: u32 = 14;
 
 struct Fps {
     show: bool,
@@ -51,7 +53,7 @@ struct Fps {
     area: (f32, f32, f32, f32, f32, f32),
 }
 
-fn on_off(s: &[&'static str; 24], on: bool) -> &'static str {
+fn on_off(s: &[&'static str; 25], on: bool) -> &'static str {
     if on { s[13] } else { s[14] }
 }
 
@@ -95,29 +97,29 @@ fn stored(cfg: &[(String, String)], key: &str, default: u32, min: u32, max: u32)
         .map_or(default, |v| v.clamp(min, max))
 }
 
-const LANGS: [(&str, [&str; 24]); 19] = [
-    ("en", ["FPS counter", "Minimum and 1% low", "Background", "Color", "Move to the next corner", "Reset to defaults", "Size", "Horizontal position", "Vertical position", "Horizontal offset", "Vertical offset", "Background padding", "Background opacity", "On", "Off", "White", "Purple", "Green", "Yellow", "By FPS", "Top left", "Top right", "Bottom left", "Bottom right"]),
-    ("pt_br", ["Contador de FPS", "Mínimo e 1% low", "Fundo", "Cor", "Mover para o próximo canto", "Restaurar padrões", "Tamanho", "Posição horizontal", "Posição vertical", "Deslocamento horizontal", "Deslocamento vertical", "Margem do fundo", "Opacidade do fundo", "Ligado", "Desligado", "Branco", "Roxo", "Verde", "Amarelo", "Pelo FPS", "Canto superior esquerdo", "Canto superior direito", "Canto inferior esquerdo", "Canto inferior direito"]),
-    ("pt_pt", ["Contador de FPS", "Mínimo e 1% low", "Fundo", "Cor", "Mover para o canto seguinte", "Repor predefinições", "Tamanho", "Posição horizontal", "Posição vertical", "Deslocamento horizontal", "Deslocamento vertical", "Margem do fundo", "Opacidade do fundo", "Ligado", "Desligado", "Branco", "Roxo", "Verde", "Amarelo", "Pelo FPS", "Canto superior esquerdo", "Canto superior direito", "Canto inferior esquerdo", "Canto inferior direito"]),
-    ("es", ["Contador de FPS", "Mínimo y 1% low", "Fondo", "Color", "Mover a la esquina siguiente", "Restablecer valores", "Tamaño", "Posición horizontal", "Posición vertical", "Desplazamiento horizontal", "Desplazamiento vertical", "Margen del fondo", "Opacidad del fondo", "Activado", "Desactivado", "Blanco", "Morado", "Verde", "Amarillo", "Según FPS", "Arriba a la izquierda", "Arriba a la derecha", "Abajo a la izquierda", "Abajo a la derecha"]),
-    ("fr", ["Compteur de FPS", "Minimum et 1% low", "Fond", "Couleur", "Aller au coin suivant", "Rétablir les valeurs", "Taille", "Position horizontale", "Position verticale", "Décalage horizontal", "Décalage vertical", "Marge du fond", "Opacité du fond", "Activé", "Désactivé", "Blanc", "Violet", "Vert", "Jaune", "Selon les FPS", "En haut à gauche", "En haut à droite", "En bas à gauche", "En bas à droite"]),
-    ("de", ["FPS-Anzeige", "Minimum und 1% low", "Hintergrund", "Farbe", "Zur nächsten Ecke", "Auf Standard zurücksetzen", "Größe", "Horizontale Position", "Vertikale Position", "Horizontaler Versatz", "Vertikaler Versatz", "Hintergrundrand", "Hintergrunddeckkraft", "An", "Aus", "Weiß", "Lila", "Grün", "Gelb", "Nach FPS", "Oben links", "Oben rechts", "Unten links", "Unten rechts"]),
-    ("it", ["Contatore FPS", "Minimo e 1% low", "Sfondo", "Colore", "Vai all'angolo successivo", "Ripristina predefiniti", "Dimensione", "Posizione orizzontale", "Posizione verticale", "Scostamento orizzontale", "Scostamento verticale", "Margine dello sfondo", "Opacità dello sfondo", "Attivo", "Disattivo", "Bianco", "Viola", "Verde", "Giallo", "In base agli FPS", "In alto a sinistra", "In alto a destra", "In basso a sinistra", "In basso a destra"]),
-    ("ru", ["Счётчик FPS", "Минимум и 1% low", "Фон", "Цвет", "В следующий угол", "Сбросить настройки", "Размер", "Горизонтальная позиция", "Вертикальная позиция", "Горизонтальный сдвиг", "Вертикальный сдвиг", "Отступ фона", "Непрозрачность фона", "Вкл.", "Выкл.", "Белый", "Фиолетовый", "Зелёный", "Жёлтый", "По FPS", "Сверху слева", "Сверху справа", "Снизу слева", "Снизу справа"]),
-    ("uk", ["Лічильник FPS", "Мінімум і 1% low", "Тло", "Колір", "До наступного кута", "Скинути налаштування", "Розмір", "Горизонтальна позиція", "Вертикальна позиція", "Горизонтальний зсув", "Вертикальний зсув", "Відступ тла", "Непрозорість тла", "Увімк.", "Вимк.", "Білий", "Фіолетовий", "Зелений", "Жовтий", "За FPS", "Вгорі ліворуч", "Вгорі праворуч", "Внизу ліворуч", "Внизу праворуч"]),
-    ("pl", ["Licznik FPS", "Minimum i 1% low", "Tło", "Kolor", "Do następnego rogu", "Przywróć domyślne", "Rozmiar", "Pozycja pozioma", "Pozycja pionowa", "Przesunięcie poziome", "Przesunięcie pionowe", "Margines tła", "Krycie tła", "Wł.", "Wył.", "Biały", "Fioletowy", "Zielony", "Żółty", "Według FPS", "Lewy górny", "Prawy górny", "Lewy dolny", "Prawy dolny"]),
-    ("tr", ["FPS sayacı", "Minimum ve 1% low", "Arka plan", "Renk", "Sonraki köşeye taşı", "Varsayılanlara dön", "Boyut", "Yatay konum", "Dikey konum", "Yatay kaydırma", "Dikey kaydırma", "Arka plan boşluğu", "Arka plan opaklığı", "Açık", "Kapalı", "Beyaz", "Mor", "Yeşil", "Sarı", "FPS'ye göre", "Sol üst", "Sağ üst", "Sol alt", "Sağ alt"]),
-    ("ar", ["عداد FPS", "الحد الأدنى و1% low", "الخلفية", "اللون", "الانتقال إلى الزاوية التالية", "استعادة الإعدادات الافتراضية", "الحجم", "الموضع الأفقي", "الموضع العمودي", "الإزاحة الأفقية", "الإزاحة العمودية", "هامش الخلفية", "شفافية الخلفية", "مفعّل", "معطّل", "أبيض", "بنفسجي", "أخضر", "أصفر", "حسب FPS", "أعلى اليسار", "أعلى اليمين", "أسفل اليسار", "أسفل اليمين"]),
-    ("zh_cn", ["FPS 计数器", "最低值与 1% low", "背景", "颜色", "移到下一个角落", "恢复默认设置", "大小", "水平位置", "垂直位置", "水平偏移", "垂直偏移", "背景边距", "背景不透明度", "开", "关", "白色", "紫色", "绿色", "黄色", "按 FPS", "左上", "右上", "左下", "右下"]),
-    ("zh_tw", ["FPS 計數器", "最低值與 1% low", "背景", "顏色", "移到下一個角落", "恢復預設值", "大小", "水平位置", "垂直位置", "水平偏移", "垂直偏移", "背景邊距", "背景不透明度", "開", "關", "白色", "紫色", "綠色", "黃色", "依 FPS", "左上", "右上", "左下", "右下"]),
-    ("ja", ["FPS カウンター", "最小値と 1% low", "背景", "色", "次の角へ移動", "初期設定に戻す", "サイズ", "水平位置", "垂直位置", "水平オフセット", "垂直オフセット", "背景の余白", "背景の不透明度", "オン", "オフ", "白", "紫", "緑", "黄", "FPS に応じて", "左上", "右上", "左下", "右下"]),
-    ("ko", ["FPS 카운터", "최소값과 1% low", "배경", "색상", "다음 모서리로 이동", "기본값 복원", "크기", "가로 위치", "세로 위치", "가로 오프셋", "세로 오프셋", "배경 여백", "배경 불투명도", "켜짐", "꺼짐", "흰색", "보라색", "초록색", "노란색", "FPS에 따라", "왼쪽 위", "오른쪽 위", "왼쪽 아래", "오른쪽 아래"]),
-    ("th", ["ตัวนับ FPS", "ค่าต่ำสุดและ 1% low", "พื้นหลัง", "สี", "ย้ายไปมุมถัดไป", "คืนค่าเริ่มต้น", "ขนาด", "ตำแหน่งแนวนอน", "ตำแหน่งแนวตั้ง", "ระยะเลื่อนแนวนอน", "ระยะเลื่อนแนวตั้ง", "ขอบพื้นหลัง", "ความทึบพื้นหลัง", "เปิด", "ปิด", "ขาว", "ม่วง", "เขียว", "เหลือง", "ตาม FPS", "ซ้ายบน", "ขวาบน", "ซ้ายล่าง", "ขวาล่าง"]),
-    ("vi", ["Bộ đếm FPS", "Tối thiểu và 1% low", "Nền", "Màu", "Chuyển sang góc tiếp theo", "Khôi phục mặc định", "Kích thước", "Vị trí ngang", "Vị trí dọc", "Dịch ngang", "Dịch dọc", "Lề nền", "Độ mờ nền", "Bật", "Tắt", "Trắng", "Tím", "Xanh lá", "Vàng", "Theo FPS", "Trên trái", "Trên phải", "Dưới trái", "Dưới phải"]),
-    ("id", ["Penghitung FPS", "Minimum dan 1% low", "Latar", "Warna", "Pindah ke sudut berikutnya", "Kembalikan bawaan", "Ukuran", "Posisi horizontal", "Posisi vertikal", "Geser horizontal", "Geser vertikal", "Margin latar", "Opasitas latar", "Nyala", "Mati", "Putih", "Ungu", "Hijau", "Kuning", "Menurut FPS", "Kiri atas", "Kanan atas", "Kiri bawah", "Kanan bawah"]),
+const LANGS: [(&str, [&str; 25]); 19] = [
+    ("en", ["FPS counter", "Minimum and 1% low", "Background", "Color", "Move to the next corner", "Reset to defaults", "Size", "Horizontal position", "Vertical position", "Move with the mouse...", "Drag the FPS counter, then press Done", "Background padding", "Background opacity", "On", "Off", "White", "Purple", "Green", "Yellow", "By FPS", "Top left", "Top right", "Bottom left", "Bottom right", "Done"]),
+    ("pt_br", ["Contador de FPS", "Mínimo e 1% low", "Fundo", "Cor", "Mover para o próximo canto", "Restaurar padrões", "Tamanho", "Posição horizontal", "Posição vertical", "Mover com o mouse...", "Arraste o contador de FPS e toque em Concluído", "Margem do fundo", "Opacidade do fundo", "Ligado", "Desligado", "Branco", "Roxo", "Verde", "Amarelo", "Pelo FPS", "Canto superior esquerdo", "Canto superior direito", "Canto inferior esquerdo", "Canto inferior direito", "Concluído"]),
+    ("pt_pt", ["Contador de FPS", "Mínimo e 1% low", "Fundo", "Cor", "Mover para o canto seguinte", "Repor predefinições", "Tamanho", "Posição horizontal", "Posição vertical", "Mover com o rato...", "Arraste o contador de FPS e toque em Concluído", "Margem do fundo", "Opacidade do fundo", "Ligado", "Desligado", "Branco", "Roxo", "Verde", "Amarelo", "Pelo FPS", "Canto superior esquerdo", "Canto superior direito", "Canto inferior esquerdo", "Canto inferior direito", "Concluído"]),
+    ("es", ["Contador de FPS", "Mínimo y 1% low", "Fondo", "Color", "Mover a la esquina siguiente", "Restablecer valores", "Tamaño", "Posición horizontal", "Posición vertical", "Mover con el ratón...", "Arrastra el contador de FPS y pulsa Listo", "Margen del fondo", "Opacidad del fondo", "Activado", "Desactivado", "Blanco", "Morado", "Verde", "Amarillo", "Según FPS", "Arriba a la izquierda", "Arriba a la derecha", "Abajo a la izquierda", "Abajo a la derecha", "Listo"]),
+    ("fr", ["Compteur de FPS", "Minimum et 1% low", "Fond", "Couleur", "Aller au coin suivant", "Rétablir les valeurs", "Taille", "Position horizontale", "Position verticale", "Déplacer à la souris...", "Faites glisser le compteur de FPS, puis appuyez sur Terminé", "Marge du fond", "Opacité du fond", "Activé", "Désactivé", "Blanc", "Violet", "Vert", "Jaune", "Selon les FPS", "En haut à gauche", "En haut à droite", "En bas à gauche", "En bas à droite", "Terminé"]),
+    ("de", ["FPS-Anzeige", "Minimum und 1% low", "Hintergrund", "Farbe", "Zur nächsten Ecke", "Auf Standard zurücksetzen", "Größe", "Horizontale Position", "Vertikale Position", "Mit der Maus verschieben...", "Ziehe den FPS-Zähler und drücke dann Fertig", "Hintergrundrand", "Hintergrunddeckkraft", "An", "Aus", "Weiß", "Lila", "Grün", "Gelb", "Nach FPS", "Oben links", "Oben rechts", "Unten links", "Unten rechts", "Fertig"]),
+    ("it", ["Contatore FPS", "Minimo e 1% low", "Sfondo", "Colore", "Vai all'angolo successivo", "Ripristina predefiniti", "Dimensione", "Posizione orizzontale", "Posizione verticale", "Sposta con il mouse...", "Trascina il contatore FPS, poi premi Fatto", "Margine dello sfondo", "Opacità dello sfondo", "Attivo", "Disattivo", "Bianco", "Viola", "Verde", "Giallo", "In base agli FPS", "In alto a sinistra", "In alto a destra", "In basso a sinistra", "In basso a destra", "Fatto"]),
+    ("ru", ["Счётчик FPS", "Минимум и 1% low", "Фон", "Цвет", "В следующий угол", "Сбросить настройки", "Размер", "Горизонтальная позиция", "Вертикальная позиция", "Переместить мышью...", "Перетащите счётчик FPS и нажмите «Готово»", "Отступ фона", "Непрозрачность фона", "Вкл.", "Выкл.", "Белый", "Фиолетовый", "Зелёный", "Жёлтый", "По FPS", "Сверху слева", "Сверху справа", "Снизу слева", "Снизу справа", "Готово"]),
+    ("uk", ["Лічильник FPS", "Мінімум і 1% low", "Тло", "Колір", "До наступного кута", "Скинути налаштування", "Розмір", "Горизонтальна позиція", "Вертикальна позиція", "Перемістити мишею...", "Перетягніть лічильник FPS і натисніть «Готово»", "Відступ тла", "Непрозорість тла", "Увімк.", "Вимк.", "Білий", "Фіолетовий", "Зелений", "Жовтий", "За FPS", "Вгорі ліворуч", "Вгорі праворуч", "Внизу ліворуч", "Внизу праворуч", "Готово"]),
+    ("pl", ["Licznik FPS", "Minimum i 1% low", "Tło", "Kolor", "Do następnego rogu", "Przywróć domyślne", "Rozmiar", "Pozycja pozioma", "Pozycja pionowa", "Przesuń myszą...", "Przeciągnij licznik FPS, potem naciśnij Gotowe", "Margines tła", "Krycie tła", "Wł.", "Wył.", "Biały", "Fioletowy", "Zielony", "Żółty", "Według FPS", "Lewy górny", "Prawy górny", "Lewy dolny", "Prawy dolny", "Gotowe"]),
+    ("tr", ["FPS sayacı", "Minimum ve 1% low", "Arka plan", "Renk", "Sonraki köşeye taşı", "Varsayılanlara dön", "Boyut", "Yatay konum", "Dikey konum", "Fareyle taşı...", "FPS sayacını sürükleyin, sonra Bitti'ye basın", "Arka plan boşluğu", "Arka plan opaklığı", "Açık", "Kapalı", "Beyaz", "Mor", "Yeşil", "Sarı", "FPS'ye göre", "Sol üst", "Sağ üst", "Sol alt", "Sağ alt", "Bitti"]),
+    ("ar", ["عداد FPS", "الحد الأدنى و1% low", "الخلفية", "اللون", "الانتقال إلى الزاوية التالية", "استعادة الإعدادات الافتراضية", "الحجم", "الموضع الأفقي", "الموضع العمودي", "التحريك بالفأرة...", "اسحب عداد FPS ثم اضغط تم", "هامش الخلفية", "شفافية الخلفية", "مفعّل", "معطّل", "أبيض", "بنفسجي", "أخضر", "أصفر", "حسب FPS", "أعلى اليسار", "أعلى اليمين", "أسفل اليسار", "أسفل اليمين", "تم"]),
+    ("zh_cn", ["FPS 计数器", "最低值与 1% low", "背景", "颜色", "移到下一个角落", "恢复默认设置", "大小", "水平位置", "垂直位置", "用鼠标移动...", "拖动 FPS 计数器，然后点击完成", "背景边距", "背景不透明度", "开", "关", "白色", "紫色", "绿色", "黄色", "按 FPS", "左上", "右上", "左下", "右下", "完成"]),
+    ("zh_tw", ["FPS 計數器", "最低值與 1% low", "背景", "顏色", "移到下一個角落", "恢復預設值", "大小", "水平位置", "垂直位置", "用滑鼠移動...", "拖曳 FPS 計數器，然後點擊完成", "背景邊距", "背景不透明度", "開", "關", "白色", "紫色", "綠色", "黃色", "依 FPS", "左上", "右上", "左下", "右下", "完成"]),
+    ("ja", ["FPS カウンター", "最小値と 1% low", "背景", "色", "次の角へ移動", "初期設定に戻す", "サイズ", "水平位置", "垂直位置", "マウスで移動...", "FPS カウンターをドラッグして「完了」を押してください", "背景の余白", "背景の不透明度", "オン", "オフ", "白", "紫", "緑", "黄", "FPS に応じて", "左上", "右上", "左下", "右下", "完了"]),
+    ("ko", ["FPS 카운터", "최소값과 1% low", "배경", "색상", "다음 모서리로 이동", "기본값 복원", "크기", "가로 위치", "세로 위치", "마우스로 이동...", "FPS 카운터를 끌어 놓은 뒤 완료를 누르세요", "배경 여백", "배경 불투명도", "켜짐", "꺼짐", "흰색", "보라색", "초록색", "노란색", "FPS에 따라", "왼쪽 위", "오른쪽 위", "왼쪽 아래", "오른쪽 아래", "완료"]),
+    ("th", ["ตัวนับ FPS", "ค่าต่ำสุดและ 1% low", "พื้นหลัง", "สี", "ย้ายไปมุมถัดไป", "คืนค่าเริ่มต้น", "ขนาด", "ตำแหน่งแนวนอน", "ตำแหน่งแนวตั้ง", "ย้ายด้วยเมาส์...", "ลากตัวนับ FPS แล้วกดเสร็จสิ้น", "ขอบพื้นหลัง", "ความทึบพื้นหลัง", "เปิด", "ปิด", "ขาว", "ม่วง", "เขียว", "เหลือง", "ตาม FPS", "ซ้ายบน", "ขวาบน", "ซ้ายล่าง", "ขวาล่าง", "เสร็จสิ้น"]),
+    ("vi", ["Bộ đếm FPS", "Tối thiểu và 1% low", "Nền", "Màu", "Chuyển sang góc tiếp theo", "Khôi phục mặc định", "Kích thước", "Vị trí ngang", "Vị trí dọc", "Di chuyển bằng chuột...", "Kéo bộ đếm FPS rồi nhấn Xong", "Lề nền", "Độ mờ nền", "Bật", "Tắt", "Trắng", "Tím", "Xanh lá", "Vàng", "Theo FPS", "Trên trái", "Trên phải", "Dưới trái", "Dưới phải", "Xong"]),
+    ("id", ["Penghitung FPS", "Minimum dan 1% low", "Latar", "Warna", "Pindah ke sudut berikutnya", "Kembalikan bawaan", "Ukuran", "Posisi horizontal", "Posisi vertikal", "Pindahkan dengan mouse...", "Seret penghitung FPS, lalu tekan Selesai", "Margin latar", "Opasitas latar", "Nyala", "Mati", "Putih", "Ungu", "Hijau", "Kuning", "Menurut FPS", "Kiri atas", "Kanan atas", "Kiri bawah", "Kanan bawah", "Selesai"]),
 ];
 
-fn strings() -> &'static [&'static str; 24] {
+fn strings() -> &'static [&'static str; 25] {
     let code = ui::language().to_lowercase();
     let find = |c: &str| LANGS.iter().find(|(l, _)| *l == c).map(|(_, s)| s);
     find(&code)
@@ -171,6 +173,7 @@ impl Fps {
             button(BACKGROUND, format!("{}: {}", t[2], on_off(t, self.background))),
             button(COLOR, format!("{}: {}", t[3], t[15 + self.color as usize])),
             button(CORNER, t[4].into()),
+            button(MOVE, t[9].into()),
             self.slider_widget(S_SIZE),
             self.slider_widget(S_X),
             self.slider_widget(S_Y),
@@ -216,6 +219,8 @@ impl Fps {
         let rgb = COLORS[self.color as usize].1;
         let rgb = if rgb != 0 {
             rgb
+        } else if fps >= 75 {
+            0xB060FF
         } else if fps >= 60 {
             0x55FF55
         } else if fps >= 30 {
@@ -379,6 +384,21 @@ impl Mod for Fps {
             BACKGROUND => self.background = !self.background,
             COLOR => self.color = (self.color + 1) % COLORS.len() as u32,
             RESET => self.defaults(),
+            MOVE => {
+                let t = strings();
+                ui::open_screen(&ui::Screen {
+                    title: t[0].into(),
+                    widgets: vec![
+                        ui::Widget::Text(ui::TextWidget { id: 1, text: t[10].into(), color: 0xB98CF2 }),
+                        ui::Widget::Button(ButtonWidget { id: DONE, label: t[24].into() }),
+                    ],
+                });
+                return;
+            }
+            DONE => {
+                ui::close_screen();
+                return;
+            }
             _ => return,
         }
         self.drawn = false;

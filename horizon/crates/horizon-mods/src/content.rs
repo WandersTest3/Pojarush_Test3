@@ -28,7 +28,8 @@ pub const MAX_TOTAL: u64 = 512 << 20;
 pub fn check_path(name: &str) -> Result<(), String> {
     let bad = || format!("{name:?} is not a plain assets/ or data/ path");
     let mut parts = name.split('/');
-    if !matches!(parts.next(), Some("assets" | "data")) {
+    let top = parts.next();
+    if !matches!(top, Some("assets" | "data" | "models")) {
         return Err(bad());
     }
     let mut count = 0;
@@ -41,8 +42,8 @@ pub fn check_path(name: &str) -> Result<(), String> {
             return Err(bad());
         }
     }
-    // assets/<namespace>/<file> at least.
-    if count < 2 {
+    // assets/<namespace>/<file> at least; models/<file> (render.spawn-model).
+    if count < if top == Some("models") { 1 } else { 2 } {
         return Err(bad());
     }
     Ok(())

@@ -170,4 +170,9 @@
     <string name="color_slots_hint">Geçerli rengi kaydetmek için boş bir daireye dokunun; kayıtlı bir rengi kullanmak için dokunun, silmek için basılı tutun.</string>
     <string name="registry_open_modrinth">Modrinth\'i aç</string>
     <string name="registry_load_more">Daha fazla yükle</string>
+    <string name="menu_music_title">Menü müziği</string>
+    <string name="menu_music_none">Müzik yok. Müzik eklenince duvar kâğıdı videosunun sesi kapanır.</string>
+    <string name="menu_music_choose">Müzik seç (MP3)</string>
+    <string name="menu_music_volume">Müzik sesi</string>
+    <string name="overlay_close_game_confirm">Oyun kapatılsın mı? Bu oturumdaki kaydedilmemiş ilerleme kaybolabilir.</string>
 </resources>

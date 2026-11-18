@@ -1408,14 +1408,18 @@ fn render_visible(
 ) {
     let overlay = u32::from(red_overlay(m));
     let s = anim::state(m, alpha);
-    let (model_key, texture) = body(m);
-    let model = m
-        .kind
-        .layer(&model_key)
-        .cloned()
-        .unwrap_or_else(|| m.kind.model.clone());
+    let (model_key, mut texture) = body(m);
+    let layered = m.kind.layer(&model_key).cloned();
+    let custom = if layered.is_none() { super::cem::get(&m.kind.id) } else { None };
+    let model = layered.unwrap_or_else(|| m.kind.model.clone());
     let mut poses = Poses::new(&model);
     anim::setup(m, &s, &mut poses, &data.animations);
+    if let Some(cem) = &custom {
+        if let Some(t) = &cem.texture {
+            texture.clone_from(t);
+        }
+        cem.animate(&cem_inputs(m, &s), &mut poses);
+    }
     let draw_body = |out: &mut Vec<Vertex>| {
         // A player or mannequin whose skin has no atlas sprite (an evicted or
         // never stored download) draws with its default skin, not invisibly.
@@ -1571,6 +1575,39 @@ fn armor_slot(model: &str) -> Option<usize> {
     })
 }
 /// Render with a fixed texture rect (the earlier API).
+/// The parameters CEM animations read for `m` this frame.
+fn cem_inputs(m: &Mob, s: &anim::State) -> super::cem::Inputs {
+    use super::cem::Param as P;
+    let mut v = [0.0f32; 27];
+    let b = |x: bool| if x { 1.0 } else { 0.0 };
+    v[P::LimbSwing as usize] = s.pos;
+    v[P::LimbSpeed as usize] = s.speed;
+    v[P::Age as usize] = s.age;
+    v[P::HeadPitch as usize] = s.x_rot;
+    v[P::HeadYaw as usize] = s.y_rot;
+    v[P::Health as usize] = m.health;
+    v[P::MaxHealth as usize] = m.kind.max_health;
+    v[P::HurtTime as usize] = m.hurt_time as f32;
+    v[P::DeathTime as usize] = m.death_time as f32;
+    v[P::SwingProgress as usize] = s.swing;
+    v[P::PosX as usize] = m.position.x as f32;
+    v[P::PosY as usize] = m.position.y as f32;
+    v[P::PosZ as usize] = m.position.z as f32;
+    v[P::RotX as usize] = m.head_pitch;
+    v[P::RotY as usize] = m.body_yaw;
+    v[P::Id as usize] = m.id as f32;
+    v[P::FrameTime as usize] = 1.0 / 60.0;
+    v[P::Time as usize] = s.age;
+    v[P::IsChild as usize] = b(s.baby);
+    v[P::IsOnGround as usize] = b(m.on_ground);
+    v[P::IsAlive as usize] = b(m.alive());
+    v[P::IsHurt as usize] = b(m.hurt_time > 0);
+    v[P::IsInWater as usize] = b(m.fluids.in_water);
+    v[P::IsInvisible as usize] = b(m.invisible);
+    v[P::IsBurning as usize] = b(m.is_on_fire());
+    super::cem::Inputs { values: v, id: m.id }
+}
+
 pub fn render_single(
     m: &Mob,
     alpha: f32,

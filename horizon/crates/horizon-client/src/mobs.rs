@@ -19,6 +19,8 @@ pub mod body_anim;
 pub mod brain;
 pub mod breeze;
 pub mod camel;
+pub mod bedrock;
+pub mod cem;
 pub mod caravan;
 pub mod combat;
 pub mod control;
@@ -507,6 +509,12 @@ impl MobTypes {
                     id,
                 },
             );
+        }
+        cem::reset();
+        for (id, t) in out.iter_mut() {
+            if let Some(model) = cem::apply(root, id, &t.model) {
+                t.model = Arc::new(model);
+            }
         }
         Ok(Self { types: out })
     }

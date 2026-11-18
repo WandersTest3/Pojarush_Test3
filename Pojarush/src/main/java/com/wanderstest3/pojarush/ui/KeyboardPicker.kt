@@ -102,7 +102,7 @@ private fun PixelKey(label: String, enabled: Boolean, blocked: Boolean, modifier
     val live = enabled && !blocked
     Box(
         modifier = modifier
-            .height(30.dp)
+            .height(34.dp)
             .drawBehind {
                 val px = 2.dp.toPx()
                 drawRect(Outline)
@@ -183,7 +183,7 @@ fun VisualKeyboard(
             }
         }
         if (showSpecials) {
-            Column(modifier = Modifier.width(92.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(modifier = Modifier.width(150.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 SideTitle(stringResource(R.string.editor_actions_special))
                 specials.forEach { (label, action) ->
                     PixelKey(label, enabled = action !in disabled, blocked = false, modifier = Modifier.fillMaxWidth()) { onPick(action) }

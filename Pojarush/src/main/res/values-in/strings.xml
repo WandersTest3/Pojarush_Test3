@@ -170,4 +170,9 @@
     <string name="color_slots_hint">Ketuk lingkaran kosong untuk menyimpan warna saat ini; ketuk warna tersimpan untuk memakainya, tahan untuk menghapusnya.</string>
     <string name="registry_open_modrinth">Buka Modrinth</string>
     <string name="registry_load_more">Muat lebih banyak</string>
+    <string name="menu_music_title">Musik menu</string>
+    <string name="menu_music_none">Tanpa musik. Dengan musik, suara video wallpaper dibisukan.</string>
+    <string name="menu_music_choose">Pilih musik (MP3)</string>
+    <string name="menu_music_volume">Volume musik</string>
+    <string name="overlay_close_game_confirm">Tutup game? Progres yang belum disimpan di sesi ini bisa hilang.</string>
 </resources>

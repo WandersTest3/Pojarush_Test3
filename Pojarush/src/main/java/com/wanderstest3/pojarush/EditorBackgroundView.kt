@@ -46,7 +46,7 @@ class EditorBackgroundView(context: Context, private val interactive: Boolean = 
                 val i = e.actionIndex
                 val x = e.getX(i)
                 val y = e.getY(i)
-                touches[e.getPointerId(i)] = floatArrayOf(x, y, x, y)
+                touches[e.getPointerId(i)] = floatArrayOf(x, y, x, y, SystemClock.uptimeMillis().toFloat())
                 burst(x, y)
             }
             android.view.MotionEvent.ACTION_MOVE -> for (i in 0 until e.pointerCount) {
@@ -135,13 +135,23 @@ class EditorBackgroundView(context: Context, private val interactive: Boolean = 
                     val dx = p.x - t0[0]
                     val dy = p.y - t0[1]
                     val d = kotlin.math.sqrt(dx * dx + dy * dy)
-                    if (d < reach && d > 0.01f) {
+                    val held = now - t0[4].toLong() > HOLD_MS
+                    if (held) {
+                        val pull = reach * 4f
+                        if (d < pull && d > 6f * resources.displayMetrics.density) {
+                            val f = (1f - d / pull) * 5200f * dt
+                            p.vx -= dx / d * f
+                            p.vy -= dy / d * f
+                            p.vx *= 1f - (2.5f * dt).coerceAtMost(0.5f)
+                            p.vy *= 1f - (2.5f * dt).coerceAtMost(0.5f)
+                        }
+                    } else if (d < reach && d > 0.01f) {
                         val f = (1f - d / reach) * 2600f * dt
                         p.vx += dx / d * f + (t0[0] - t0[2]) * 4f * dt * (1f - d / reach) * 10f
                         p.vy += dy / d * f + (t0[1] - t0[3]) * 4f * dt * (1f - d / reach) * 10f
                     }
                 }
-                val k = (dt * 1.5f).coerceAtMost(1f)
+                val k = (dt * (if (touches.values.any { now - it[4].toLong() > HOLD_MS }) 0.2f else 1.5f)).coerceAtMost(1f)
                 p.vx += (p.bvx - p.vx) * k
                 p.vy += (p.bvy - p.vy) * k
                 p.spin = p.spin * (1f - k) + p.spin.coerceIn(-45f, 45f) * k
@@ -197,5 +207,9 @@ class EditorBackgroundView(context: Context, private val interactive: Boolean = 
         }
         paint.style = Paint.Style.FILL
         postInvalidateOnAnimation()
+    }
+
+    private companion object {
+        const val HOLD_MS = 300L
     }
 }

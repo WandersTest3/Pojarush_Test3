@@ -199,6 +199,25 @@ fn build_in(root: &Path, release: bool) -> Result<PathBuf, String> {
     for name in &content.files {
         files.push((name.as_str(), reader.read(name)?));
     }
+    // GeckoLib-style models (`render.spawn-model`): every file under models/.
+    let models = root.join("models");
+    let mut stack = vec![models.clone()];
+    let mut model_files = Vec::new();
+    while let Some(dir) = stack.pop() {
+        for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                stack.push(p);
+            } else if let Ok(rel) = p.strip_prefix(root) {
+                model_files.push((rel.to_string_lossy().replace('\\', "/"), p));
+            }
+        }
+    }
+    model_files.sort();
+    let model_files: Vec<(String, Vec<u8>)> = model_files
+        .into_iter()
+        .map(|(n, p)| std::fs::read(&p).map(|b| (n, b)).map_err(|e| format!("{}: {e}", p.display())))
+        .collect::<Result<_, _>>()?;
     if !manifest.icon.is_empty() {
         let icon = std::fs::read(root.join(&manifest.icon))
             .map_err(|e| format!("icon {}: {e}", manifest.icon))?;
@@ -206,6 +225,9 @@ fn build_in(root: &Path, release: bool) -> Result<PathBuf, String> {
             return Err(format!("icon {} is not a PNG", manifest.icon));
         }
         files.push((manifest.icon.as_str(), icon));
+    }
+    for (n, b) in &model_files {
+        files.push((n.as_str(), b.clone()));
     }
     let files: Vec<(&str, &[u8])> = files.iter().map(|(n, b)| (*n, b.as_slice())).collect();
     let dir = target_dir.join("horizon-mod");

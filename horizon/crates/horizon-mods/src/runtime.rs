@@ -6,6 +6,7 @@ use server_bindings::{
     horizon::mods::{players, world as mod_world},
 };
 use std::{
+    collections::BTreeMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::{Duration, Instant, SystemTime},
@@ -77,6 +78,9 @@ pub struct Directory {
     pub shader_pack: String,
 }
 
+/// The `ui-events.select` id of a click on a mod's title-screen button.
+pub const TITLE_BUTTON: u32 = 0xFFFF_FF00;
+
 /// What mods asked of the game's menus during their hooks, for it to act on.
 #[derive(Clone, Debug, PartialEq)]
 pub enum UiRequest {
@@ -146,8 +150,32 @@ pub use render_bindings::horizon::mods::input::{Event as InputEvent, HeldItem, I
 pub use render_bindings::horizon::mods::render::{
     Corner as RenderCorner, FarTerrain as ModFarTerrain, FillShape, FrameRate, ItemShape,
     Minimap as ModMinimap, Point as RenderPoint, QuadShape, Rect as RenderRect, Shape, SpriteShape,
-    HudDrag, TextShape, Zoom as ModZoom,
+    HudDrag, ModelPlace, TextShape, Zoom as ModZoom,
 };
+
+/// A model a mod placed in the world (`render.spawn-model`).
+#[derive(Clone, Debug)]
+pub struct ModModel {
+    pub geometry: String,
+    pub texture: String,
+    pub place: ModelPlace,
+    /// (file, animation, looping, serial): the serial changes each time one starts.
+    pub animation: Option<(String, String, bool, u64)>,
+    /// Bone turns (degrees, Bedrock axes) and visibility set by the mod.
+    pub bones: BTreeMap<String, ([f32; 3], bool)>,
+}
+
+/// Models one mod may have at once.
+pub const MAX_MODELS: usize = 64;
+static ANIMATION_SERIAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+fn model_file(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 128
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | '/'))
+        && !name.contains("..")
+        && !name.starts_with('/')
+}
 use render_bindings::{RenderHost, horizon::mods::render};
 /// Capability `recipes`'s imports (docs/mods.md): the game's recipes and items.
 mod recipes_bindings {
@@ -477,6 +505,9 @@ struct State {
     hud_scale: f32,
     hud_always: bool,
     hud_drag: Option<RenderRect>,
+    title_button: Option<String>,
+    models: BTreeMap<u32, ModModel>,
+    next_model: u32,
     drag: Option<(f32, f32, bool)>,
     /// Capability `render`'s corner panel.
     corner: Option<CornerPanel>,
@@ -688,6 +719,9 @@ impl Mods {
             hud_scale: 1.0,
             hud_always: false,
             hud_drag: None,
+            title_button: None,
+            models: BTreeMap::new(),
+            next_model: 1,
             drag: None,
             corner: None,
             zoom: None,
@@ -1326,6 +1360,17 @@ impl Mods {
             })
             .collect()
     }
+    /// The models running mods placed, with each mod's index and file.
+    pub fn models(&self) -> impl Iterator<Item = (usize, &Path, &ModModel)> {
+        self.entries.iter().enumerate().filter_map(|(i, e)| Some((i, e.path.as_path(), e.run.as_ref()?)))
+            .flat_map(|(i, path, run)| run.store.data().models.values().map(move |m| (i, path, m)))
+    }
+    /// The title-screen button a running mod asked for: its index and label.
+    pub fn title_button(&self) -> Option<(usize, String)> {
+        self.entries.iter().enumerate().find_map(|(i, e)| {
+            Some((i, e.run.as_ref()?.store.data().title_button.clone()?))
+        })
+    }
     /// Adds a drag (GUI pixels) to mod `i`'s draggable area.
     pub fn push_hud_drag(&mut self, i: usize, dx: f32, dy: f32, done: bool) {
         let Some(run) = self.entries.get_mut(i).and_then(|e| e.run.as_mut()) else { return };
@@ -1922,6 +1967,54 @@ fn clip_shapes(shapes: Vec<Shape>) -> Vec<Shape> {
 }
 
 impl render::Host for State {
+    fn spawn_model(&mut self, geometry: String, texture: String, place: ModelPlace) -> Result<u32, String> {
+        if !model_file(&geometry) || !model_file(&texture) {
+            return Err("model files are names inside the mod's models/ folder".into());
+        }
+        if self.models.len() >= MAX_MODELS {
+            return Err(format!("at most {MAX_MODELS} models per mod"));
+        }
+        let id = self.next_model;
+        self.next_model = self.next_model.wrapping_add(1).max(1);
+        self.models.insert(
+            id,
+            ModModel { geometry, texture, place, animation: None, bones: BTreeMap::new() },
+        );
+        Ok(id)
+    }
+    fn place_model(&mut self, id: u32, place: ModelPlace) {
+        if let Some(m) = self.models.get_mut(&id) {
+            m.place = place;
+        }
+    }
+    fn play_animation(&mut self, id: u32, file: String, name: String, looping: bool) {
+        if !model_file(&file) || name.len() > 128 {
+            return;
+        }
+        if let Some(m) = self.models.get_mut(&id) {
+            let serial = ANIMATION_SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            m.animation = Some((file, name, looping, serial));
+        }
+    }
+    fn stop_animation(&mut self, id: u32) {
+        if let Some(m) = self.models.get_mut(&id) {
+            m.animation = None;
+        }
+    }
+    fn set_bone(&mut self, id: u32, bone: String, rotation: (f32, f32, f32), visible: bool) {
+        if bone.len() > 128 {
+            return;
+        }
+        if let Some(m) = self.models.get_mut(&id) {
+            let r = [rotation.0, rotation.1, rotation.2].map(|v| if v.is_finite() { v } else { 0.0 });
+            if m.bones.len() < 256 || m.bones.contains_key(&bone) {
+                m.bones.insert(bone, (r, visible));
+            }
+        }
+    }
+    fn remove_model(&mut self, id: u32) {
+        self.models.remove(&id);
+    }
     fn set_hud(&mut self, shapes: Vec<Shape>) {
         self.shapes = clip_shapes(shapes);
     }
@@ -2120,6 +2213,10 @@ impl ui::Host for State {
     }
     fn reload_shader_pack(&mut self) {
         request(UiRequest::ReloadShaderPack);
+    }
+    fn set_title_button(&mut self, label: String) {
+        let label = clip(label);
+        self.title_button = (!label.trim().is_empty()).then_some(label);
     }
     fn set_slider(&mut self, id: u32, position: u32, label: String) {
         let label = clip(label);

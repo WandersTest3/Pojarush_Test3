@@ -233,6 +233,8 @@ pub enum Mode {
 pub enum Action {
     None,
     Quit,
+    /// The mod button where Realms is.
+    ModButton,
     Options,
     Accessibility,
     Language,
@@ -261,6 +263,8 @@ pub struct Title {
     pub last_server: String,
     /// `skipMultiplayerWarning`, synchronized with `options.txt` the same way.
     pub skip_multiplayer_warning: bool,
+    /// A mod's button where Realms is, by its label (Mod Menu's "Mods").
+    pub mod_button: Option<String>,
     pub saves: PathBuf,
     /// The prepared resource root: the flat preset list and block registry.
     resources: PathBuf,
@@ -426,6 +430,7 @@ impl Title {
             mode,
             last_server: String::new(),
             skip_multiplayer_warning: false,
+            mod_button: None,
             saves,
             resources: resources.to_owned(),
             started: now,
@@ -995,14 +1000,17 @@ impl Title {
                         true,
                         4,
                     ),
-                    b(
-                        cx - 100.0,
-                        y + 48.0,
-                        200.0,
-                        &lang::get_or("menu.online", "Minecraft Realms"),
-                        false,
-                        0,
-                    ),
+                    match &self.mod_button {
+                        Some(label) => b(cx - 100.0, y + 48.0, 200.0, label, true, 20),
+                        None => b(
+                            cx - 100.0,
+                            y + 48.0,
+                            200.0,
+                            &lang::get_or("menu.online", "Minecraft Realms"),
+                            false,
+                            0,
+                        ),
+                    },
                     b(
                         cx - 100.0,
                         y + 96.0,
@@ -1976,6 +1984,7 @@ impl Title {
                 Action::None
             }
             (Mode::Main, Some(2)) => Action::Quit,
+            (Mode::Main, Some(20)) => Action::ModButton,
             (Mode::Main, Some(4)) => {
                 // TitleScreen.init: SafetyScreen first, unless it was turned off.
                 self.mode = if self.skip_multiplayer_warning {
