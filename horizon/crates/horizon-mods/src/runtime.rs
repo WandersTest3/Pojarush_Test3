@@ -523,6 +523,7 @@ struct State {
     hud_drag: Option<RenderRect>,
     title_button: Option<String>,
     video_button: Option<String>,
+    cape: Option<String>,
     models: BTreeMap<u32, ModModel>,
     next_model: u32,
     drag: Option<(f32, f32, bool)>,
@@ -739,6 +740,7 @@ impl Mods {
             title_button: None,
             video_button: None,
             models: BTreeMap::new(),
+            cape: None,
             next_model: 1,
             drag: None,
             corner: None,
@@ -1225,7 +1227,13 @@ impl Mods {
                 .filter(|(_, key)| key_ok(key))
                 .map(|(n, k)| (n.to_owned(), k.to_owned()))
                 .collect();
-            for (name, key) in input.bindings.clone() {
+            let defaults: Vec<(String, String)> = input
+                .keys
+                .iter()
+                .filter(|k| !input.bindings.iter().any(|(n, _)| *n == k.name) && k.key != k.default)
+                .map(|k| (k.name.clone(), k.default.clone()))
+                .collect();
+            for (name, key) in input.bindings.clone().into_iter().chain(defaults) {
                 input.rebind(&name, key);
             }
         }
@@ -1382,6 +1390,10 @@ impl Mods {
     pub fn models(&self) -> impl Iterator<Item = (usize, &Path, &ModModel)> {
         self.entries.iter().enumerate().filter_map(|(i, e)| Some((i, e.path.as_path(), e.run.as_ref()?)))
             .flat_map(|(i, path, run)| run.store.data().models.values().map(move |m| (i, path, m)))
+    }
+    /// The cape a running mod gives the local player: its package and the PNG in `models/`.
+    pub fn player_cape(&self) -> Option<(&Path, &str)> {
+        self.entries.iter().find_map(|e| Some((e.path.as_path(), e.run.as_ref()?.store.data().cape.as_deref()?)))
     }
     /// The Video Settings button a running mod asked for: its index and label.
     pub fn video_button(&self) -> Option<(usize, String)> {
@@ -1837,6 +1849,8 @@ pub struct ModKey {
     pub label: String,
     /// `key.keyboard.r`.
     pub key: String,
+    /// The key the mod registered, for Controls' reset.
+    pub default: String,
 }
 
 /// What capability `input` holds for one mod.
@@ -1902,18 +1916,19 @@ impl input::Host for State {
             ));
         }
         let (name, label) = (clip(name), clip(label));
+        let default = key.clone();
         let key = match self.input.bindings.iter().find(|(n, _)| *n == name) {
             Some((_, chosen)) => chosen.clone(),
             None => key,
         };
         if let Some(k) = self.input.keys.iter_mut().find(|k| k.name == name) {
-            (k.label, k.key) = (label, key);
+            (k.label, k.key, k.default) = (label, key, default);
             return Ok(());
         }
         if self.input.keys.len() == KEYS {
             return Err(format!("a mod may register {KEYS} keys"));
         }
-        self.input.keys.push(ModKey { name, label, key });
+        self.input.keys.push(ModKey { name, label, key, default });
         Ok(())
     }
     fn held(&mut self) -> Option<HeldItem> {
@@ -2065,6 +2080,17 @@ impl render::Host for State {
     }
     fn player_skin_slim(&mut self) -> bool {
         PLAYER_SKIN.lock().is_ok_and(|p| p.slim)
+    }
+    fn set_player_cape(&mut self, texture: String) -> Result<(), String> {
+        if texture.is_empty() {
+            self.cape = None;
+            return Ok(());
+        }
+        if !model_file(&texture) {
+            return Err("the cape is a PNG file in models/".into());
+        }
+        self.cape = Some(texture);
+        Ok(())
     }
     fn player_skin(&mut self) -> Option<Vec<u8>> {
         PLAYER_SKIN.lock().ok()?.pixels.as_ref().map(|p| p.to_vec())

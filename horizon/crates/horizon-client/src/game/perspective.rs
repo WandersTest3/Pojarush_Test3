@@ -487,7 +487,7 @@ impl Game<'_> {
         m.extra.fall_fly_ticks = fly_ticks;
         m.extra.auto_spin_attack = spinning;
         m.extra.main_hand_left = self.settings.main_hand_left;
-        m.extra.hidden_model_parts = (!self.settings.file.model_customisation() & 0x7F) | Self::mod_hidden_parts();
+        m.extra.hidden_model_parts = !self.settings.file.model_customisation() & 0x7F;
         m.extra.using_item = using;
         m.extra.using_off_hand = using_off_hand;
         m.extra.blocking = blocking;
@@ -586,6 +586,16 @@ impl Game<'_> {
         }
         let Some(m) = self.player_model.as_ref() else {
             return;
+        };
+        let hidden = Self::mod_hidden_parts();
+        let hiding;
+        let m = if hidden != 0 && self.own_body_visible() {
+            let mut copy = m.clone();
+            copy.extra.hidden_model_parts |= hidden;
+            hiding = copy;
+            &hiding
+        } else {
+            m
         };
         let light = self.world.light(
             m.position.x.floor() as i32,

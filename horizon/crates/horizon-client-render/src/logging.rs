@@ -235,6 +235,9 @@ enum Out {
     },
     /// Answer once everything before is written.
     Flush(mpsc::SyncSender<()>),
+    /// A new game starts in this process: the last one's log is archived and a new
+    /// `latest.log` begins, one file per game.
+    Roll,
 }
 
 /// The file side of the log, on its own thread: a line costs the thread that logs it a
@@ -261,22 +264,20 @@ impl Writer {
                     if let Some(message) = message {
                         let _ = writeln!(stderr.lock(), "{message}");
                     }
-                    if date != self.date {
-                        if let Some(latest) = &mut self.file
-                            && let Err(e) = roll(&mut latest.file, &self.dir, self.date)
-                        {
-                            let _ = writeln!(
-                                stderr.lock(),
-                                "Horizon: could not roll over the log: {e}"
-                            );
-                        }
-                        self.date = date;
-                    }
+                    let _ = date;
                     if let Some(latest) = &mut self.file {
                         let mut text = lines.join("\n");
                         text.push('\n');
                         let _ = latest.file.write_all(text.as_bytes());
                     }
+                }
+                Out::Roll => {
+                    if let Some(latest) = &mut self.file
+                        && let Err(e) = roll(&mut latest.file, &self.dir, self.date)
+                    {
+                        let _ = writeln!(stderr.lock(), "Horizon: could not roll over the log: {e}");
+                    }
+                    self.date = Local::now().date_naive();
                 }
                 Out::Flush(done) => {
                     if let Some(latest) = &mut self.file {
@@ -384,6 +385,10 @@ impl Logger {
 /// Starts the log in `home/logs`. The main thread shows as `main_thread` in it. Messages are
 /// still printed when the file cannot be opened.
 pub fn init(home: &Path, main_thread: &'static str) {
+    if let Some(logger) = LOGGER.get() {
+        let _ = logger.out.send(Out::Roll);
+        return;
+    }
     let dir = logs_dir(home);
     let file = match open_latest(&dir) {
         Ok(Some(latest)) => Some(latest),

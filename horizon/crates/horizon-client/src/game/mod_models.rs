@@ -29,7 +29,11 @@ pub(super) struct ModModels {
     pub(super) downloaded: HashMap<String, Arc<[u8]>>,
     /// The skin `render.player-skin` last gave.
     skin: String,
+    /// The atlas sprite of the cape a mod gives the local player (`render.set-player-cape`).
+    pub(super) cape: Option<String>,
 }
+
+const MOD_CAPE: &str = "horizon/modcape";
 
 const PLAYER_SKIN: &str = "player:skin";
 
@@ -49,6 +53,7 @@ impl Game<'_> {
     #[cfg(feature = "mods")]
     pub(super) fn mod_model_geometry(&mut self, camera: glam::DVec3, out: &mut Vec<Vertex>) {
         self.sync_player_skin();
+        self.sync_player_cape();
         let wanted: Vec<(PathBuf, horizon_mods::ModModel)> = self
             .mods
             .mods
@@ -194,6 +199,33 @@ impl Game<'_> {
     }
     #[cfg(not(feature = "mods"))]
     pub(super) fn mod_attached_geometry(&mut self, _camera: glam::DVec3, _alpha: f64, _out: &mut Vec<Vertex>) {}
+    /// The cape a mod gives the local player: uploaded, kept in the atlas and worn.
+    #[cfg(feature = "mods")]
+    fn sync_player_cape(&mut self) {
+        let wanted = self.mods.mods.player_cape().map(|(p, f)| (p.to_owned(), f.to_owned()));
+        let sprite = wanted.and_then(|(path, file)| {
+            let [u0, v0, u1, v1] = self.model_texture(&path, &format!("models/{file}"))?;
+            let mut r = self.gui.atlas.sprites.get("horizon/model0").copied()?;
+            (r.u0, r.v0, r.u1, r.v1) = (u0, v0, u1, v1);
+            self.gui.atlas.sprites.insert(MOD_CAPE.to_owned(), r);
+            Some(MOD_CAPE.to_owned())
+        });
+        if sprite == self.mod_models.cape {
+            if let (Some(s), Some(m)) = (&sprite, self.player_model.as_mut()) {
+                m.cape = Some(s.clone());
+            }
+            return;
+        }
+        let was = self.mod_models.cape.take();
+        if let Some(m) = self.player_model.as_mut() {
+            match &sprite {
+                Some(s) => m.cape = Some(s.clone()),
+                None if was.is_some() && m.cape.as_deref() == Some(MOD_CAPE) => m.cape = None,
+                None => {}
+            }
+        }
+        self.mod_models.cape = sprite;
+    }
     /// Gives mods the local player's skin (`render.player-skin`) when it changes.
     #[cfg(feature = "mods")]
     fn sync_player_skin(&mut self) {

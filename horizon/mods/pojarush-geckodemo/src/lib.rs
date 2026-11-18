@@ -12,7 +12,7 @@ struct Demo {
 
 impl Mod for Demo {
     fn init() -> Result<(Self, Registration), String> {
-        input::register_key(KEY, "Place the demo model", "key.keyboard.j")?;
+        input::register_key(KEY, if horizon_mod_sdk::ui::language().starts_with("pt_") { "Pôr o modelo de demonstração" } else { "Place the demo model" }, "key.keyboard.j")?;
         Ok((Demo { model: None }, Registration::new().on_frame()))
     }
 

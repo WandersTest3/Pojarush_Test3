@@ -1,7 +1,8 @@
 id = "pojarush_fps"
-name = "Pojarush FPS"
-version = "1.1.7"
+name = "PH FPS"
+version = "1.1.8"
 description = "Frames per second anywhere on the screen, at any size, with the slowest frame and the 1% low if you like. Turns Horizon's own overlay off."
+
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"
@@ -15,3 +16,9 @@ icon = "assets/pojarush_fps/icon.png"
 homepage = "https://github.com/WandersTest3/Pojarush_Test3"
 sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/pojarush-fps"
 issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
+
+[translations.pt_br]
+description = "Quadros por segundo em qualquer lugar da tela, em qualquer tamanho, com o quadro mais lento e o 1% mais baixo se quiser. Desliga a sobreposição do próprio Horizon."
+
+[translations.pt_pt]
+description = "Fotogramas por segundo em qualquer sítio do ecrã, em qualquer tamanho, com o fotograma mais lento e o 1% mais baixo se quiseres. Desliga a sobreposição do próprio Horizon."

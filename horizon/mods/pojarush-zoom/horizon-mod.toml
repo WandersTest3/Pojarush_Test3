@@ -1,7 +1,8 @@
 id = "pojarush_zoom"
-name = "Pojarush Zoom"
-version = "2.2.4"
+name = "PH Zoom"
+version = "2.2.5"
 description = "Hold (or toggle) C to zoom. The mouse wheel zooms from a wide 0.25x view up to 50x while zoomed. Settings for distance, speed, wheel step, key mode and camera steadiness."
+
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"
@@ -15,3 +16,9 @@ icon = "assets/pojarush_zoom/icon.png"
 homepage = "https://github.com/WandersTest3/Pojarush_Test3"
 sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/pojarush-zoom"
 issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
+
+[translations.pt_br]
+description = "Segure (ou alterne) C para dar zoom. A roda do mouse vai de uma visão ampla de 0.25x até 50x durante o zoom. Ajustes de distância, velocidade, passo da roda, modo da tecla e estabilidade da câmera."
+
+[translations.pt_pt]
+description = "Mantém (ou alterna) C para fazer zoom. A roda do rato vai de uma vista ampla de 0.25x até 50x durante o zoom. Definições de distância, velocidade, passo da roda, modo da tecla e estabilidade da câmara."

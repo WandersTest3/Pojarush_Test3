@@ -48,6 +48,8 @@ pub(super) struct ModsState {
     pub(super) shake: super::mod_render::Shake,
     /// `--dev-mod PATH`: always on, reloaded when rebuilt.
     pub(super) dev: Vec<PathBuf>,
+    /// The options page a mod's settings page was opened from, to go back to.
+    pub(super) settings_from: Option<horizon_client::options_ui::Page>,
     /// When dev mods were last checked for a rebuild.
     #[cfg(feature = "mods")]
     checked: Option<Instant>,
@@ -357,7 +359,15 @@ impl Game<'_> {
             .mods
             .entries()
             .iter()
-            .map(|e| {
+            .enumerate()
+            .map(|(i, e)| {
+                let keys: Vec<[String; 3]> = self
+                    .mods
+                    .mods
+                    .keys_of(i)
+                    .iter()
+                    .map(|k| [k.name.clone(), k.label.clone(), k.default.clone()])
+                    .collect();
                 let file = e.path.file_name().unwrap_or_default().to_string_lossy();
                 let problem = match &e.status {
                     Status::Failed(reason) => Some(format!("Stopped: {reason}")),
@@ -382,18 +392,19 @@ impl Game<'_> {
                 } else {
                     format!("May {}.", may.join(", "))
                 };
+                let (name, description) = m.localized(&horizon_client::lang::code());
                 Installed {
                     id: m.id.clone(),
-                    title: format!("{} {}", m.name, m.version),
-                    description: format!("{may} {}", m.description).trim().to_owned(),
+                    title: format!("{name} {}", m.version),
+                    description: format!("{may} {description}").trim().to_owned(),
                     problem,
                     dev: dev.contains(&e.path),
                     has_settings: e.has_ui_settings(),
                     native: None,
                     details: mod_list::ModDetails {
-                        name: m.name.clone(),
+                        name,
                         version: m.version.clone(),
-                        description: m.description.clone(),
+                        description,
                         authors: m.authors.clone(),
                         license: m.license.clone(),
                         minecraft: m.minecraft.clone(),
@@ -401,6 +412,7 @@ impl Game<'_> {
                         issues: m.contact.issues.clone(),
                         sources: m.contact.sources.clone(),
                         icon: None,
+                        keys,
                     },
                 }
             })
@@ -434,6 +446,8 @@ impl Game<'_> {
     /// After the options changed: restart the mods if the list of the ones
     /// turned on did.
     pub(super) fn sync_mods(&mut self) {
+        let chosen = &self.settings.mods;
+        self.mods.mods.set_bindings(|id| chosen.keys_of(id));
         let running: Vec<&str> = self
             .mods
             .mods
@@ -759,8 +773,7 @@ impl Game<'_> {
                     if self.screen == Screen::Playing && self.title.is_none() {
                         self.capture(false);
                     }
-                    self.open_options(self.title.is_some());
-                    self.ui.options.show(Page::ModMenu);
+                    self.open_options_at(self.title.is_some(), Page::ModMenu);
                 }
                 horizon_mods::UiRequest::ReloadShaderPack => {
                     self.pack_ids = None;
@@ -992,12 +1005,8 @@ impl Game<'_> {
         }
     }
     /// The keys a settings page lists first: the mod's own (`input`).
-    fn mod_page_keys<'a>(mods: &'a Mods, ms: &ModScreen) -> &'a [ModKey] {
-        if ms.settings {
-            mods.keys_of(ms.owner)
-        } else {
-            &[]
-        }
+    fn mod_page_keys<'a>(_mods: &'a Mods, _ms: &ModScreen) -> &'a [ModKey] {
+        &[]
     }
     /// A key row's label as Key Binds shows one, "Zoom: Z", marked
     /// "> Zoom: Z <" in yellow while it waits for the new key.
@@ -1067,26 +1076,39 @@ impl Game<'_> {
         keys: usize,
         widgets: &[UiWidget],
         page: f32,
-    ) -> (Vec<f32>, Vec<(f32, f32)>, f32) {
+    ) -> (Vec<f32>, Vec<(f32, f32, f32, f32)>, f32) {
         let key_rows = (0..keys)
             .map(|i| MOD_UI_TOP + i as f32 * MOD_UI_KEY_ROW)
             .collect::<Vec<_>>();
         let mut out = Vec::with_capacity(widgets.len());
         let mut y = MOD_UI_TOP + keys as f32 * MOD_UI_KEY_ROW;
+        let mut left_open = false;
         for w in widgets {
+            let half = matches!(w, UiWidget::Button(_) | UiWidget::Slider(_));
             let wh = match w {
                 UiWidget::Text(_) => 12.0,
                 UiWidget::Item(_) | UiWidget::Button(_) | UiWidget::Slider(_) => 20.0,
                 UiWidget::List(l) => (l.rows.len().min(6) as f32 * 12.0) + 8.0,
             };
-            out.push((y, wh));
+            if half && left_open {
+                out.push((MOD_UI_GAP / 2.0, y - 26.0, MOD_UI_HALF, wh));
+                left_open = false;
+                continue;
+            }
+            if half {
+                out.push((-MOD_UI_WIDE / 2.0, y, MOD_UI_HALF, wh));
+                left_open = true;
+            } else {
+                out.push((-MOD_UI_WIDE / 2.0, y, MOD_UI_WIDE, wh));
+                left_open = false;
+            }
             y += wh + 6.0;
         }
         let max = (y - 6.0 - (h - MOD_UI_BOTTOM)).max(0.0);
         let page = page.clamp(0.0, max);
         (
             key_rows.into_iter().map(|y| y - page).collect(),
-            out.into_iter().map(|(y, wh)| (y - page, wh)).collect(),
+            out.into_iter().map(|(x, y, ww, wh)| (x, y - page, ww, wh)).collect(),
             max,
         )
     }
@@ -1135,7 +1157,8 @@ impl Game<'_> {
             return;
         };
         if ms.settings {
-            self.open_options_at(self.title.is_some(), Page::Mods);
+            let page = self.mods.settings_from.take().unwrap_or(Page::Mods);
+            self.open_options_at(self.title.is_some(), page);
         } else {
             self.screen = ms.under;
             if self.screen == Screen::Playing && self.player.is_some() {
@@ -1170,6 +1193,9 @@ impl Game<'_> {
         let mut items: Vec<(String, f32, f32)> = Vec::new();
         let atlas = &self.gui.atlas;
         let in_world = self.player.is_some();
+        if in_world {
+            batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, 0xA010_0010);
+        }
         ui::menu_background(batch, atlas, 0.0, 0.0, batch.width, batch.height, in_world);
         ui::centered_text(
             batch,
@@ -1209,7 +1235,8 @@ impl Game<'_> {
             );
         }
         let mut list_i = 0usize;
-        for (w, &(wy, wh)) in widgets.iter().zip(&layout) {
+        for (w, &(dx, wy, col, wh)) in widgets.iter().zip(&layout) {
+            let x = cx + dx;
             if !Self::mod_ui_shown(view_h, wy, wh) {
                 if matches!(w, UiWidget::List(_)) {
                     ms.scrolls.resize_with(list_i + 1, ui::Scroll::default);
@@ -1219,14 +1246,14 @@ impl Game<'_> {
             }
             match w {
                 UiWidget::Button(b) => {
-                    let hover = ui::hovered(self.cursor, x, wy, MOD_UI_COLUMN, 20.0);
+                    let hover = ui::hovered(self.cursor, x, wy, col, 20.0);
                     let label = Text::literal(b.label.clone());
                     ui::button(
                         batch,
                         atlas,
                         x,
                         wy,
-                        MOD_UI_COLUMN,
+                        col,
                         20.0,
                         &label,
                         true,
@@ -1234,14 +1261,14 @@ impl Game<'_> {
                     );
                 }
                 UiWidget::Slider(sl) => {
-                    let hover = ui::hovered(self.cursor, x, wy, MOD_UI_COLUMN, 20.0);
+                    let hover = ui::hovered(self.cursor, x, wy, col, 20.0);
                     let label = Text::literal(sl.label.clone());
                     ui::slider(
                         batch,
                         atlas,
                         x,
                         wy,
-                        MOD_UI_COLUMN,
+                        col,
                         &label,
                         sl.position as f32 / sl.steps.max(1) as f32,
                         hover,
@@ -1261,7 +1288,7 @@ impl Game<'_> {
                         &Text::literal(t.text.clone()),
                         x,
                         wy + 1.0,
-                        MOD_UI_COLUMN,
+                        col,
                         color,
                     );
                 }
@@ -1291,11 +1318,11 @@ impl Game<'_> {
                     list_i += 1;
                     let rows_top = wy + 4.0;
                     let rows_bottom = wy + wh - 4.0;
-                    batch.fill(atlas, x, wy, MOD_UI_COLUMN, wh, 0x8000_0000);
+                    batch.fill(atlas, x, wy, col, wh, 0x8000_0000);
                     for (b, yy) in [(x, wy), (x, wy + wh - 1.0)] {
-                        batch.fill(atlas, b, yy, MOD_UI_COLUMN, 1.0, 0xFF50_5050);
+                        batch.fill(atlas, b, yy, col, 1.0, 0xFF50_5050);
                     }
-                    for (xx, yy) in [(x, wy), (x + MOD_UI_COLUMN - 1.0, wy)] {
+                    for (xx, yy) in [(x, wy), (x + col - 1.0, wy)] {
                         batch.fill(atlas, xx, yy, 1.0, wh, 0xFF50_5050);
                     }
                     let content = l.rows.len() as f32 * 12.0;
@@ -1306,12 +1333,12 @@ impl Game<'_> {
                         &l.rows,
                         l.selected,
                         scroll.amount,
-                        (x, wy, wh),
+                        (x, wy, wh, col),
                     );
                     ui::scrollbar(
                         batch,
                         atlas,
-                        x + MOD_UI_COLUMN - 5.0,
+                        x + col - 5.0,
                         rows_top,
                         rows_bottom,
                         content,
@@ -1325,7 +1352,7 @@ impl Game<'_> {
             ui::scrollbar(
                 batch,
                 atlas,
-                x + MOD_UI_COLUMN + 6.0,
+                cx + MOD_UI_WIDE / 2.0 + 6.0,
                 MOD_UI_TOP,
                 view_h - MOD_UI_BOTTOM,
                 content,
@@ -1380,7 +1407,8 @@ impl Game<'_> {
         };
         let owner = ms.owner;
         let page = ms.page;
-        let x = (w / 2.0).floor() - MOD_UI_COLUMN / 2.0;
+        let cx = (w / 2.0).floor();
+        let x = cx - MOD_UI_COLUMN / 2.0;
         // A key row waits for the key to bind.
         let keys = Self::mod_page_keys(&self.mods.mods, ms);
         let (key_rows, layout, _) = Self::mod_ui_layout(h, keys.len(), widgets, page);
@@ -1399,7 +1427,8 @@ impl Game<'_> {
         let mut list_i = 0usize;
         // The `ui_select` call needs `&mut`: find the pick first.
         let mut hit = None;
-        for (w, &(wy, wh)) in widgets.iter().zip(&layout) {
+        for (w, &(dx, wy, col, wh)) in widgets.iter().zip(&layout) {
+            let x = cx + dx;
             if !Self::mod_ui_shown(h, wy, wh) {
                 if matches!(w, UiWidget::List(_)) {
                     list_i += 1;
@@ -1407,20 +1436,20 @@ impl Game<'_> {
                 continue;
             }
             if let UiWidget::Slider(sl) = w
-                && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
+                && ui::hovered(cursor, x, wy, col, 20.0)
             {
                 let owner = self.mods.screen.as_ref().map_or(0, |ms| ms.owner);
                 if let Some(ms) = self.mods.screen.as_mut() {
                     ms.slider = Some(sl.id);
                 }
-                let position = Self::slider_position(cursor.0, x, sl.steps);
+                let position = Self::slider_position(cursor.0, x, col, sl.steps);
                 self.mods.mods.ui_select(owner, sl.id, position);
                 self.show_mod_output();
                 return;
             }
             // A button is `select(id, 0)`.
             if let UiWidget::Button(b) = w
-                && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
+                && ui::hovered(cursor, x, wy, col, 20.0)
             {
                 self.audio.play_button_click();
                 let owner = self.mods.screen.as_ref().map_or(0, |ms| ms.owner);
@@ -1432,7 +1461,7 @@ impl Game<'_> {
             let scroll = ms.scrolls.get(list_i).copied().unwrap_or_default();
             list_i += 1;
             let row = ((cursor.1 - (wy + 4.0) + scroll.amount) / 12.0) as i64;
-            if ui::hovered(cursor, x + 1.0, wy + 1.0, MOD_UI_COLUMN - 7.0, wh - 2.0)
+            if ui::hovered(cursor, x + 1.0, wy + 1.0, col - 7.0, wh - 2.0)
                 && row >= 0
                 && (row as usize) < l.rows.len()
             {
@@ -1449,8 +1478,8 @@ impl Game<'_> {
         }
     }
     /// The slider position under cursor column `cx` of a track at `x`.
-    fn slider_position(cx: f32, x: f32, steps: u32) -> u32 {
-        let value = ((cx - (x + 4.0)) / (MOD_UI_COLUMN - 8.0)).clamp(0.0, 1.0);
+    fn slider_position(cx: f32, x: f32, col: f32, steps: u32) -> u32 {
+        let value = ((cx - (x + 4.0)) / (col - 8.0)).clamp(0.0, 1.0);
         (value * steps as f32).round() as u32
     }
     /// A drag moved the cursor: the dragged slider follows it.
@@ -1472,16 +1501,17 @@ impl Game<'_> {
         let Some((_, widgets)) = Self::mod_ui_view(&self.mods.mods, ms) else {
             return;
         };
-        let (w, _) = self.gui_size();
-        let x = (w / 2.0).floor() - MOD_UI_COLUMN / 2.0;
-        let steps = widgets.iter().find_map(|w| match w {
-            UiWidget::Slider(s) if s.id == id => Some((s.steps, s.position)),
+        let (w, h) = self.gui_size();
+        let cx = (w / 2.0).floor();
+        let (_, layout, _) = Self::mod_ui_layout(h, 0, widgets, ms.page);
+        let steps = widgets.iter().zip(&layout).find_map(|(w, l)| match w {
+            UiWidget::Slider(s) if s.id == id => Some((s.steps, s.position, *l)),
             _ => None,
         });
-        let Some((steps, current)) = steps else {
+        let Some((steps, current, (dx, _, col, _))) = steps else {
             return;
         };
-        let position = Self::slider_position(self.cursor.0, x, steps);
+        let position = Self::slider_position(self.cursor.0, cx + dx, col, steps);
         if position != current {
             self.mods.mods.ui_select(owner, id, position);
             self.show_mod_output();
@@ -1504,14 +1534,14 @@ impl Game<'_> {
         let Some((_, widgets)) = Self::mod_ui_view(&self.mods.mods, ms) else {
             return;
         };
-        let x = (w / 2.0).floor() - MOD_UI_COLUMN / 2.0;
+        let cx = (w / 2.0).floor();
         let keys = Self::mod_page_keys(&self.mods.mods, ms).len();
         let (_, layout, max) = Self::mod_ui_layout(h, keys, widgets, ms.page);
         let mut list_i = 0usize;
-        for (w, &(wy, wh)) in widgets.iter().zip(&layout) {
+        for (w, &(dx, wy, col, wh)) in widgets.iter().zip(&layout) {
             let UiWidget::List(l) = w else { continue };
             let over =
-                Self::mod_ui_shown(h, wy, wh) && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, wh);
+                Self::mod_ui_shown(h, wy, wh) && ui::hovered(cursor, cx + dx, wy, col, wh);
             ms.scrolls.resize_with(list_i + 1, ui::Scroll::default);
             if over {
                 let content = l.rows.len() as f32 * 12.0;
@@ -1536,7 +1566,7 @@ fn draw_list_rows(
     rows: &[String],
     selected: Option<u32>,
     scroll: f32,
-    (x, wy, wh): (f32, f32, f32),
+    (x, wy, wh, col): (f32, f32, f32, f32),
 ) {
     let rows_top = wy + 4.0;
     let rows_bottom = wy + wh - 4.0;
@@ -1545,8 +1575,8 @@ fn draw_list_rows(
     let start = batch.vertices.len();
     for (vi, ri) in (first..last).enumerate() {
         let ry = rows_top + vi as f32 * 12.0 - (scroll % 12.0);
-        if ui::hovered(cursor, x, ry, MOD_UI_COLUMN - 6.0, 12.0) {
-            batch.fill(atlas, x + 1.0, ry, MOD_UI_COLUMN - 8.0, 12.0, 0x20FF_FFFF);
+        if ui::hovered(cursor, x, ry, col - 6.0, 12.0) {
+            batch.fill(atlas, x + 1.0, ry, col - 8.0, 12.0, 0x20FF_FFFF);
         }
         if selected == Some(ri as u32) {
             batch.fill(atlas, x + 1.0, ry, 3.0, 12.0, 0xFFFF_FFFF);
@@ -1564,7 +1594,7 @@ fn draw_list_rows(
         start,
         x + 1.0,
         wy + 1.0,
-        x + MOD_UI_COLUMN - 1.0,
+        x + col - 1.0,
         wy + wh - 1.0,
     );
 }
@@ -1575,6 +1605,12 @@ const MOD_UI_TOP: f32 = 40.0;
 const MOD_UI_BOTTOM: f32 = 34.0;
 #[cfg(feature = "mods")]
 const MOD_UI_COLUMN: f32 = 200.0;
+#[cfg(feature = "mods")]
+const MOD_UI_WIDE: f32 = 310.0;
+#[cfg(feature = "mods")]
+const MOD_UI_HALF: f32 = 150.0;
+#[cfg(feature = "mods")]
+const MOD_UI_GAP: f32 = 10.0;
 /// A key row's height with its gap, as the widgets below it space out.
 #[cfg(feature = "mods")]
 const MOD_UI_KEY_ROW: f32 = 26.0;
@@ -1603,7 +1639,7 @@ mod tests {
                 &rows,
                 Some(6 + (scroll / 12.0) as u32),
                 scroll,
-                (x, wy, wh),
+                (x, wy, wh, MOD_UI_COLUMN),
             );
             assert!(!batch.vertices.is_empty(), "scroll {scroll}: rows drawn");
             let (top, bottom) = batch

@@ -106,9 +106,10 @@ impl Shaders {
 
 impl Mod for Shaders {
     fn init() -> Result<(Self, Registration), String> {
-        input::register_key(MENU, "Shader pack list", "key.keyboard.o")?;
-        input::register_key(TOGGLE, "Toggle shaders", "key.keyboard.k")?;
-        input::register_key(RELOAD, "Reload shaders", "key.keyboard.r")?;
+        let pt = ui::language().starts_with("pt_");
+        input::register_key(MENU, if pt { "Lista de pacotes de shaders" } else { "Shader pack list" }, "key.keyboard.o")?;
+        input::register_key(TOGGLE, if pt { "Ligar/desligar shaders" } else { "Toggle shaders" }, "key.keyboard.k")?;
+        input::register_key(RELOAD, if pt { "Recarregar shaders" } else { "Reload shaders" }, "key.keyboard.r")?;
         let last = storage::get(FILE)
             .and_then(|v| String::from_utf8(v).ok())
             .and_then(|t| t.lines().find_map(|l| l.strip_prefix("last=").map(str::to_owned)))
@@ -155,7 +156,7 @@ impl Mod for Shaders {
                 ui::open_shader_packs();
                 self.open = false;
             }
-            OPEN => self.screen(None),
+            OPEN => ui::open_shader_packs(),
             VIDEO => ui::open_shader_packs(),
             _ => {}
         }

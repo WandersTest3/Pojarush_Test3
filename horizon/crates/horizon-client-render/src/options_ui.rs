@@ -1014,6 +1014,14 @@ pub fn apply_preset(s: &mut Settings) {
     }
 }
 
+/// A mod's keys (name, label, default): a native mod's page's, else its own.
+fn mod_keys(m: &crate::mod_list::Installed) -> &[[String; 3]] {
+    match &m.native {
+        Some(p) => &p.keys,
+        None => &m.details.keys,
+    }
+}
+
 /// `selected_key` while a native mod's key waits (`selected_native_key`).
 const NATIVE_KEY: &str = "horizon.nativeModKey";
 
@@ -1068,6 +1076,8 @@ enum Act {
     Extra(crate::extras::Item),
     Key(&'static str),
     ResetKey(&'static str),
+    /// Back to the default of mod `i`'s key `k` (Key Binds).
+    ResetModKey(usize, usize),
     ResetKeys,
     /// Controller binds: wait for a button, reset one, reset all.
     PadKey(&'static str),
@@ -1473,7 +1483,7 @@ impl OptionsUi {
     }
     fn settings_search_active(&self) -> bool {
         self.settings_search.focused
-            && matches!(self.page(), Page::Video | Page::Controls | Page::KeyBinds)
+            && matches!(self.page(), Page::Video | Page::Controls | Page::KeyBinds | Page::ModMenu)
     }
     pub fn page(&self) -> Page {
         *self.stack.last().unwrap_or(&Page::Main)
@@ -1537,7 +1547,7 @@ impl OptionsUi {
         self.stack.push(page);
         self.scroll = 0.0;
         self.scrollbar_drag_y = None;
-        if matches!(page, Page::Video | Page::Controls | Page::KeyBinds) {
+        if matches!(page, Page::Video | Page::Controls | Page::KeyBinds | Page::ModMenu) {
             self.settings_search.set_value("");
             self.settings_search.focused = false;
         }
@@ -1976,7 +1986,7 @@ impl OptionsUi {
                         } else if installed.dev {
                             label = label.append(tr("horizon.mods.dev"));
                         }
-                        let dead = installed.dev || installed.id.is_empty();
+                        let dead = installed.dev || installed.id.is_empty() || self.in_world;
                         // A native mod gets its settings page's button beside
                         // the toggle.
                         if installed.native.is_some() || installed.has_settings {
@@ -2040,9 +2050,13 @@ impl OptionsUi {
         let mut out = Vec::new();
         let page = self.page();
         let cx = (w / 2.0).floor();
-        if matches!(page, Page::Video | Page::Controls | Page::KeyBinds) {
+        if matches!(page, Page::Video | Page::Controls | Page::KeyBinds | Page::ModMenu) {
             self.settings_search.x = cx - 100.0;
             self.settings_search.y = 17.0;
+            if page == Page::ModMenu {
+                self.settings_search.x = ((w / 2.0).floor() / 2.0 - 100.0).max(4.0);
+                self.settings_search.y = 6.0;
+            }
         }
         let done = |y: f32| button(cx - 100.0, y, 200.0, tr("gui.done"), Act::Done);
         // (list top, list bottom, content height)
@@ -2255,6 +2269,70 @@ impl OptionsUi {
                     });
                     y += 20.0;
                 }
+                for (i, m) in s.mods.installed.iter().enumerate() {
+                    let keys = mod_keys(m);
+                    let shown: Vec<(usize, &[String; 3])> = keys
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, [_, label, _])| {
+                            query.is_empty() || label.to_lowercase().contains(&query)
+                        })
+                        .collect();
+                    if shown.is_empty() {
+                        continue;
+                    }
+                    let title = if m.details.name.is_empty() { m.title.clone() } else { m.details.name.clone() };
+                    out.push(Widget {
+                        x: 0.0,
+                        y: y + 7.0,
+                        w,
+                        h: 9.0,
+                        kind: WKind::Text {
+                            text: Text::literal(title).with_style(&Style {
+                                bold: Some(true),
+                                underlined: Some(true),
+                                ..Style::default()
+                            }),
+                            color: u32::MAX,
+                            centered: true,
+                        },
+                        list: false,
+                    });
+                    y += 20.0;
+                    let chosen = s.mods.keys.get(&m.id);
+                    for (k, [name, label, default]) in shown {
+                        out.push(Widget {
+                            x: row_left + 2.0,
+                            y: y + 6.0,
+                            w: 200.0,
+                            h: 9.0,
+                            kind: WKind::Text {
+                                text: Text::literal(label.clone()),
+                                color: u32::MAX,
+                                centered: false,
+                            },
+                            list: false,
+                        });
+                        let key = chosen.and_then(|c| c.get(name)).unwrap_or(default);
+                        let mut message = keybinds::display_name(key);
+                        if self.selected_native_key == Some((i, k)) {
+                            message = Text::literal("> ")
+                                .append(message.with_style(&Style {
+                                    color: Some(text::WHITE),
+                                    underlined: Some(true),
+                                    ..Style::default()
+                                }))
+                                .append(" <")
+                                .with_color(text::YELLOW);
+                        }
+                        let reset_x = scrollbar_x - 50.0 - 10.0;
+                        let change_x = reset_x - 5.0 - 75.0;
+                        out.push(button(change_x, y, 75.0, message, Act::NativeKey(i, k)));
+                        let reset = button(reset_x, y, 50.0, tr("controls.reset"), Act::ResetModKey(i, k));
+                        out.push(if key == default { inactive(reset) } else { reset });
+                        y += 20.0;
+                    }
+                }
                 content = y + self.scroll - top + 2.0;
                 out[list_start..].iter_mut().for_each(|w| w.list = true);
                 out.push(button(
@@ -2428,23 +2506,19 @@ impl OptionsUi {
                 bottom = h - 33.0;
                 let count = s.mods.installed.len();
                 let pick = self.mod_pick.min(count.saturating_sub(1));
-                out.push(Widget {
-                    x: 0.0,
-                    y: 8.0,
-                    w: half,
-                    h: 9.0,
-                    kind: WKind::Text {
-                        text: Text::literal(format!("{} ({count})", lang::get_or("horizon.pages.mods", "Mods"))),
-                        color: u32::MAX,
-                        centered: true,
-                    },
-                    list: false,
-                });
+                let query = self.settings_search.value.to_lowercase();
                 let list_start = out.len();
                 let mut y = top + 2.0 - self.scroll;
                 for (i, m) in s.mods.installed.iter().enumerate() {
                     let name = if m.details.name.is_empty() { m.title.clone() } else { m.details.name.clone() };
                     let desc = if m.details.description.is_empty() { m.description.clone() } else { m.details.description.clone() };
+                    if !query.is_empty()
+                        && !name.to_lowercase().contains(&query)
+                        && !m.id.to_lowercase().contains(&query)
+                        && !desc.to_lowercase().contains(&query)
+                    {
+                        continue;
+                    }
                     out.push(Widget {
                         x: 6.0,
                         y,
@@ -2473,7 +2547,7 @@ impl OptionsUi {
                             y: ry,
                             w: 32.0,
                             h: 32.0,
-                            kind: WKind::Image { rect, act: m.has_settings.then_some(Act::ModSettings(pick)) },
+                            kind: WKind::Image { rect, act: (m.has_settings || m.native.is_some()).then_some(Act::ModSettings(pick)) },
                             list: false,
                         });
                     }
@@ -3017,10 +3091,20 @@ impl OptionsUi {
                         batch.text_styled(atlas, &line, tx, wd.y + 15.0 + k as f32 * 10.0, rgba(0x80, 0x80, 0x80, 255), true);
                     }
                 }
-                WKind::Image { rect: [u0, v0, u1, v1], .. } => {
+                WKind::Image { rect: [u0, v0, u1, v1], act } => {
                     if let Some(mut r) = atlas.sprites.get("gui/sprites/icon/language").copied() {
                         (r.u0, r.v0, r.u1, r.v1) = (*u0, *v0, *u1, *v1);
                         batch.rect_uv(wd.x, wd.y, wd.w, wd.h, r, u32::MAX);
+                    }
+                    if act.is_some() && ui::hovered(cursor, wd.x, wd.y, wd.w, wd.h) {
+                        batch.fill(atlas, wd.x, wd.y, wd.w, wd.h, rgba(0, 0, 0, 128));
+                        let bw = (wd.w * 0.5).floor();
+                        let bx = wd.x + ((wd.w - bw) / 2.0).floor();
+                        let gap = (wd.h / 6.0).floor().max(3.0);
+                        let by = wd.y + ((wd.h - gap * 2.0 - 2.0) / 2.0).floor();
+                        for k in 0..3 {
+                            batch.fill(atlas, bx, by + k as f32 * gap, bw, 2.0, u32::MAX);
+                        }
                     }
                 }
                 WKind::LanguageRow {
@@ -3086,7 +3170,7 @@ impl OptionsUi {
             }
             self.language_search = search;
         }
-        if matches!(self.page(), Page::Video | Page::Controls | Page::KeyBinds) {
+        if matches!(self.page(), Page::Video | Page::Controls | Page::KeyBinds | Page::ModMenu) {
             let mut search = self.settings_search.clone();
             search.draw(batch, atlas, None);
             if search.value.is_empty() && !search.focused {
@@ -3186,7 +3270,7 @@ impl OptionsUi {
         }
         let (widgets, top, bottom, content) = self.layout(s, size.0, size.1);
         let mut events = Vec::new();
-        if !drag && matches!(self.page(), Page::Video | Page::Controls | Page::KeyBinds) {
+        if !drag && matches!(self.page(), Page::Video | Page::Controls | Page::KeyBinds | Page::ModMenu) {
             let search = &mut self.settings_search;
             search.focused = ui::hovered((x, y), search.x, search.y, search.width, search.height);
             if search.focused {
@@ -3313,7 +3397,19 @@ impl OptionsUi {
                             s.keys.set(name, KeyBinds::default_of(name));
                             events.push(Event::Changed);
                         }
+                        Act::ResetModKey(i, k) => {
+                            if let Some(m) = s.mods.installed.get(i)
+                                && let Some([name, ..]) = mod_keys(m).get(k)
+                            {
+                                let name = name.clone();
+                                if let Some(c) = s.mods.keys.get_mut(&m.id) {
+                                    c.remove(&name);
+                                }
+                                events.push(Event::Changed);
+                            }
+                        }
                         Act::ResetKeys => {
+                            s.mods.keys.clear();
                             s.keys.reset_all();
                             events.push(Event::Changed);
                         }
@@ -3758,7 +3854,7 @@ impl OptionsUi {
             let Some(m) = s.mods.installed.get(i) else {
                 return Vec::new();
             };
-            let Some([key, ..]) = m.native.as_ref().and_then(|p| p.keys.get(k)) else {
+            let Some([key, ..]) = mod_keys(m).get(k) else {
                 return Vec::new();
             };
             let keys = s.mods.keys.entry(m.id.clone()).or_default();

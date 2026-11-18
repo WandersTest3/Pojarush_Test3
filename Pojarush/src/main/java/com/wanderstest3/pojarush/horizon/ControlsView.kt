@@ -40,6 +40,7 @@ import com.wanderstest3.pojarush.controls.ControlStick
 import com.wanderstest3.pojarush.controls.Style
 import com.wanderstest3.pojarush.controls.Visibility
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.min
@@ -1231,7 +1232,7 @@ class ControlsView(
                     mouse(0, false)
                 }
             }
-            is Role.Scroll -> if (!cancel && !role.scrolled && time - role.downTime < 300) {
+            is Role.Scroll -> if (!cancel && captured && !role.scrolled && abs(role.travelled) < 6f * density && time - role.downTime < 300) {
                 mouse(1, true)
                 mouse(1, false)
             }

@@ -259,6 +259,16 @@ Modelos montados pelo próprio mod e presos no jogador (nível 11): `render::spa
 lugar)` usa geometria Bedrock em texto e a skin do jogador como textura; `render::attach_model(id, "head")` prende o
 modelo numa parte do jogador (desenhado em terceira pessoa); `render::hide_player_parts(&["hat".into()])` esconde partes
 do modelo; `render::player_skin()` dá a skin (64x64 RGBA) e `render::player_skin_slim()` diz se os braços são finos.
+`render::set_player_cape("capes/x.png")` veste no jogador uma capa 64x32 da pasta `models/` do mod (também no élitro).
+
+Teclas dos mods (`input::register_key`) aparecem em Controles > Atalhos, numa seção por mod, com botão de restaurar o
+padrão. Páginas de configuração organizam botões e sliders em duas colunas. Nome e descrição traduzidos no manifesto:
+
+```toml
+[translations.pt_br]
+name = "..."
+description = "..."
+```
 Exemplo: `horizon/mods/pojarush-3dskinlayers`.
 
 Expressões Molang nas animações ainda contam como 0; valores numéricos, `lerp_mode` `catmullrom`, `loop` e
@@ -274,6 +284,8 @@ Exemplos completos neste repositório:
 - `horizon/mods/pojarush-fps`: texto na fonte do Minecraft no HUD, ampliado com `render::set_hud_scale` (função do Horizon do Pojarush), tamanho e posição ajustáveis e ajustes salvos. Com ele instalado, o launcher desliga a sobreposição do próprio Horizon.
 - `horizon/mods/pojarush-modmenu`: Mod Menu como o do Fabric (tecla M ou o mini ícone na tela inicial e no menu de pausa): lista com ícone, nome e descrição à esquerda, detalhes, links e configurações do mod escolhido à direita.
 - `horizon/mods/pojarush-shaders`: atalhos do Iris para shaders (O abre os pacotes, K liga e desliga, R recarrega) e o botão "Pacotes de shaders..." em Gráficos, que abre a tela de pacotes no estilo do Iris.
+- `horizon/mods/acvcape`: porte do Acv Cape (capas do Java, Bedrock e Dungeons II, favoritos, Sem Capa). As texturas
+  das capas não ficam no repositório: `horizon/mods/acvcape/fetch-capes.sh ACV-Cape-Fabric-<versão>.jar` as copia do jar.
 - `horizon/mods/pojarush-3dskinlayers`: porte de teste não oficial do 3D Skin Layers, de tr7zw (todo o crédito ao autor original; não redistribuir): a segunda camada da skin em voxels 3D.
 - `horizon/crates/horizon-mod-sdk/examples/`: `welcome`, `coords-hud`, `beacons`, `ruby-content`, `predator-missile`.
 - Contrato completo da API: `horizon/crates/horizon-mod-sdk/wit/horizon.wit`.

@@ -60,6 +60,8 @@ pub struct ModDetails {
     pub sources: String,
     /// Its icon's atlas rectangle, once uploaded.
     pub icon: Option<[f32; 4]>,
+    /// Its keys (name, label, default), listed in Controls > Key Binds.
+    pub keys: Vec<[String; 3]>,
 }
 
 /// A native mod's settings page: its keys as Key Binds rows, then its

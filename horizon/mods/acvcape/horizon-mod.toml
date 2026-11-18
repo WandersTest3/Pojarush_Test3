@@ -1,0 +1,21 @@
+id = "acvcape"
+name = "Acv Cape"
+version = "1.0.32"
+description = "Wear any cape you like. Port of the Fabric mod Acv Cape to Horizon: the Java, Bedrock and Dungeons II capes in tabs, favorites and No Cape. The cape is also drawn on the elytra. Open it with R or from its settings."
+authors = ["Wanders_Test3"]
+api = "0.1"
+side = "client"
+capabilities = ["render", "ui", "input", "storage"]
+experimental = ["input", "render", "ui"]
+minecraft = "26.3"
+license = "MIT"
+icon = "assets/acvcape/icon.png"
+
+[contact]
+sources = "https://github.com/WandersTest3/ACV-Cape"
+
+[translations.pt_br]
+description = "Use capa como bem entender. Porte do mod Fabric Acv Cape para o Horizon: as capas do Java, do Bedrock e do Dungeons II em abas, favoritos e Sem Capa. A capa também aparece no élitro. Abra com R ou pelas configurações."
+
+[translations.pt_pt]
+description = "Usa a capa que quiseres. Port do mod Fabric Acv Cape para o Horizon: as capas do Java, do Bedrock e do Dungeons II em separadores, favoritos e Sem Capa. A capa também aparece nos élitros. Abre com R ou nas definições."

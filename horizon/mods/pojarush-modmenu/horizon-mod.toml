@@ -1,7 +1,8 @@
 id = "pojarush_modmenu"
-name = "Pojarush Mod Menu"
-version = "1.2.0"
-description = "The installed mods with their version, authors, Minecraft and API versions, license and links, and a button to each one's settings. Press M in game, its icon beside Accessibility on the title screen and the pause menu, or open it from its settings page."
+name = "PH Mod Menu"
+version = "1.3.0"
+description = "A Mod Menu like Fabric's: the installed mods with icon, name and description on the left, and the picked one's version, authors, license, links and settings on the right, with a search box. Open it with its icon beside Accessibility on the title screen and the pause menu, or with M (Controls > Key Binds)."
+
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"
@@ -15,3 +16,9 @@ icon = "assets/pojarush_modmenu/icon.png"
 homepage = "https://github.com/WandersTest3/Pojarush_Test3"
 sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/pojarush-modmenu"
 issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
+
+[translations.pt_br]
+description = "Um Mod Menu como o do Fabric: os mods instalados com ícone, nome e descrição à esquerda, e a versão, os autores, a licença, os links e as configurações do escolhido à direita, com barra de pesquisa. Abra pelo ícone ao lado de Acessibilidade na tela inicial e no menu de pausa, ou com M (Controles > Atalhos)."
+
+[translations.pt_pt]
+description = "Um Mod Menu como o do Fabric: os mods instalados com ícone, nome e descrição à esquerda, e a versão, os autores, a licença, as ligações e as definições do escolhido à direita, com barra de pesquisa. Abre pelo ícone ao lado de Acessibilidade no ecrã inicial e no menu de pausa, ou com M (Controlos > Teclas)."

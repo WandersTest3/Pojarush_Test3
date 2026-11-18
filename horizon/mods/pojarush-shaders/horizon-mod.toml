@@ -1,7 +1,8 @@
 id = "pojarush_shaders"
-name = "Pojarush Shaders"
-version = "1.1.0"
-description = "Iris's shortcuts for shader packs: O opens the pack list, K turns shaders on and off, R reloads the pack. Adds a Shader Packs button to Video Settings, opening an Iris-style pack screen."
+name = "PH Shaders"
+version = "1.2.0"
+description = "Iris's shortcuts for shader packs: O opens the pack list, K turns shaders on and off, R reloads the pack. Adds a Shader Packs button to Video Settings, opening an Iris-style pack screen. Keys are in Controls > Key Binds."
+
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"
@@ -15,3 +16,9 @@ icon = "assets/pojarush_shaders/icon.png"
 homepage = "https://github.com/WandersTest3/Pojarush_Test3"
 sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/pojarush-shaders"
 issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
+
+[translations.pt_br]
+description = "Os atalhos do Iris para shaders: O abre a lista de pacotes, K liga e desliga os shaders, R recarrega o pacote. Adiciona o botão Pacotes de shaders em Gráficos, que abre a tela de pacotes no estilo do Iris. As teclas ficam em Controles > Atalhos."
+
+[translations.pt_pt]
+description = "Os atalhos do Iris para shaders: O abre a lista de pacotes, K liga e desliga os shaders, R recarrega o pacote. Adiciona o botão Pacotes de shaders em Gráficos, que abre o ecrã de pacotes ao estilo do Iris. As teclas estão em Controlos > Teclas."

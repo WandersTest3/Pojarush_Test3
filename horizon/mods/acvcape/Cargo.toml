@@ -1,0 +1,20 @@
+[package]
+name = "acvcape"
+version = "1.0.32"
+edition = "2024"
+license = "MIT"
+description = "Acv Cape for Horizon: wear any cape."
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+horizon-mod-sdk = { path = "../../crates/horizon-mod-sdk" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+
+[workspace]

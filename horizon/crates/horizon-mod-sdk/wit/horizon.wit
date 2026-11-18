@@ -545,6 +545,10 @@ interface render {
     /// The local player's skin as drawn: 64x64 RGBA, row by row; none before a
     /// world is open.
     player-skin: func() -> option<list<u8>>;
+    /// Gives the local player this cape, a 64x32 PNG in the mod's `models/`
+    /// (also drawn on its elytra), in place of its account's; empty gives the
+    /// account's back.
+    set-player-cape: func(texture: string) -> result<_, string>;
     record minimap {
         corner: corner,
         /// Its side in GUI pixels, 16 to 256.

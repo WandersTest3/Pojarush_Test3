@@ -629,6 +629,9 @@ impl Game<'_> {
         if let Some(renderer) = &mut self.renderer {
             // Marks this dimension as loaded, without a pack, so it is not tried again.
             renderer.set_shader_pack(dimension, None, &[]);
+            if let Err(e) = renderer.recreate_surface() {
+                log::warn!("shader pack {name}: the window could not be set up again: {e}");
+            }
         }
         if self.settings.horizon.shader_pack == name {
             self.settings.horizon.shader_pack.clear();

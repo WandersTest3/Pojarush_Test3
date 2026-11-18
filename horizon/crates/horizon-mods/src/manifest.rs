@@ -70,6 +70,34 @@ pub struct Manifest {
     pub icon: String,
     #[serde(default)]
     pub contact: Contact,
+    /// The name and description in other languages, by game language code
+    /// (`[translations.pt_br]`).
+    #[serde(default)]
+    pub translations: std::collections::BTreeMap<String, Translation>,
+}
+
+/// A mod's name and description in one language (`[translations.<code>]`).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct Translation {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+}
+
+impl Manifest {
+    /// The name and description in the game's language `code`, else the manifest's own.
+    pub fn localized(&self, code: &str) -> (String, String) {
+        let t = self.translations.get(code).or_else(|| {
+            code.starts_with("pt_").then(|| self.translations.get("pt_br")).flatten()
+        });
+        let pick = |a: Option<&String>, b: &String| a.filter(|s| !s.is_empty()).unwrap_or(b).clone();
+        (
+            pick(t.map(|t| &t.name), &self.name),
+            pick(t.map(|t| &t.description), &self.description),
+        )
+    }
 }
 
 /// Where players find more about a mod (`[contact]`).

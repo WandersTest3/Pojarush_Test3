@@ -285,7 +285,10 @@ impl Game<'_> {
                     let _ = std::fs::create_dir_all(&dir);
                     super::packs::open_folder(&dir);
                 }
-                Event::ModSettings(i) => self.open_mod_screen(i, true),
+                Event::ModSettings(i) => {
+                    self.mods.settings_from = Some(self.ui.options.page());
+                    self.open_mod_screen(i, true);
+                }
                 Event::NativeSettings(i) => self.native_settings_refresh(i),
                 Event::NativeButton(i, b) => self.native_settings_event(i, b),
                 Event::Credits => self.open_win_screen(false, super::win::Finish::Options),
