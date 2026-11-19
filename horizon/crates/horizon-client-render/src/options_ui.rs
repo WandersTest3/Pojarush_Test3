@@ -1232,8 +1232,14 @@ fn slider_unsnapped(opt: Opt, held: bool, moved: Instant) -> bool {
 pub struct OptionsUi {
     /// A mod's button on Video Settings, by its label.
     pub video_button: Option<String>,
+    /// Shift is held: a click on a shader pack's option puts it back at the default.
+    pub shift: bool,
     pub stack: Vec<Page>,
     scroll: f32,
+    /// Mod Menu: the picked mod's page, which scrolls apart from the list.
+    detail_scroll: f32,
+    detail_content: f32,
+    detail_drag_y: Option<f32>,
     pub(crate) dragging: Option<Opt>,
     /// The shader pack option whose slider is held, and the handle's own position: it follows
     /// the pointer while the option takes the nearest of its values.
@@ -1304,8 +1310,12 @@ impl Default for OptionsUi {
             languages: Vec::new(),
             language_choice: None,
             video_button: None,
+            shift: false,
             shader_choice: None,
             mod_pick: 0,
+            detail_scroll: 0.0,
+            detail_content: 0.0,
+            detail_drag_y: None,
             language_search: search,
             settings_search,
             pack_infos: Vec::new(),
@@ -1608,6 +1618,7 @@ impl OptionsUi {
             + match self.page() {
                 Page::KeyBinds | Page::PadBinds => 178.0,
                 Page::Language => 118.0,
+                Page::ModMenu => -12.0,
                 _ => 163.0,
             }
     }
@@ -2522,7 +2533,7 @@ impl OptionsUi {
                     out.push(Widget {
                         x: 6.0,
                         y,
-                        w: half - 12.0,
+                        w: half - 20.0,
                         h: 36.0,
                         kind: WKind::ModEntry {
                             icon: m.details.icon,
@@ -2537,73 +2548,88 @@ impl OptionsUi {
                 }
                 content = y + self.scroll - top + 2.0;
                 out[list_start..].iter_mut().for_each(|w| w.list = true);
+                // The picked mod's page scrolls on its own, clipped to the same band as the list.
+                let detail_start = out.len();
+                let mut detail_end = top;
                 if let Some(m) = s.mods.installed.get(pick) {
                     let d = &m.details;
                     let x = half + 6.0;
-                    let mut ry = top + 2.0;
+                    let width = (w - x - 14.0).max(40.0);
+                    let mut ry = top + 4.0 - self.detail_scroll;
+                    let gear = m.has_settings || m.native.is_some();
                     if let Some(rect) = d.icon {
                         out.push(Widget {
                             x,
                             y: ry,
                             w: 32.0,
                             h: 32.0,
-                            kind: WKind::Image { rect, act: (m.has_settings || m.native.is_some()).then_some(Act::ModSettings(pick)) },
+                            kind: WKind::Image { rect, act: gear.then_some(Act::ModSettings(pick)) },
                             list: false,
                         });
                     }
-                    let text = |x: f32, y: f32, t: String, color: u32| Widget {
+                    let text = |x: f32, y: f32, width: f32, t: String, color: u32| Widget {
                         x,
                         y,
-                        w: w - x - 6.0,
+                        w: width,
                         h: 9.0,
                         kind: WKind::Text { text: Text::literal(t), color, centered: false },
                         list: false,
                     };
                     let name = if d.name.is_empty() { m.title.clone() } else { d.name.clone() };
-                    out.push(text(x + 38.0, ry + 1.0, name, u32::MAX));
-                    if !d.version.is_empty() {
-                        out.push(text(x + 38.0, ry + 12.0, format!("v{}", d.version), rgba(0xAA, 0xAA, 0xAA, 255)));
+                    let name_width = width - 38.0 - if gear { 24.0 } else { 0.0 };
+                    let mut ny = ry + 1.0;
+                    for (line, _) in atlas_free_wrap(&name, name_width).into_iter().take(3) {
+                        out.push(text(x + 38.0, ny, name_width, line, u32::MAX));
+                        ny += 10.0;
                     }
-                    if !d.authors.is_empty() {
-                        out.push(text(x + 38.0, ry + 23.0, format!("{} {}", lang::get_or("horizon.modmenu.by", "By"), d.authors.join(", ")), rgba(0xAA, 0xAA, 0xAA, 255)));
+                    if gear {
+                        out.push(button(x + width - 20.0, ry, 20.0, Text::literal("\u{2699}"), Act::ModSettings(pick)));
                     }
-                    if m.has_settings || m.native.is_some() {
-                        out.push(button(w - 26.0, ry, 20.0, Text::literal("⚙"), Act::ModSettings(pick)));
-                    }
-                    ry += 38.0;
-                    let links: Vec<(&str, &String)> = [("horizon.modmenu.website", &d.homepage), ("horizon.modmenu.issues", &d.issues)]
-                        .into_iter()
-                        .filter(|(_, u)| u.starts_with("https://") || u.starts_with("http://"))
-                        .collect();
-                    let bw = ((w - x - 6.0 - 4.0) / 2.0).floor();
-                    for (k, (key, url)) in links.iter().enumerate() {
-                        out.push(button(x + k as f32 * (bw + 4.0), ry, bw, tr(key), Act::OpenUrl((*url).clone())));
-                    }
-                    if !links.is_empty() {
-                        ry += 26.0;
-                    }
-                    let width = w - x - 6.0;
+                    ry = (ry + 38.0).max(ny + 4.0);
+                    let gray = rgba(0xAA, 0xAA, 0xAA, 255);
                     let mut para = |t: &str, color: u32, ry: &mut f32| {
                         for (line, _) in atlas_free_wrap(t, width) {
-                            out.push(text(x, *ry, line, color));
+                            out.push(text(x, *ry, width, line, color));
                             *ry += 10.0;
                         }
                         *ry += 4.0;
                     };
+                    // The description first, then the facts about the mod.
                     let desc = if d.description.is_empty() { m.description.clone() } else { d.description.clone() };
                     para(&desc, u32::MAX, &mut ry);
                     if let Some(problem) = &m.problem {
                         para(problem, rgba(0xFF, 0x55, 0x55, 255), &mut ry);
                     }
+                    if !d.version.is_empty() {
+                        para(&format!("{}: {}", lang::get_or("horizon.modmenu.version", "Version"), d.version), gray, &mut ry);
+                    }
                     if !d.minecraft.is_empty() {
-                        para(&format!("Minecraft: {}", d.minecraft), rgba(0xAA, 0xAA, 0xAA, 255), &mut ry);
+                        para(&format!("Minecraft: {}", d.minecraft), gray, &mut ry);
                     }
                     if !d.license.is_empty() {
-                        para(&format!("{}: {}", lang::get_or("horizon.modmenu.license", "License"), d.license), rgba(0xAA, 0xAA, 0xAA, 255), &mut ry);
+                        para(&format!("{}: {}", lang::get_or("horizon.modmenu.license", "License"), d.license), gray, &mut ry);
                     }
                     if !d.authors.is_empty() {
-                        para(&format!("{}: {}", lang::get_or("horizon.modmenu.credits", "Credits"), d.authors.join(", ")), rgba(0xAA, 0xAA, 0xAA, 255), &mut ry);
+                        para(&format!("{}: {}", lang::get_or("horizon.modmenu.credits", "Credits"), d.authors.join(", ")), gray, &mut ry);
                     }
+                    let links: Vec<(&str, &String)> = [("horizon.modmenu.website", &d.homepage), ("horizon.modmenu.issues", &d.issues)]
+                        .into_iter()
+                        .filter(|(_, u)| u.starts_with("https://") || u.starts_with("http://"))
+                        .collect();
+                    let bw = ((width - 4.0) / 2.0).floor();
+                    for (k, (key, url)) in links.iter().enumerate() {
+                        out.push(button(x + k as f32 * (bw + 4.0), ry, bw, tr(key), Act::OpenUrl((*url).clone())));
+                    }
+                    if !links.is_empty() {
+                        ry += 24.0;
+                    }
+                    detail_end = ry + self.detail_scroll;
+                }
+                out[detail_start..].iter_mut().for_each(|w| w.list = true);
+                self.detail_content = detail_end - top + 2.0;
+                let max = (self.detail_content - (bottom - top)).max(0.0);
+                if self.detail_scroll > max {
+                    self.detail_scroll = max;
                 }
                 out.push(button(cx - 154.0, h - 27.0, 150.0, tr("horizon.mods.open_folder"), Act::OpenModFolder));
                 out.push(button(cx + 4.0, h - 27.0, 150.0, tr("gui.done"), Act::Done));
@@ -2858,7 +2884,8 @@ impl OptionsUi {
                 .draw(level, s, batch, atlas, cursor, self.in_world);
             return;
         }
-        if self.page() == Page::Packs {
+        let page = self.page();
+        if page == Page::Packs {
             self.watch_data_packs(atlas, (w, h));
             ui::menu_background(batch, atlas, 0.0, 0.0, w, h, self.in_world);
             let blink = self.pack_focus.elapsed().as_millis() as u64;
@@ -3064,6 +3091,8 @@ impl OptionsUi {
                             *color,
                             true,
                         );
+                    } else if page == Page::ModMenu {
+                        batch.text_styled(atlas, &clip_text(atlas, text, wd.w.max(1.0)), wd.x, wd.y, *color, true);
                     } else {
                         batch.text_styled(atlas, text, wd.x, wd.y, *color, true);
                     }
@@ -3154,6 +3183,9 @@ impl OptionsUi {
             ui::separators(batch, atlas, top, bottom, in_world);
             let sx = self.scrollbar_x(w);
             ui::scrollbar(batch, atlas, sx, top, bottom, content, self.scroll);
+            if self.page() == Page::ModMenu {
+                ui::scrollbar(batch, atlas, w - 7.0, top, bottom, self.detail_content, self.detail_scroll);
+            }
         }
         if self.page() == Page::Language {
             let mut search = self.language_search.clone();
@@ -3281,6 +3313,14 @@ impl OptionsUi {
             }
         }
         if drag {
+            if let Some(previous_y) = self.detail_drag_y {
+                if let Some((_, thumb)) = ui::scrollbar_thumb(top, bottom, self.detail_content, self.detail_scroll) {
+                    let max = self.detail_content - (bottom - top);
+                    self.detail_scroll = (self.detail_scroll + (y - previous_y) * max / (bottom - top - thumb)).clamp(0.0, max.max(0.0));
+                    self.detail_drag_y = Some(y);
+                }
+                return events;
+            }
             if let Some(previous_y) = self.scrollbar_drag_y {
                 if let Some((_, thumb)) = ui::scrollbar_thumb(top, bottom, content, self.scroll) {
                     let max = content - (bottom - top);
@@ -3361,8 +3401,19 @@ impl OptionsUi {
             self.scrollbar_drag_y = Some(y);
             return events;
         }
+        if self.page() == Page::ModMenu
+            && ui::scrollbar_thumb(top, bottom, self.detail_content, self.detail_scroll).is_some()
+            && ui::hovered((x, y), size.0 - 7.0, top, 6.0, bottom - top)
+        {
+            self.detail_drag_y = Some(y);
+            return events;
+        }
         for wd in widgets {
             if !ui::hovered((x, y), wd.x, wd.y, wd.w, wd.h) {
+                continue;
+            }
+            // Text takes no click: a button under a long page is still reached.
+            if matches!(wd.kind, WKind::Text { .. }) {
                 continue;
             }
             if wd.list && (y < top || y >= bottom) {
@@ -3485,7 +3536,11 @@ impl OptionsUi {
                         }
                         Act::ShaderOption(name) => {
                             if let Some(options) = &mut s.shader_options {
-                                options.cycle(&name, false);
+                                if self.shift {
+                                    options.reset_option(&name);
+                                } else {
+                                    options.cycle(&name, false);
+                                }
                             }
                         }
                         Act::ShaderScreen(screen) => {
@@ -3509,6 +3564,12 @@ impl OptionsUi {
                         Act::None => {}
                     }
                 }
+                WKind::ShaderSlider { name, .. } if self.shift => {
+                    if let Some(options) = &mut s.shader_options {
+                        options.reset_option(&name);
+                    }
+                    events.push(Event::ButtonClick);
+                }
                 WKind::ShaderSlider { name, .. } => {
                     let at = ui::slider_value(wd.x, wd.w, x);
                     if let Some(options) = &mut s.shader_options {
@@ -3525,6 +3586,9 @@ impl OptionsUi {
                 WKind::ModEntry { index, .. } => {
                     if self.mod_pick == index && s.mods.installed.get(index).is_some_and(|m| m.has_settings) {
                         events.push(Event::ModSettings(index));
+                    }
+                    if self.mod_pick != index {
+                        self.detail_scroll = 0.0;
                     }
                     self.mod_pick = index;
                 }
@@ -3557,6 +3621,7 @@ impl OptionsUi {
     }
     pub fn release(&mut self) -> Vec<Event> {
         self.scrollbar_drag_y = None;
+        self.detail_drag_y = None;
         if let Some(p) = &mut self.pack_screen {
             p.release();
         }
@@ -3653,6 +3718,12 @@ impl OptionsUi {
         }
         if let Some(level) = Self::graphics_level(self.page()) {
             self.graphics.scroll(level, s, size.1, amount);
+            return;
+        }
+        if self.page() == Page::ModMenu && cursor.0 >= (size.0 / 2.0).floor() {
+            let (_, top, bottom, _) = self.layout(s, size.0, size.1);
+            let max = (self.detail_content - (bottom - top)).max(0.0);
+            self.detail_scroll = (self.detail_scroll - amount * 18.0).clamp(0.0, max);
             return;
         }
         match &mut self.pack_screen {

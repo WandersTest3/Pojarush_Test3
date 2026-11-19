@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -199,12 +201,50 @@ fun stepsFor(range: ClosedFloatingPointRange<Float>, step: Float): Int =
     (Math.round((range.endInclusive - range.start) / step) - 1).coerceAtLeast(0)
 
 @Composable
+fun ResetButton(enabled: Boolean, onClick: () -> Unit) {
+    val color = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.35f)
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .padding(start = 6.dp)
+            .size(26.dp)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(16.dp)) {
+            val stroke = size.minDimension * 0.14f
+            val r = size.minDimension / 2f - stroke
+            val c = center
+            drawArc(
+                color = color,
+                startAngle = -60f,
+                sweepAngle = 300f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(c.x - r, c.y - r),
+                size = androidx.compose.ui.geometry.Size(r * 2f, r * 2f),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+            )
+            val a = Math.toRadians(-60.0)
+            val tip = androidx.compose.ui.geometry.Offset(c.x + r * Math.cos(a).toFloat(), c.y + r * Math.sin(a).toFloat())
+            val head = androidx.compose.ui.graphics.Path().apply {
+                moveTo(tip.x + stroke * 2.2f, tip.y - stroke * 0.4f)
+                lineTo(tip.x - stroke * 0.6f, tip.y - stroke * 2.4f)
+                lineTo(tip.x - stroke * 0.2f, tip.y + stroke * 1.6f)
+                close()
+            }
+            drawPath(head, color)
+        }
+    }
+}
+
+@Composable
 fun SettingSlider(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
     step: Float,
     display: (Float) -> String,
+    default: Float? = null,
     onDone: (Float) -> Unit,
 ) {
     var current by remember(value) { mutableFloatStateOf(value) }
@@ -212,6 +252,12 @@ fun SettingSlider(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             Text(display(current), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            if (default != null) {
+                ResetButton(enabled = kotlin.math.abs(current - default) > step / 2f) {
+                    current = default
+                    onDone(default)
+                }
+            }
         }
         Slider(
             value = current,

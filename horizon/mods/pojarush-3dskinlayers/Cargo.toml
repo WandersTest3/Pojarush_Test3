@@ -1,6 +1,6 @@
 [package]
 name = "pojarush_3dskinlayers"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 license-file = "LICENSE.txt"
 description = "3D Skin Layers (test port): the second layer of the player's skin as 3D voxels. Original mod by tr7zw."

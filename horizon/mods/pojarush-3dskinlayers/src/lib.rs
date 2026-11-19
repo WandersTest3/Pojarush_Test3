@@ -2,7 +2,7 @@ use horizon_mod_sdk::{
     Mod, Registration,
     render::{self, ModelPlace},
     storage,
-    ui::{self, ButtonWidget, SliderWidget, TextWidget, WidgetV2},
+    ui::{self, ButtonWidget, EntityWidget, SliderWidget, TextWidget, WidgetV3},
 };
 use std::fmt::Write;
 
@@ -312,22 +312,27 @@ impl Layers {
         let t = strings();
         let on = |b: bool| if b { t[0] } else { t[1] };
         let mut widgets = vec![
-            WidgetV2::Text(TextWidget { id: 0, text: t[13].into(), color: 0xB98CF2 }),
-            WidgetV2::Text(TextWidget { id: 0, text: format!("{} {}", t[14], t[15]), color: 0xAAAAAA }),
-            WidgetV2::Button(ButtonWidget { id: ENABLED, label: format!("{}: {}", t[2], on(self.enabled)) }),
+            WidgetV3::Text(TextWidget { id: 0, text: t[13].into(), color: 0xB98CF2 }),
+            WidgetV3::Text(TextWidget { id: 0, text: format!("{} {}", t[14], t[15]), color: 0xAAAAAA }),
+            // The player as they look now, turned toward the cursor.
+            WidgetV3::Entity(EntityWidget { id: 0, entity: "player".into(), height: 90, follow_cursor: true }),
+            WidgetV3::Button(ButtonWidget { id: ENABLED, label: format!("{}: {}", t[2], on(self.enabled)) }),
         ];
         for (i, _) in LAYER_LIST.iter().enumerate() {
-            widgets.push(WidgetV2::Button(ButtonWidget {
+            widgets.push(WidgetV3::Button(ButtonWidget {
                 id: LAYERS + i as u32,
                 label: format!("{}: {}", t[3 + i], on(self.layers[i])),
             }));
         }
         for id in [S_HEAD, S_BODY, S_BASE] {
             let (label, position) = self.slider(id);
-            widgets.push(WidgetV2::Slider(SliderWidget { id, label, steps: SIZE_MAX - SIZE_MIN, position }));
+            widgets.push(WidgetV3::Slider(SliderWidget { id, label, steps: SIZE_MAX - SIZE_MIN, position }));
         }
-        widgets.push(WidgetV2::Button(ButtonWidget { id: RESET, label: t[12].into() }));
-        ui::set_settings_v2(&widgets);
+        widgets.push(WidgetV3::Button(ButtonWidget { id: RESET, label: t[12].into() }));
+        ui::set_settings_v3(&widgets);
+        let mut resets = vec![ENABLED, S_HEAD, S_BODY, S_BASE];
+        resets.extend(LAYERS..LAYERS + 6);
+        ui::set_resets(&resets);
     }
 
     fn defaults(&mut self) {
@@ -375,6 +380,26 @@ impl Mod for Layers {
     }
 
     fn ui_select(&mut self, id: u32, row: u32) {
+        // Shift + click: that setting back at its default.
+        if row == u32::MAX {
+            let mut d = Layers { skin: None, models: Vec::new(), ..*self };
+            d.defaults();
+            match id {
+                ENABLED => self.enabled = d.enabled,
+                S_HEAD => self.head = d.head,
+                S_BODY => self.body = d.body,
+                S_BASE => self.base = d.base,
+                i if (LAYERS..LAYERS + 6).contains(&i) => {
+                    let i = (i - LAYERS) as usize;
+                    self.layers[i] = d.layers[i];
+                }
+                _ => return,
+            }
+            self.save();
+            self.dirty = true;
+            self.page();
+            return;
+        }
         match id {
             S_HEAD | S_BODY | S_BASE => {
                 let value = (SIZE_MIN + row).min(SIZE_MAX);

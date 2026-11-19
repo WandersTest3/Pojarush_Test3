@@ -1,6 +1,6 @@
 id = "pojarush_3dskinlayers"
 name = "3D Skin Layers (Test Port)"
-version = "1.0.1"
+version = "1.0.2"
 description = "Unofficial test port of tr7zw's 3D Skin Layers to Horizon, made only to test the mod API. The flat second layer of your skin (hat, jacket, sleeves and pants) becomes a 3D model of voxels, transparent pixels included, so glasses and visors stand out. Each layer can be turned off and the voxel sizes changed in its settings. Shown on your own player in third person. All credit for the original idea and design goes to tr7zw; not for redistribution."
 
 authors = ["tr7zw (original 3D Skin Layers)", "Wanders_Test3 (Horizon test port)"]

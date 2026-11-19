@@ -75,5 +75,6 @@
   "horizon.modmenu.website": "Website",
   "horizon.modmenu.issues": "Issues",
   "horizon.modmenu.license": "License",
+  "horizon.modmenu.version": "Version",
   "horizon.modmenu.credits": "Credits"
 }

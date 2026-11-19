@@ -88,6 +88,11 @@ icon rows), `ui::set_video_button(label)` (a button at the top of Video Settings
 and for models built in code and hung on the local player `render::spawn_model_json`,
 `render::attach_model`, `render::hide_player_parts`, `render::player_skin` and
 `render::player_skin_slim`.
+API level 12 adds `ui::open_screen_v3` and `ui::set_settings_v3`, which take every widget kind
+(sliders on a mod's own screen too) and `entity`: the player as they look (`"player"`) or an
+entity type (`"minecraft:zombie"`) drawn in 3D in a box of `height` GUI pixels, turned toward the
+cursor when `follow_cursor`. `ui::set_resets(ids)` names the buttons and sliders that Shift + click
+puts back at the mod's default: the game calls `ui_select(id, u32::MAX)` for them.
 
 ### Content mods (API 0.2)
 

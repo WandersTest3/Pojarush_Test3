@@ -910,6 +910,26 @@ fn helper(
     (pipeline, layout)
 }
 
+/// The shader pack program whose pipeline the driver compiles now: a driver that loses the
+/// device while compiling one (Adreno with Solas) leaves its name for the log.
+static BUILDING: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+
+fn building(name: &str) {
+    if let Ok(mut b) = BUILDING.lock() {
+        b.clear();
+        b.push_str(name);
+    }
+}
+
+/// The last shader pack program sent to the driver, empty once the pack is built.
+pub fn last_built() -> String {
+    BUILDING.lock().map(|b| b.clone()).unwrap_or_default()
+}
+
+pub(crate) fn built() {
+    building("");
+}
+
 /// Whether gbuffers program `p` writes neither a buffer nor an image.
 fn writes_nothing(p: &horizon_shaders::PostProgram) -> bool {
     p.program.as_ref().is_some_and(|g| {
@@ -1640,6 +1660,7 @@ fn build_pass(
             module(program.fragment, true),
         );
         let is_shadow = p.group == Group::Shadow;
+        building(&p.name);
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some(&p.name),
             layout: Some(&pipeline_layout),
@@ -1820,6 +1841,7 @@ fn build_compute(
             label: Some(&name),
             source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(module)),
         });
+        building(&name);
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some(&name),
             layout: Some(&pipeline_layout),
@@ -2493,6 +2515,7 @@ impl PackPost {
             });
         }
         let white = [255u8; 4];
+        built();
         Self {
             notes,
             passes,

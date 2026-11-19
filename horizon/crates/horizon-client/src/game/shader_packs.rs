@@ -392,6 +392,18 @@ impl Game<'_> {
                     let matches_job = slot
                         .as_ref()
                         .is_some_and(|j| j.name == name && j.dimension == dimension);
+                    // The last game stopped while the GPU built this pack (a driver that loses
+                    // the device): it stays off rather than stopping every start.
+                    if !matches_job && std::fs::read_to_string(Self::pack_marker()).is_ok_and(|m| m == name) {
+                        drop(slot);
+                        let _ = std::fs::remove_file(Self::pack_marker());
+                        self.shader_pack_failed(
+                            &name,
+                            dimension,
+                            "the game stopped while the GPU built it last time",
+                        );
+                        return PackInputs::default();
+                    }
                     if !matches_job {
                         let renderer = self.renderer.as_mut().unwrap();
                         let mut macros = Macros::standard();
@@ -473,6 +485,7 @@ impl Game<'_> {
                                 started_ids.elapsed().as_millis()
                             );
                             if let Some(renderer) = &self.renderer {
+                                let _ = std::fs::write(Self::pack_marker(), &name);
                                 let ctx = renderer.shader_pack_build_context();
                                 let (tx, rx) = std::sync::mpsc::channel();
                                 let _ = std::thread::Builder::new()
@@ -508,6 +521,7 @@ impl Game<'_> {
                     }
                 }
                 if let Some((started, gpu_res)) = gpu_finished {
+                    let _ = std::fs::remove_file(Self::pack_marker());
                     match gpu_res {
                         Ok(built_pack) => {
                             let mut active = false;
@@ -666,6 +680,11 @@ impl Game<'_> {
 
     /// Turns off the pack `name` after loading it panicked: nothing runs in its place, it is no
     /// longer the picked pack (so the next start does not load it again), and the chat says so.
+    /// Names the pack the GPU is building, until it is built.
+    fn pack_marker() -> std::path::PathBuf {
+        Self::options_path().with_file_name("shaderpack-building.txt")
+    }
+
     fn shader_pack_failed(&mut self, name: &str, dimension: i32, error: &str) {
         log::error!("shader pack {name}: turned off: {error}");
         self.pack_ids = None;

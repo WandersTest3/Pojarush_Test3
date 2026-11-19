@@ -134,6 +134,7 @@ impl Game<'_> {
             [r.config.width as i32, r.config.height as i32]
         });
         let mut ui = std::mem::take(&mut self.ui.options);
+        ui.shift = self.shift_held();
         let events = ui.click(
             &mut self.settings,
             &self.gui.atlas,
@@ -146,6 +147,12 @@ impl Game<'_> {
         );
         self.ui.options = ui;
         self.handle_option_events(events)
+    }
+    /// Shift is down: the window's modifiers, or a Shift key a touch overlay sent.
+    pub(super) fn shift_held(&self) -> bool {
+        self.modifiers.shift_key()
+            || self.physical_keys.contains(&KeyCode::ShiftLeft)
+            || self.physical_keys.contains(&KeyCode::ShiftRight)
     }
     pub(super) fn options_drag(&mut self) -> Result<()> {
         let size = self.gui_size();

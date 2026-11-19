@@ -202,6 +202,43 @@ interface ui {
         /// A slider.
         slider(slider-widget),
     }
+    /// A player or an entity drawn in 3D in a box, lit as the inventory's
+    /// player is (API level 12).
+    record entity-widget {
+        /// The mod's own name for the widget.
+        id: u32,
+        /// `player`: the player as they look now (skin, armour, held items,
+        /// the cape); else an entity type, `minecraft:zombie`. An unknown
+        /// type draws nothing.
+        entity: string,
+        /// The box's height in GUI pixels, 24 to 200; it is as wide as its column.
+        height: u32,
+        /// The head and body turn toward the cursor, as in the inventory;
+        /// else the model faces the player.
+        follow-cursor: bool,
+    }
+    /// `widget-v2` with the entity box (API level 12).
+    variant widget-v3 {
+        /// Text the player reads.
+        text(text-widget),
+        /// A button.
+        button(button-widget),
+        /// An item's icon and name.
+        item(item-widget),
+        /// Rows the player picks from.
+        %list(list-widget),
+        /// A slider.
+        slider(slider-widget),
+        /// A player or an entity in 3D.
+        entity(entity-widget),
+    }
+    /// `screen` with the newer widget kinds (API level 12).
+    record screen-v3 {
+        /// Its title, up to 256 characters.
+        title: string,
+        /// Its widgets, in order, at most 64.
+        widgets: list<widget-v3>,
+    }
     /// A screen the mod owns: a title over widgets stacked down the middle,
     /// the Done button the game adds, and Esc to leave it.
     record screen {
@@ -223,6 +260,16 @@ interface ui {
     set-settings: func(widgets: list<widget>);
     /// `set-settings` taking the newer widget kinds too.
     set-settings-v2: func(widgets: list<widget-v2>);
+    /// `open-screen` taking every widget kind, sliders and entity boxes too
+    /// (API level 12).
+    open-screen-v3: func(screen: screen-v3);
+    /// `set-settings` taking every widget kind (API level 12).
+    set-settings-v3: func(widgets: list<widget-v3>);
+    /// The buttons and sliders, by id, that Shift + click puts back at the
+    /// mod's default (API level 12): the game calls `ui-events::select(id,
+    /// 4294967295)` (`0xFFFFFFFF`) for them, and the mod sets its default
+    /// and pushes fresh widgets. Others take Shift + click as a plain click.
+    set-resets: func(ids: list<u32>);
     /// The game's selected language code, lowercase (`en_us`, `pt_br`), for
     /// mods that translate their widgets.
     language: func() -> string;
@@ -518,15 +565,18 @@ interface render {
     /// a PNG of at most 128x128 from the same folder, in the world. Returns the
     /// model's id; at most 64 per mod.
     spawn-model: func(geometry: string, texture: string, place: model-place) -> result<u32, string>;
+    /// Moves, turns and scales model `id` to `place`.
     place-model: func(id: u32, place: model-place);
     /// Plays animation `name` of `models/<file>.animation.json` (Bedrock
     /// animations, GeckoLib's format) on the model, from its start.
     play-animation: func(id: u32, file: string, name: string, looping: bool);
+    /// Stops the animation playing on model `id`; it keeps its pose.
     stop-animation: func(id: u32);
     /// Turns a bone by `rotation` (degrees, Bedrock axes) on top of the
     /// animation, and shows or hides it with its children (GeckoLib's
     /// `getBone(...).setRot` and `setHidden`).
     set-bone: func(id: u32, bone: string, rotation: tuple<f32, f32, f32>, visible: bool);
+    /// Takes model `id` away.
     remove-model: func(id: u32);
     /// A model from Bedrock geometry text the mod builds itself (as 3D Skin
     /// Layers builds voxels), textured by a PNG in `models/` or by

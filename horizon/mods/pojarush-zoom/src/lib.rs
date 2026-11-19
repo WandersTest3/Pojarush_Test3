@@ -169,6 +169,7 @@ impl Zoom {
             ),
             Self::button(RESET, t[8].into()),
         ]);
+        ui::set_resets(&[S_LEVEL, S_SPEED, WHEEL_STEP, MODE, KEEP, STEADY]);
     }
 
     fn save(&self) {
@@ -275,6 +276,29 @@ impl Mod for Zoom {
     }
 
     fn ui_select(&mut self, id: u32, row: u32) {
+        // Shift + click: that setting back at its default.
+        if row == u32::MAX {
+            match id {
+                S_LEVEL => self.level = 8,
+                S_SPEED => self.speed = 6,
+                WHEEL_STEP => self.step = 2,
+                MODE => {
+                    self.toggle = false;
+                    if self.active {
+                        self.stop();
+                    }
+                }
+                KEEP => {
+                    self.keep = true;
+                    self.wheel = 1.0;
+                }
+                STEADY => self.steady = true,
+                _ => return,
+            }
+            self.save();
+            self.page();
+            return;
+        }
         if id == S_LEVEL || id == S_SPEED {
             if id == S_LEVEL {
                 self.level = (LEVEL_MIN + row).min(LEVEL_MAX);

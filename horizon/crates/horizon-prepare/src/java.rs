@@ -369,7 +369,14 @@ fn run(mut command: Command, log: &fs::File) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("Cannot start {program}: {e}"))?;
     let start = Instant::now();
+    // A slow phone runs one JVM for many minutes: a line a minute shows the launcher it lives.
+    let mut said = 0u64;
     loop {
+        let minutes = start.elapsed().as_secs() / 60;
+        if minutes > said {
+            said = minutes;
+            println!("{program}: still running ({minutes} min)");
+        }
         if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
             return if status.success() {
                 Ok(())

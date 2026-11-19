@@ -64,9 +64,14 @@ type ServerEvents = server_bindings::exports::horizon::mods::server_events::Gues
 /// The widget model a `ui` screen or settings page shows (WIT `interface
 /// ui`), for the game to draw with its menus' own widgets.
 pub use ui_bindings::horizon::mods::ui::{
-    ButtonWidget, ItemWidget, ListWidget, SliderWidget, TextWidget, WidgetV2 as UiWidget,
+    ButtonWidget, EntityWidget, ItemWidget, ListWidget, SliderWidget, TextWidget,
+    WidgetV3 as UiWidget,
 };
-use ui_bindings::horizon::mods::ui::{Screen as ScreenV1, Widget as WidgetV1};
+use ui_bindings::horizon::mods::ui::{
+    Screen as ScreenV1, ScreenV3, Widget as WidgetV1, WidgetV2,
+};
+/// `ui-events::select`'s row for a Shift + click on a widget `ui.set-resets` named.
+pub const RESET_ROW: u32 = u32::MAX;
 /// A mod as `ui.mods` lists it (WIT `ui.mod-info`).
 pub use ui_bindings::horizon::mods::ui::ModInfo as UiModInfo;
 
@@ -137,6 +142,15 @@ fn widget_v2(w: WidgetV1) -> UiWidget {
         WidgetV1::Button(b) => UiWidget::Button(b),
         WidgetV1::Item(i) => UiWidget::Item(i),
         WidgetV1::List(l) => UiWidget::List(l),
+    }
+}
+fn widget_v3(w: WidgetV2) -> UiWidget {
+    match w {
+        WidgetV2::Text(t) => UiWidget::Text(t),
+        WidgetV2::Button(b) => UiWidget::Button(b),
+        WidgetV2::Item(i) => UiWidget::Item(i),
+        WidgetV2::List(l) => UiWidget::List(l),
+        WidgetV2::Slider(sl) => UiWidget::Slider(sl),
     }
 }
 /// Capability `render`'s imports (docs/mods.md): the game draws the shapes.
@@ -464,6 +478,8 @@ struct UiState {
     /// The widgets `ui.set-settings` last pushed (the mod's page in
     /// Options > Mods).
     settings: Vec<UiWidget>,
+    /// The widgets Shift + click resets (`ui.set-resets`).
+    resets: Vec<u32>,
     /// The calls since the last hook ended, for [`Output`].
     open: bool,
     close: bool,
@@ -1441,6 +1457,13 @@ impl Mods {
             .and_then(|e| e.run.as_ref())
             .map_or(&[], |r| &r.store.data().ui.settings)
     }
+    /// Whether Shift + click on widget `id` of mod `i` resets it (`ui.set-resets`).
+    pub fn ui_resets(&self, i: usize, id: u32) -> bool {
+        self.entries
+            .get(i)
+            .and_then(|e| e.run.as_ref())
+            .is_some_and(|r| r.store.data().ui.resets.contains(&id))
+    }
     /// A `list` widget's row was picked on a surface of mod `i`.
     pub fn ui_select(&mut self, i: usize, id: u32, row: u32) {
         self.ui_event(i, |ui, s| {
@@ -1611,6 +1634,11 @@ fn clip_widgets(widgets: Vec<UiWidget>) -> Vec<UiWidget> {
                 s.steps = s.steps.clamp(1, SLIDER_STEPS);
                 s.position = s.position.min(s.steps);
                 UiWidget::Slider(s)
+            }
+            UiWidget::Entity(mut e) => {
+                e.entity = clip(e.entity);
+                e.height = e.height.clamp(24, 200);
+                UiWidget::Entity(e)
             }
         })
         .collect()
@@ -2254,8 +2282,21 @@ impl ui::Host for State {
     fn set_settings(&mut self, widgets: Vec<WidgetV1>) {
         self.ui.settings = clip_widgets(widgets.into_iter().map(widget_v2).collect());
     }
-    fn set_settings_v2(&mut self, widgets: Vec<UiWidget>) {
+    fn set_settings_v2(&mut self, widgets: Vec<WidgetV2>) {
+        self.ui.settings = clip_widgets(widgets.into_iter().map(widget_v3).collect());
+    }
+    fn open_screen_v3(&mut self, screen: ScreenV3) {
+        self.ui.screen = Some(UiScreen {
+            title: clip(screen.title),
+            widgets: clip_widgets(screen.widgets),
+        });
+        self.ui.open = true;
+    }
+    fn set_settings_v3(&mut self, widgets: Vec<UiWidget>) {
         self.ui.settings = clip_widgets(widgets);
+    }
+    fn set_resets(&mut self, ids: Vec<u32>) {
+        self.ui.resets = ids.into_iter().take(WIDGETS * 2).collect();
     }
     fn language(&mut self) -> String {
         horizon_client_core::lang::code()

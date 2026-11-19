@@ -290,11 +290,11 @@ fun InterfaceSettings(settings: ControlSettings) {
                 }
             }
         }
-        SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) {
+        SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.60f) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
         }
-        SettingSlider(stringResource(R.string.font_size), settings.fontScale, 0.70f..1.60f, 0.05f, { "${Math.round(it * 100)}%" }) {
+        SettingSlider(stringResource(R.string.font_size), settings.fontScale, 0.70f..1.60f, 0.05f, { "${Math.round(it * 100)}%" }, default = 1.00f) {
             settings.fontScale = it
             UiPrefs.fontScale = it
         }
@@ -337,7 +337,7 @@ fun LodSettings() {
         SettingSlider(stringResource(R.string.lod_distance), index.toFloat(), 0f..steps.lastIndex.toFloat(), 1f, { v ->
             val chunks = steps[v.toInt().coerceIn(0, steps.lastIndex)]
             if (chunks == 0) off else "$chunks"
-        }) { v ->
+        }, default = 0f) { v ->
             lod = steps[Math.round(v).coerceIn(0, steps.lastIndex)]
             com.wanderstest3.pojarush.horizon.HorizonManager.setLodDistance(lod)
         }
@@ -505,14 +505,14 @@ fun WallpaperSettings(settings: ControlSettings) {
             }
         }
         if (path.isNotEmpty()) {
-            SettingSlider(stringResource(R.string.wallpaper_dim), settings.wallpaperDim, 0f..0.90f, 0.05f, { "${Math.round(it * 100)}%" }) {
+            SettingSlider(stringResource(R.string.wallpaper_dim), settings.wallpaperDim, 0f..0.90f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.25f) {
                 settings.wallpaperDim = it
                 WallpaperState.version++
             }
         }
         MenuMusicSettings(settings)
         if (path.isNotEmpty() && ControlLayouts.isVideo(File(path).name) && settings.menuMusic.isEmpty()) {
-            SettingSlider(stringResource(R.string.wallpaper_volume), settings.wallpaperVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }) {
+            SettingSlider(stringResource(R.string.wallpaper_volume), settings.wallpaperVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0f) {
                 settings.wallpaperVolume = it
                 WallpaperState.version++
             }
@@ -703,7 +703,7 @@ private fun MenuMusicSettings(settings: ControlSettings) {
         }
     }
     if (music.isNotEmpty()) {
-        SettingSlider(stringResource(R.string.menu_music_volume), settings.menuMusicVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }) {
+        SettingSlider(stringResource(R.string.menu_music_volume), settings.menuMusicVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.6f) {
             settings.menuMusicVolume = it
             WallpaperState.version++
         }

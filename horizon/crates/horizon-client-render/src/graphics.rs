@@ -502,7 +502,8 @@ impl Graphics {
                 "fxaa" => g.fxaa = flag(g.fxaa),
                 "taa" => g.taa = flag(g.taa),
                 "upscaling" => g.upscaling = Upscaling::parse(value),
-                "hdr" => g.hdr = flag(g.hdr),
+                // HDR and battery mode left the menus: a saved "on" no longer applies.
+                "hdr" => {}
                 "hdrPaperWhite" => {
                     g.hdr_paper_white = match number(g.hdr_paper_white) {
                         0 => 0,
@@ -519,7 +520,7 @@ impl Graphics {
                 "hdrUiBrightness" => {
                     g.hdr_ui_brightness = number(g.hdr_ui_brightness).clamp(25, 100)
                 }
-                "batteryMode" => g.battery = flag(g.battery),
+                "batteryMode" => {}
                 "graphicsApi" => g.api = GraphicsApi::from_name(value).unwrap_or_default(),
                 "pickedShaderPack" => g.shader_pack = value.to_owned(),
                 "overlay" => {
@@ -698,12 +699,12 @@ mod tests {
             fxaa: true,
             taa: true,
             upscaling: Upscaling::Balanced,
-            hdr: true,
+            hdr: false,
             hdr_paper_white: 240,
             hdr_peak: 1400,
             hdr_black_level: 12,
             hdr_ui_brightness: 60,
-            battery: true,
+            battery: false,
             api: GraphicsApi::Dx12,
             shader_pack: "Golden Hour".into(),
         };

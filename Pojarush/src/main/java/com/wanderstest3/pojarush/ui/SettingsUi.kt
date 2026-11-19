@@ -115,10 +115,10 @@ fun LayoutSettings(settings: ControlSettings, onEdit: (() -> Unit)?, onChange: (
 fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     PojarushCard {
         CardTitle(stringResource(R.string.nav_controls))
-        SettingSlider(stringResource(R.string.controls_opacity), settings.opacity, 0.10f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.opacity = it; onChange(Change.CONTROLS) }
-        SettingSlider(stringResource(R.string.controls_size), settings.buttonScale, 0.50f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.buttonScale = it; onChange(Change.CONTROLS) }
-        SettingSlider(stringResource(R.string.controls_sensitivity), settings.lookSensitivity, 0.10f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.lookSensitivity = it; onChange(Change.CONTROLS) }
-        SettingSlider(stringResource(R.string.controls_long_press), settings.longPressMs.toFloat(), 0f..800f, 50f, { "${it.toInt()} ms" }) { settings.longPressMs = it.toInt(); onChange(Change.CONTROLS) }
+        SettingSlider(stringResource(R.string.controls_opacity), settings.opacity, 0.10f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }, default = 1.00f) { settings.opacity = it; onChange(Change.CONTROLS) }
+        SettingSlider(stringResource(R.string.controls_size), settings.buttonScale, 0.50f..2.00f, 0.05f, { "${fmt(it)}x" }, default = 1.00f) { settings.buttonScale = it; onChange(Change.CONTROLS) }
+        SettingSlider(stringResource(R.string.controls_sensitivity), settings.lookSensitivity, 0.10f..2.00f, 0.05f, { "${fmt(it)}x" }, default = 1.00f) { settings.lookSensitivity = it; onChange(Change.CONTROLS) }
+        SettingSlider(stringResource(R.string.controls_long_press), settings.longPressMs.toFloat(), 0f..800f, 50f, { "${it.toInt()} ms" }, default = 350f) { settings.longPressMs = it.toInt(); onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_tap_use), settings.tapToUse) { settings.tapToUse = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_hotbar), settings.hotbarTouch) { settings.hotbarTouch = it; onChange(Change.CONTROLS) }
         SettingSwitch(stringResource(R.string.controls_vibrate), settings.vibrate) { settings.vibrate = it; onChange(Change.CONTROLS) }
@@ -132,7 +132,7 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             onChange(Change.CONTROLS)
         }
         if (drop) {
-            SettingSlider(stringResource(R.string.controls_bedrock_drop_interval), settings.bedrockDropMs.toFloat(), 50f..600f, 50f, { "${it.toInt()} ms" }) {
+            SettingSlider(stringResource(R.string.controls_bedrock_drop_interval), settings.bedrockDropMs.toFloat(), 50f..600f, 50f, { "${it.toInt()} ms" }, default = 200f) {
                 settings.bedrockDropMs = it.toInt()
                 onChange(Change.CONTROLS)
             }
@@ -144,7 +144,7 @@ fun ControlsSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             onChange(Change.CONTROLS)
         }
         if (gyro) {
-            SettingSlider(stringResource(R.string.controls_gyro_sensitivity), settings.gyroSensitivity, 0.10f..3.00f, 0.05f, { "${fmt(it)}x" }) {
+            SettingSlider(stringResource(R.string.controls_gyro_sensitivity), settings.gyroSensitivity, 0.10f..3.00f, 0.05f, { "${fmt(it)}x" }, default = 1.00f) {
                 settings.gyroSensitivity = it
                 onChange(Change.CONTROLS)
             }
@@ -181,9 +181,9 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     }
     PojarushCard {
         CardTitle(stringResource(R.string.menu_button_title))
-        SettingSlider(stringResource(R.string.menu_button_size), settings.menuSize, 20f..80f, 2f, { "${it.toInt()} dp" }) { settings.menuSize = it; onChange(Change.MENU_BUTTON) }
-        SettingSlider(stringResource(R.string.menu_button_opacity), settings.menuOpacity, 0.05f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }) { settings.menuOpacity = it; onChange(Change.MENU_BUTTON) }
-        SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
+        SettingSlider(stringResource(R.string.menu_button_size), settings.menuSize, 20f..80f, 2f, { "${it.toInt()} dp" }, default = 30f) { settings.menuSize = it; onChange(Change.MENU_BUTTON) }
+        SettingSlider(stringResource(R.string.menu_button_opacity), settings.menuOpacity, 0.05f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.50f) { settings.menuOpacity = it; onChange(Change.MENU_BUTTON) }
+        SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }, default = 0.50f) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
         Hint(if (icon.isEmpty()) stringResource(R.string.menu_button_icon_none) else stringResource(R.string.mouse_cursor_current, File(icon).name))
         val iconFiles = remember(iconVersion) { ControlLayouts.history(ControlLayouts.menuIconDir()) }
         if (iconFiles.isNotEmpty()) {
@@ -242,8 +242,8 @@ fun MouseSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     PojarushCard {
         CardTitle(stringResource(R.string.nav_mouse))
         SettingSwitch(stringResource(R.string.mouse_virtual), settings.virtualMouse, stringResource(R.string.mouse_virtual_desc)) { settings.virtualMouse = it; onChange(Change.MOUSE) }
-        SettingSlider(stringResource(R.string.mouse_speed), settings.mouseSpeed, 0.25f..3.00f, 0.05f, { "${fmt(it)}x" }) { settings.mouseSpeed = it; onChange(Change.MOUSE) }
-        SettingSlider(stringResource(R.string.mouse_size), settings.cursorSize, 0.25f..2.00f, 0.05f, { "${fmt(it)}x" }) { settings.cursorSize = it; onChange(Change.MOUSE) }
+        SettingSlider(stringResource(R.string.mouse_speed), settings.mouseSpeed, 0.25f..3.00f, 0.05f, { "${fmt(it)}x" }, default = 1.75f) { settings.mouseSpeed = it; onChange(Change.MOUSE) }
+        SettingSlider(stringResource(R.string.mouse_size), settings.cursorSize, 0.25f..2.00f, 0.05f, { "${fmt(it)}x" }, default = 0.75f) { settings.cursorSize = it; onChange(Change.MOUSE) }
         SettingSwitch(stringResource(R.string.mouse_screen_touch), settings.screenTouch, stringResource(R.string.mouse_screen_touch_desc)) { settings.screenTouch = it; onChange(Change.MOUSE) }
     }
     PojarushCard {
@@ -313,7 +313,8 @@ fun MemorySettings(settings: ControlSettings) {
                 settings.javaHeapMb.coerceIn(512, maxMb).toFloat(),
                 512f..maxMb.toFloat(),
                 256f,
-                { context.getString(R.string.memory_value, it.toInt()) }
+                { context.getString(R.string.memory_value, it.toInt()) },
+                default = 2048f.coerceIn(512f, maxMb.toFloat()),
             ) { applyHeap(Math.round(it)) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -381,7 +382,7 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             }, label = { Text(stringResource(R.string.graphics_mode_fixed)) })
         }
         if (!fixed) {
-            SettingSlider(stringResource(R.string.graphics_mode_percent), percent.toFloat(), 10f..100f, 1f, { "${it.toInt()}%" }) { applyPercent(it.toInt()) }
+            SettingSlider(stringResource(R.string.graphics_mode_percent), percent.toFloat(), 10f..100f, 1f, { "${it.toInt()}%" }, default = 100f) { applyPercent(it.toInt()) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = percentText,

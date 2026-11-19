@@ -667,6 +667,21 @@ impl Game<'_> {
         size: f32,
         offset_y: f32,
     ) {
+        self.draw_player_preview_at(batch, x0, y0, x1, y1, size, offset_y, self.cursor);
+    }
+    /// `draw_player_preview` turned toward `look` instead of the cursor.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn draw_player_preview_at(
+        &self,
+        batch: &mut HudBatch,
+        x0: f32,
+        y0: f32,
+        x1: f32,
+        y1: f32,
+        size: f32,
+        offset_y: f32,
+        look: (f32, f32),
+    ) {
         let Some(m) = self.player_model.as_ref() else {
             return;
         };
@@ -678,8 +693,8 @@ impl Game<'_> {
             return;
         }
         let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
-        let x_angle = ((cx - self.cursor.0) / 40.0).atan();
-        let y_angle = ((cy - self.cursor.1) / 40.0).atan();
+        let x_angle = ((cx - look.0) / 40.0).atan();
+        let y_angle = ((cy - look.1) / 40.0).atan();
         let mut m = m.clone();
         // `extractEntityInInventory` divides the size by the entity's scale: the
         // preview is the same size whatever the player's scale.
@@ -735,6 +750,73 @@ impl Game<'_> {
             .filter(|p| p.fire_ticks > 0 && !p.spectator)
             .map(|p| (p.dimensions.width, p.dimensions.height));
         let quads = player_preview_quads(verts, gui, fire, &atlas.sprites);
+        let start = batch.vertices.len();
+        for (_, p, uv, color) in quads {
+            batch.quad_3d(p, uv, color);
+        }
+        batch.depth_since(start, [x0, y0, x1, y1]);
+    }
+    /// A mod's entity box (`ui.entity-widget`): the player as they look, or an entity of
+    /// type `entity` standing still, in `[x0, x1) x [y0, y1)`, turned toward the cursor when
+    /// `follow` (else facing out).
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn draw_entity_box(
+        &self,
+        batch: &mut HudBatch,
+        x0: f32,
+        y0: f32,
+        x1: f32,
+        y1: f32,
+        entity: &str,
+        follow: bool,
+    ) {
+        let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+        let look = if follow { self.cursor } else { (cx, cy) };
+        if entity == "player" {
+            let size = ((y1 - y0) / 2.3).min((x1 - x0) / 1.2);
+            self.draw_player_preview_at(batch, x0, y0, x1, y1, size, 0.0625, look);
+            return;
+        }
+        let kind = if entity.contains(':') {
+            entity.to_owned()
+        } else {
+            format!("minecraft:{entity}")
+        };
+        let Some(t) = self.res.mob_types().get(&kind).cloned() else {
+            return;
+        };
+        let (height, width) = (t.height.max(0.2) as f32, t.width.max(0.2) as f32);
+        let size = ((y1 - y0) * 0.8 / height).min((x1 - x0) * 0.8 / width.max(height * 0.5));
+        let mut m = horizon_client::mobs::Mob::new(0, t, horizon_core::geometry::Vec3::new(0.0, 0.0, 0.0), 0.0);
+        let x_angle = ((cx - look.0) / 40.0).atan();
+        let y_angle = ((cy - look.1) / 40.0).atan();
+        m.body_yaw = 180.0 + x_angle * 20.0;
+        m.previous_body_yaw = m.body_yaw;
+        m.yaw = m.body_yaw;
+        m.head_yaw = m.body_yaw + x_angle * 20.0;
+        m.previous_head_yaw = m.head_yaw;
+        m.head_pitch = -y_angle * 20.0;
+        m.previous_head_pitch = m.head_pitch;
+        m.previous = m.position;
+        let camera = glam::DVec3::new(m.position.x, m.position.y, m.position.z);
+        let atlas = &self.gui.atlas;
+        let lookup = |name: &str| atlas.sprites.get(name).map(|r| [r.u0, r.v0, r.u1, r.v1]);
+        let mut verts = Vec::new();
+        horizon_client::mobs::render::render(
+            &m,
+            1.0,
+            camera,
+            &lookup,
+            240 | 240 << 8,
+            self.res.mob_data(),
+            &mut verts,
+        );
+        let gui = glam::Mat4::from_translation(glam::Vec3::new(cx, cy, 0.0))
+            * glam::Mat4::from_scale(glam::Vec3::new(size, size, -size))
+            * glam::Mat4::from_translation(glam::Vec3::new(0.0, height / 2.0, 0.0))
+            * glam::Mat4::from_rotation_z(std::f32::consts::PI)
+            * glam::Mat4::from_rotation_x((y_angle * 20.0).to_radians());
+        let quads = player_preview_quads(verts, gui, None, &atlas.sprites);
         let start = batch.vertices.len();
         for (_, p, uv, color) in quads {
             batch.quad_3d(p, uv, color);

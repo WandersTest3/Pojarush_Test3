@@ -181,6 +181,29 @@ impl Fps {
             self.slider_widget(S_OPACITY),
             button(RESET, strings()[5].into()),
         ]);
+        ui::set_resets(&[SHOW, LOWS, BACKGROUND, COLOR, S_SIZE, S_X, S_Y, S_PAD, S_OPACITY]);
+    }
+
+    /// Shift + click: one setting back at its default.
+    fn reset(&mut self, id: u32) {
+        let mut d = Fps { ..*self };
+        d.defaults();
+        match id {
+            SHOW => self.show = d.show,
+            LOWS => self.lows = d.lows,
+            BACKGROUND => self.background = d.background,
+            COLOR => self.color = d.color,
+            S_SIZE => self.scale = d.scale,
+            S_X => self.x = d.x,
+            S_Y => self.y = d.y,
+            S_PAD => self.pad = d.pad,
+            S_OPACITY => self.opacity = d.opacity,
+            _ => return,
+        }
+        self.drawn = false;
+        self.last = (0, 0, 0, 0, 0);
+        self.save();
+        self.page();
     }
 
     fn save(&self) {
@@ -339,6 +362,10 @@ impl Mod for Fps {
     }
 
     fn ui_select(&mut self, id: u32, row: u32) {
+        if row == u32::MAX {
+            self.reset(id);
+            return;
+        }
         let slid = match id {
             S_SIZE => {
                 self.scale = SCALE_MIN + row * SCALE_STEP;

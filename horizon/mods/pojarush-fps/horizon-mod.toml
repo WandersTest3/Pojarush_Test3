@@ -1,6 +1,6 @@
 id = "pojarush_fps"
 name = "PH FPS"
-version = "1.1.8"
+version = "1.1.9"
 description = "Frames per second anywhere on the screen, at any size, with the slowest frame and the 1% low if you like. Turns Horizon's own overlay off."
 
 authors = ["Wanders_Test3"]

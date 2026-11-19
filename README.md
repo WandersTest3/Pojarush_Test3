@@ -261,6 +261,11 @@ modelo numa parte do jogador (desenhado em terceira pessoa); `render::hide_playe
 do modelo; `render::player_skin()` dá a skin (64x64 RGBA) e `render::player_skin_slim()` diz se os braços são finos.
 `render::set_player_cape("capes/x.png")` veste no jogador uma capa 64x32 da pasta `models/` do mod (também no élitro).
 
+Nível 12: `ui::open_screen_v3` e `ui::set_settings_v3` aceitam todos os widgets, incluindo `entity`, que desenha em 3D
+o jogador (`"player"`) ou uma entidade (`"minecraft:zombie"`) numa caixa, virada para o cursor se `follow_cursor`.
+`ui::set_resets(&[ids])` diz quais botões e sliders voltam ao padrão com Shift + clique: o jogo chama
+`ui_select(id, u32::MAX)`. Nas opções das shaders, Shift + clique também volta a opção ao padrão do pack.
+
 Teclas dos mods (`input::register_key`) aparecem em Controles > Atalhos, numa seção por mod, com botão de restaurar o
 padrão. Páginas de configuração organizam botões e sliders em duas colunas. Nome e descrição traduzidos no manifesto:
 

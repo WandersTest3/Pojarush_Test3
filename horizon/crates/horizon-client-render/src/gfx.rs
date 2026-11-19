@@ -1187,7 +1187,14 @@ async fn open_backend(
     match opened {
         Ok((device, queue)) => {
             device.set_device_lost_callback(|reason, message| {
-                log::error!("Horizon renderer: the GPU device was lost ({reason:?}): {message}");
+                let program = pack_post::last_built();
+                if program.is_empty() {
+                    log::error!("Horizon renderer: the GPU device was lost ({reason:?}): {message}");
+                } else {
+                    log::error!(
+                        "Horizon renderer: the GPU device was lost ({reason:?}) while the driver compiled the shader pack's `{program}`: {message}"
+                    );
+                }
             });
             crate::hud::set_atlas_limit(device.limits().max_texture_dimension_2d);
             set_split_limit(device.limits().max_texture_array_layers);

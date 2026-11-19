@@ -96,7 +96,8 @@ pub fn set_atlas_limit(limit: u32) {
 
 fn atlas_limit_after_device() -> u32 {
     if cfg!(target_os = "android") {
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(4);
+        // The GPU opens on the render thread while resources load: a phone may take a while.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
         while ATLAS_LIMIT.load(std::sync::atomic::Ordering::Relaxed) == 0 && std::time::Instant::now() < deadline {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
@@ -106,7 +107,8 @@ fn atlas_limit_after_device() -> u32 {
 
 pub fn atlas_limit() -> u32 {
     match ATLAS_LIMIT.load(std::sync::atomic::Ordering::Relaxed) {
-        0 if cfg!(target_os = "android") => 4096,
+        // Before the GPU says: every Vulkan phone GPU takes 8192 (Adreno and recent Mali 16384).
+        0 if cfg!(target_os = "android") => 8192,
         0 => MAX_ATLAS_SIZE,
         limit => limit,
     }

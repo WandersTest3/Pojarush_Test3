@@ -119,13 +119,8 @@ pub fn rows(level: Level) -> Vec<Row> {
         "Waits for the display's refresh: no tearing, a little latency.",
     );
     let gui = v(Opt::GuiScale, None, "Size of menus and the HUD.");
-    let preset = h(
-        H::Preset,
-        None,
-        "Sets the options below together. Changing one makes it Custom.",
-    );
     let mut rows = match level {
-        Level::Simple => vec![preset, render, lod, far, fov, fps, vsync, gui],
+        Level::Simple => vec![render, lod, far, fov, fps, vsync, gui],
         Level::Hdr => vec![
             Row::Header("HDR"),
             h(
@@ -264,11 +259,6 @@ pub fn rows(level: Level) -> Vec<Row> {
                 "Renders the world smaller and rebuilds it with TAA. Faster, softer.",
             ),
             h(
-                H::HdrSettings,
-                None,
-                "HDR output on an HDR display: lava, fire and sunlight shine brighter.",
-            ),
-            h(
                 H::PresentMode,
                 None,
                 "How frames reach the screen while VSync is off.",
@@ -293,11 +283,6 @@ pub fn rows(level: Level) -> Vec<Row> {
             v(Opt::Autosave, None, "Shows when the world saves."),
             v(Opt::AttackIndicator, None, "Shows attack cooldown."),
             Row::Header("Performance"),
-            h(
-                H::BatteryMode,
-                None,
-                "60 FPS cap (30 in menus or unfocused), half the workers: less power.",
-            ),
             h(
                 H::Workers,
                 None,
@@ -1006,51 +991,19 @@ impl GraphicsUi {
 mod tests {
     use super::*;
 
+    /// Preset, HDR Settings and Battery Mode are left out of the menus.
     #[test]
-    fn hdr_settings_open_where_hdr_is_offered() {
-        let mut s = Settings::default();
-        let mut ui = GraphicsUi::default();
-        let size = (480.0, 2000.0);
-        let at = |ui: &mut GraphicsUi, s: &Settings, level, item| {
-            let (widgets, _, _) = ui.layout(level, s, size.0, size.1);
-            let w = widgets
-                .iter()
-                .find(|w| matches!(w.target, Target::Item(i) if i == item))
-                .unwrap();
-            (w.x + 1.0, w.y + 1.0)
-        };
-        let button = at(&mut ui, &s, Level::Advanced, Item::Horizon(H::HdrSettings));
-        let click = |ui: &mut GraphicsUi, s: &mut Settings, level, point| {
-            ui.click(level, s, point, size, [480, 2000], false, false)
-        };
-        crate::graphics::offer_hdr(false);
-        assert!(click(&mut ui, &mut s, Level::Advanced, button).is_empty());
-        // Not even with HDR saved on, from another computer.
-        s.horizon.hdr = true;
-        assert!(click(&mut ui, &mut s, Level::Advanced, button).is_empty());
-        s.horizon.hdr = false;
-        crate::graphics::offer_hdr(true);
-        assert_eq!(
-            click(&mut ui, &mut s, Level::Advanced, button),
-            [Action::ButtonClick, Action::OpenHdr]
-        );
-        // On HDR's screen, the sliders wait for the switch above them.
-        let peak = at(&mut ui, &s, Level::Hdr, Item::Horizon(H::HdrPeak));
-        assert!(click(&mut ui, &mut s, Level::Hdr, peak).is_empty());
-        s.horizon.hdr = true;
-        assert_eq!(
-            click(&mut ui, &mut s, Level::Hdr, peak),
-            [Action::SliderDrag]
-        );
-        let on = |level, item| {
+    fn removed_settings_are_not_offered() {
+        let s = Settings::default();
+        let offered = |level, item| {
             extra_rows(level, &s)
                 .iter()
                 .any(|r| matches!(r, Row::Setting(x) if x.item == Item::Horizon(item)))
         };
-        assert!(on(Level::Hdr, H::Hdr) && !on(Level::Advanced, H::Hdr));
-        assert!(on(Level::Hdr, H::HdrPeak) && !on(Level::Advanced, H::HdrPeak));
-        for item in [H::HdrBlackLevel, H::HdrPaperWhite, H::HdrUiBrightness] {
-            assert!(on(Level::Hdr, item) && !on(Level::Advanced, item));
+        for level in [Level::Simple, Level::Advanced] {
+            for item in [H::Preset, H::HdrSettings, H::BatteryMode] {
+                assert!(!offered(level, item));
+            }
         }
     }
     #[test]

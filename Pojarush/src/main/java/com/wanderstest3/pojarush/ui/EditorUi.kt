@@ -518,6 +518,7 @@ private fun ButtonEditor(
         stringResource(R.string.editor_opacity),
         (b.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).opacity,
         0.05f..1f, 0.05f, { "${Math.round(it * 100)}%" },
+        default = com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE.opacity,
     ) { v ->
         onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(opacity = v)) }
     }
@@ -525,7 +526,7 @@ private fun ButtonEditor(
     SettingSwitch(stringResource(R.string.editor_penetrable), b.penetrable) { v -> onChange { it.copy(penetrable = v) } }
     SettingSwitch(stringResource(R.string.editor_spam), b.spam) { v -> onChange { it.copy(spam = v) } }
     if (b.spam) {
-        SettingSlider(stringResource(R.string.editor_spam_cps), b.spamCps, 1f..40f, 1f, { "${Math.round(it)} CPS" }) { v -> onChange { it.copy(spamCps = v) } }
+        SettingSlider(stringResource(R.string.editor_spam_cps), b.spamCps, 1f..40f, 1f, { "${Math.round(it)} CPS" }, default = 12f) { v -> onChange { it.copy(spamCps = v) } }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onDuplicate) { Text(stringResource(R.string.editor_duplicate)) }
@@ -553,6 +554,7 @@ private fun StickEditor(
         stringResource(R.string.editor_opacity),
         (s.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).opacity,
         0.05f..1f, 0.05f, { "${Math.round(it * 100)}%" },
+        default = com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE.opacity,
     ) { v ->
         onChange { it.copy(style = (it.style ?: com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE).copy(opacity = v)) }
     }
@@ -614,7 +616,7 @@ private fun BackgroundColorPicker(style: com.wanderstest3.pojarush.controls.Styl
         }
     }
     if (!transparent) {
-        SettingSlider(stringResource(R.string.editor_background_alpha), alpha / 255f, 0.05f..1f, 0.05f, { "${(it * 100).toInt()}%" }) { v ->
+        SettingSlider(stringResource(R.string.editor_background_alpha), alpha / 255f, 0.05f..1f, 0.05f, { "${(it * 100).toInt()}%" }, default = android.graphics.Color.alpha(com.wanderstest3.pojarush.controls.HudImages.DEFAULT_STYLE.fill) / 255f) { v ->
             onChange(apply(style.fill, (v * 255).toInt().coerceIn(1, 255)))
         }
     }

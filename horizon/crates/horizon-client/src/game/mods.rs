@@ -1089,6 +1089,7 @@ impl Game<'_> {
                 UiWidget::Text(_) => 12.0,
                 UiWidget::Item(_) | UiWidget::Button(_) | UiWidget::Slider(_) => 20.0,
                 UiWidget::List(l) => (l.rows.len().min(6) as f32 * 12.0) + 8.0,
+                UiWidget::Entity(e) => e.height as f32,
             };
             if half && left_open {
                 out.push((MOD_UI_GAP / 2.0, y - 26.0, MOD_UI_HALF, wh));
@@ -1191,6 +1192,8 @@ impl Game<'_> {
         // Item icons draw in a second pass: `draw_item` needs `&mut self`,
         // so `atlas` may not stay borrowed across it.
         let mut items: Vec<(String, f32, f32)> = Vec::new();
+        // Entity boxes too: the model is built from `&self` after the loop.
+        let mut entities: Vec<([f32; 4], String, bool)> = Vec::new();
         let atlas = &self.gui.atlas;
         let in_world = self.player.is_some();
         if in_world {
@@ -1292,6 +1295,10 @@ impl Game<'_> {
                         color,
                     );
                 }
+                UiWidget::Entity(e) => {
+                    batch.fill(atlas, x, wy, col, wh, 0x6000_0000);
+                    entities.push(([x, wy, x + col, wy + wh], e.entity.clone(), e.follow_cursor));
+                }
                 UiWidget::Item(i) => {
                     if self.res.items().get(&i.item).is_some() {
                         items.push((i.item.clone(), x + 2.0, wy + 2.0));
@@ -1367,10 +1374,13 @@ impl Game<'_> {
             batch.height - 27.0,
             200.0,
             20.0,
-            &Text::literal("Done"),
+            &Text::literal(horizon_client::lang::get("gui.done")),
             true,
             hover,
         );
+        for ([x0, y0, x1, y1], entity, follow) in entities {
+            self.draw_entity_box(batch, x0, y0, x1, y1, &entity, follow);
+        }
         for (id, ix, iy) in items {
             let stack = ItemStack::new(id.as_str(), 1);
             self.draw_item(batch, &stack, ix, iy);
@@ -1434,6 +1444,22 @@ impl Game<'_> {
                     list_i += 1;
                 }
                 continue;
+            }
+            // Shift + click: the mod's default, for the widgets it named (`ui.set-resets`).
+            let reset_id = match w {
+                UiWidget::Slider(sl) => Some(sl.id),
+                UiWidget::Button(b) => Some(b.id),
+                _ => None,
+            };
+            if let Some(id) = reset_id
+                && ui::hovered(cursor, x, wy, col, 20.0)
+                && self.shift_held()
+                && self.mods.mods.ui_resets(owner, id)
+            {
+                self.audio.play_button_click();
+                self.mods.mods.ui_select(owner, id, horizon_mods::RESET_ROW);
+                self.show_mod_output();
+                return;
             }
             if let UiWidget::Slider(sl) = w
                 && ui::hovered(cursor, x, wy, col, 20.0)
