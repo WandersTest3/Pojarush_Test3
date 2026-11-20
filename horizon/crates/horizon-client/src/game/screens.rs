@@ -199,10 +199,7 @@ impl Game<'_> {
         }
         // A mod's icon button after them (Mod Menu's).
         if let Some((_, label)) = self.mods_title_button() {
-            let (x, y) = {
-                let first = pause_icons(w, h, links)[3];
-                (first.0 + 24.0, first.1)
-            };
+            let (x, y) = (w - 24.0, 4.0);
             let icon = self.mod_button_icon();
             let atlas = &self.gui.atlas;
             let hover = ui::hovered(self.cursor, x, y, 20.0, 20.0);
@@ -240,9 +237,8 @@ impl Game<'_> {
         };
         let links = !self.server_links().is_empty();
         let friends = pause_icons(w, h, links)[FRIENDS_ICON];
-        let last = pause_icons(w, h, links)[3];
         if self.mods_title_button().is_some()
-            && ui::hovered(self.cursor, last.0 + 24.0, last.1, 20.0, 20.0)
+            && ui::hovered(self.cursor, w - 24.0, 4.0, 20.0, 20.0)
         {
             self.mod_title_button();
             return Ok(());

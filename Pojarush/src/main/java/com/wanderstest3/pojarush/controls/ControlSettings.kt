@@ -106,7 +106,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getFloat("menu_opacity", 0.50f).coerceIn(0.05f, 1.00f)
         set(v) = prefs.edit().putFloat("menu_opacity", v.coerceIn(0.05f, 1.00f)).apply()
     var menuRadius: Float
-        get() = prefs.getFloat("menu_radius", 0.50f).coerceIn(0f, 0.50f)
+        get() = prefs.getFloat("menu_radius", 0.25f).coerceIn(0f, 0.50f)
         set(v) = prefs.edit().putFloat("menu_radius", v.coerceIn(0f, 0.50f)).apply()
     var menuColor: Int
         get() = prefs.getInt("menu_color", 0xFF57197F.toInt())
@@ -133,7 +133,7 @@ class ControlSettings(context: Context) {
         set(v) = prefs.edit().putBoolean("text_actions", v).apply()
 
     var menuBackground: Float
-        get() = prefs.getFloat("menu_background", 0.60f).coerceIn(0f, 1.00f)
+        get() = prefs.getFloat("menu_background", 0.50f).coerceIn(0f, 1.00f)
         set(v) = prefs.edit().putFloat("menu_background", v.coerceIn(0f, 1.00f)).apply()
     var minecraftFont: Boolean
         get() = prefs.getBoolean("minecraft_font", true)
@@ -167,7 +167,7 @@ class ControlSettings(context: Context) {
         get() = prefs.getString("wallpaper", "").orEmpty()
         set(v) = prefs.edit().putString("wallpaper", v).apply()
     var wallpaperDim: Float
-        get() = prefs.getFloat("wallpaper_dim", 0.25f).coerceIn(0f, 0.90f)
+        get() = prefs.getFloat("wallpaper_dim", 0.20f).coerceIn(0f, 0.90f)
         set(v) = prefs.edit().putFloat("wallpaper_dim", v.coerceIn(0f, 0.90f)).apply()
     var wallpaperVolume: Float
         get() = prefs.getFloat("wallpaper_volume", 0f).coerceIn(0f, 1f)
@@ -194,8 +194,8 @@ class ControlSettings(context: Context) {
     fun renderSize(viewWidth: Int, viewHeight: Int): Pair<Int, Int> =
         if (fixedResolution) fixedWidth.coerceIn(64, 7680) to fixedHeight.coerceIn(64, 4320)
         else {
-            val s = renderScale.coerceIn(0.10f, 1.00f)
-            (viewWidth * s).toInt().coerceAtLeast(1) to (viewHeight * s).toInt().coerceAtLeast(1)
+            val s = renderScale.coerceIn(0.01f, 1.00f)
+            (viewWidth * s).toInt().coerceAtLeast(16) to (viewHeight * s).toInt().coerceAtLeast(16)
         }
 
     companion object {

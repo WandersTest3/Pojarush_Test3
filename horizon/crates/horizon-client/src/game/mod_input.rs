@@ -17,6 +17,10 @@ pub(super) struct ModUse {
 
 #[cfg(not(feature = "mods"))]
 impl Game<'_> {
+    pub(super) fn mod_hud_mouse(&mut self, _pressed: bool) -> bool {
+        false
+    }
+    pub(super) fn mod_hud_mouse_move(&mut self) {}
     pub(super) fn sandbox_mod_use(&mut self, _button: MouseButton, _pressed: bool) -> bool {
         false
     }
@@ -160,6 +164,40 @@ impl Game<'_> {
             && self.title.is_none()
             && self.sign_edit.is_none()
             && self.book.is_none()
+    }
+    /// The left button over a mod's draggable HUD area (`render.set-hud-drag`)
+    /// while the cursor is free, in any screen: the drag starts and the click
+    /// goes no further. Release ends it. True when the event is taken.
+    pub(super) fn mod_hud_mouse(&mut self, pressed: bool) -> bool {
+        let (x, y) = self.cursor;
+        if !pressed {
+            return match self.mods.hud_mouse.take() {
+                Some((i, lx, ly)) => {
+                    self.mods.mods.push_hud_drag(i, x - lx, y - ly, true);
+                    true
+                }
+                None => false,
+            };
+        }
+        if self.captured || !self.mods.mods.is_running() {
+            return false;
+        }
+        let hit = self.mods.mods.hud_drag_areas().into_iter().rev().find(|(_, r)| {
+            x >= r[0] - 2.0 && x <= r[0] + r[2] + 2.0 && y >= r[1] - 2.0 && y <= r[1] + r[3] + 2.0
+        });
+        let Some((i, _)) = hit else {
+            return false;
+        };
+        self.mods.hud_mouse = Some((i, x, y));
+        true
+    }
+    /// The cursor moved: a held HUD area follows it.
+    pub(super) fn mod_hud_mouse_move(&mut self) {
+        let (x, y) = self.cursor;
+        if let Some((i, lx, ly)) = self.mods.hud_mouse {
+            self.mods.mods.push_hud_drag(i, x - lx, y - ly, false);
+            self.mods.hud_mouse = Some((i, x, y));
+        }
     }
     /// Once a frame, before the mods run: a screen that opened lets their
     /// held keys up.

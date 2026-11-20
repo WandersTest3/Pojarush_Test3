@@ -1,6 +1,6 @@
 id = "pojarush_geckodemo"
-name = "PH Model Demo"
-version = "1.0.1"
+name = "PR Model Demo"
+version = "1.0.2"
 description = "Shows the GeckoLib-style model API: press J to place an animated model (a Bedrock geometry and animation from models/) in front of you, and again to take it away."
 
 authors = ["Wanders_Test3"]

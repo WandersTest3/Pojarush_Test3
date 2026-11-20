@@ -1,0 +1,24 @@
+id = "combat_hitboxes"
+name = "Combat Hitboxes (PR Port)"
+version = "1.0.11"
+description = "Port of Sootysplash's Combat Hitboxes to Horizon. Changes the hitboxes F3+B shows to help with attack timing and judging your reach: colours for the entity you aim at and for a hurt one, thinner lines far away, an outline, the eye height and where each entity looks. Settings in Mod Menu."
+
+authors = ["Sootysplash (original Combat Hitboxes)", "Wanders_Test3 (Horizon port)"]
+api = "0.1"
+side = "client"
+capabilities = ["game-read", "render", "ui", "storage"]
+experimental = ["render", "ui"]
+minecraft = "26.3"
+license = "Apache-2.0"
+icon = "assets/combat_hitboxes/icon.png"
+
+[contact]
+homepage = "https://github.com/WandersTest3/Pojarush_Test3"
+sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/combat-hitboxes"
+issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
+
+[translations.pt_br]
+description = "Porte do Combat Hitboxes, de Sootysplash, para o Horizon. Muda as hitboxes do F3+B para ajudar no tempo dos ataques e a medir o alcance: cores para a entidade na mira e para uma ferida, linhas mais finas de longe, contorno, a altura dos olhos e para onde cada entidade olha. Configurações no Mod Menu."
+
+[translations.pt_pt]
+description = "Port do Combat Hitboxes, de Sootysplash, para o Horizon. Muda as hitboxes do F3+B para ajudar no tempo dos ataques e a medir o alcance: cores para a entidade na mira e para uma ferida, linhas mais finas ao longe, contorno, a altura dos olhos e para onde cada entidade olha. Definições no Mod Menu."

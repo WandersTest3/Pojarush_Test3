@@ -1070,6 +1070,8 @@ pub enum Page {
 #[derive(Clone, Debug, PartialEq)]
 enum Act {
     None,
+    ModSort,
+    ModFilter,
     Push(Page),
     Done,
     Cycle(Opt),
@@ -1147,6 +1149,8 @@ enum WKind {
         description: Text,
         selected: bool,
         index: usize,
+        /// Its icon opens its settings.
+        gear: bool,
     },
     /// An atlas rectangle drawn as is (a mod's icon), clickable when `act` is set.
     Image {
@@ -1238,6 +1242,10 @@ pub struct OptionsUi {
     scroll: f32,
     /// Mod Menu: the picked mod's page, which scrolls apart from the list.
     detail_scroll: f32,
+    /// Mod Menu's order: 0 as installed, 1 A to Z, 2 Z to A.
+    mod_sort: u8,
+    /// Mod Menu's filter: 0 all, 1 with settings, 2 on, 3 off.
+    mod_filter: u8,
     detail_content: f32,
     detail_drag_y: Option<f32>,
     pub(crate) dragging: Option<Opt>,
@@ -1314,6 +1322,8 @@ impl Default for OptionsUi {
             shader_choice: None,
             mod_pick: 0,
             detail_scroll: 0.0,
+            mod_sort: 0,
+            mod_filter: 0,
             detail_content: 0.0,
             detail_drag_y: None,
             language_search: search,
@@ -1333,6 +1343,28 @@ impl Default for OptionsUi {
         }
     }
 }
+/// The settings hint over a mod's icon: a purple veil with a light rim and three
+/// bars with a shadow, in Pojarush's colours.
+fn settings_overlay(batch: &mut HudBatch, atlas: &HudAtlas, x: f32, y: f32, w: f32, h: f32) {
+    batch.fill(atlas, x, y, w, h, rgba(0x2A, 0x0B, 0x3E, 190));
+    let rim = rgba(0xB9, 0x8C, 0xF2, 255);
+    batch.fill(atlas, x, y, w, 1.0, rim);
+    batch.fill(atlas, x, y + h - 1.0, w, 1.0, rim);
+    batch.fill(atlas, x, y + 1.0, 1.0, h - 2.0, rim);
+    batch.fill(atlas, x + w - 1.0, y + 1.0, 1.0, h - 2.0, rim);
+    let bw = (w * 0.5).floor();
+    let bx = x + ((w - bw) / 2.0).floor();
+    let gap = (h / 5.0).floor().max(4.0);
+    let by = y + ((h - gap * 2.0 - 3.0) / 2.0).floor();
+    for k in 0..3 {
+        let ry = by + k as f32 * gap;
+        batch.fill(atlas, bx + 1.0, ry + 1.0, bw, 3.0, rgba(0x12, 0x04, 0x1C, 255));
+        batch.fill(atlas, bx + 1.0, ry, bw - 2.0, 3.0, u32::MAX);
+        batch.fill(atlas, bx, ry + 1.0, bw, 1.0, u32::MAX);
+        batch.fill(atlas, bx + 1.0, ry + 1.0, bw - 2.0, 1.0, rgba(0xE8, 0xD8, 0xFF, 255));
+    }
+}
+
 fn button(x: f32, y: f32, w: f32, label: Text, act: Act) -> Widget {
     Widget {
         x,
@@ -2520,8 +2552,29 @@ impl OptionsUi {
                 let query = self.settings_search.value.to_lowercase();
                 let list_start = out.len();
                 let mut y = top + 2.0 - self.scroll;
-                for (i, m) in s.mods.installed.iter().enumerate() {
-                    let name = if m.details.name.is_empty() { m.title.clone() } else { m.details.name.clone() };
+                let name_of = |m: &crate::mod_list::Installed| if m.details.name.is_empty() { m.title.clone() } else { m.details.name.clone() };
+                let mut order: Vec<usize> = (0..count)
+                    .filter(|&i| {
+                        let m = &s.mods.installed[i];
+                        match self.mod_filter {
+                            1 => m.has_settings || m.native.is_some(),
+                            2 => s.mods.is_on(i),
+                            3 => !s.mods.is_on(i),
+                            _ => true,
+                        }
+                    })
+                    .collect();
+                match self.mod_sort {
+                    1 => order.sort_by_key(|&i| name_of(&s.mods.installed[i]).to_lowercase()),
+                    2 => {
+                        order.sort_by_key(|&i| name_of(&s.mods.installed[i]).to_lowercase());
+                        order.reverse();
+                    }
+                    _ => {}
+                }
+                for i in order {
+                    let m = &s.mods.installed[i];
+                    let name = name_of(m);
                     let desc = if m.details.description.is_empty() { m.description.clone() } else { m.details.description.clone() };
                     if !query.is_empty()
                         && !name.to_lowercase().contains(&query)
@@ -2541,6 +2594,7 @@ impl OptionsUi {
                             description: Text::literal(desc),
                             selected: i == pick,
                             index: i,
+                            gear: m.has_settings || m.native.is_some(),
                         },
                         list: false,
                     });
@@ -2631,6 +2685,12 @@ impl OptionsUi {
                 if self.detail_scroll > max {
                     self.detail_scroll = max;
                 }
+                let hx = half + 6.0;
+                let hw = ((w - hx - 10.0) / 2.0 - 2.0).floor().max(40.0);
+                let sort_key = ["horizon.modmenu.sort.installed", "horizon.modmenu.sort.az", "horizon.modmenu.sort.za"][self.mod_sort as usize % 3];
+                let filter_key = ["horizon.modmenu.filter.all", "horizon.modmenu.filter.settings", "horizon.modmenu.filter.on", "horizon.modmenu.filter.off"][self.mod_filter as usize % 4];
+                out.push(button(hx, 6.0, hw, tr(sort_key), Act::ModSort));
+                out.push(button(hx + hw + 4.0, 6.0, hw, tr(filter_key), Act::ModFilter));
                 out.push(button(cx - 154.0, h - 27.0, 150.0, tr("horizon.mods.open_folder"), Act::OpenModFolder));
                 out.push(button(cx + 4.0, h - 27.0, 150.0, tr("gui.done"), Act::Done));
             }
@@ -3098,7 +3158,7 @@ impl OptionsUi {
                     }
                 }
                 WKind::ModEntry {
-                    icon, name, description, selected, ..
+                    icon, name, description, selected, gear, ..
                 } => {
                     let rect = [wd.x, wd.y, wd.w, wd.h];
                     crate::widgets::record_as(&name.plain(), rect, true, crate::widgets::Kind::Row);
@@ -3113,6 +3173,9 @@ impl OptionsUi {
                         (r.u0, r.v0, r.u1, r.v1) = (*u0, *v0, *u1, *v1);
                         batch.rect_uv(wd.x + 2.0, wd.y + 2.0, 32.0, 32.0, r, u32::MAX);
                     }
+                    if *gear && ui::hovered(cursor, wd.x + 2.0, wd.y + 2.0, 32.0, 32.0) && !(wd.list && (cursor.1 < top || cursor.1 >= bottom)) {
+                        settings_overlay(batch, atlas, wd.x + 2.0, wd.y + 2.0, 32.0, 32.0);
+                    }
                     let tx = wd.x + 38.0;
                     let room = wd.w - 40.0;
                     batch.text_styled(atlas, &clip_text(atlas, name, room), tx, wd.y + 4.0, u32::MAX, true);
@@ -3126,14 +3189,7 @@ impl OptionsUi {
                         batch.rect_uv(wd.x, wd.y, wd.w, wd.h, r, u32::MAX);
                     }
                     if act.is_some() && ui::hovered(cursor, wd.x, wd.y, wd.w, wd.h) {
-                        batch.fill(atlas, wd.x, wd.y, wd.w, wd.h, rgba(0, 0, 0, 128));
-                        let bw = (wd.w * 0.5).floor();
-                        let bx = wd.x + ((wd.w - bw) / 2.0).floor();
-                        let gap = (wd.h / 6.0).floor().max(3.0);
-                        let by = wd.y + ((wd.h - gap * 2.0 - 2.0) / 2.0).floor();
-                        for k in 0..3 {
-                            batch.fill(atlas, bx, by + k as f32 * gap, bw, 2.0, u32::MAX);
-                        }
+                        settings_overlay(batch, atlas, wd.x, wd.y, wd.w, wd.h);
                     }
                 }
                 WKind::LanguageRow {
@@ -3493,6 +3549,14 @@ impl OptionsUi {
                         }
                         Act::NativeButton(i, b) => events.push(Event::NativeButton(i, b)),
                         Act::OpenModFolder => events.push(Event::OpenModFolder),
+                        Act::ModSort => {
+                            self.mod_sort = (self.mod_sort + 1) % 3;
+                            self.scroll = 0.0;
+                        }
+                        Act::ModFilter => {
+                            self.mod_filter = (self.mod_filter + 1) % 4;
+                            self.scroll = 0.0;
+                        }
                         Act::PickShaderPack(i) => {
                             if let Some(pack) = s.shader_packs.get(i) {
                                 s.horizon.shader_pack = if s.horizon.shader_pack == pack.file {
@@ -3582,6 +3646,9 @@ impl OptionsUi {
                     let v = ui::slider_value(wd.x, wd.w, x);
                     self.slider_value = Some((opt, v, Instant::now()));
                     drag_slider(opt, s, v, &mut events);
+                }
+                WKind::ModEntry { index, gear: true, .. } if ui::hovered((x, y), wd.x + 2.0, wd.y + 2.0, 32.0, 32.0) => {
+                    events.push(Event::ModSettings(index));
                 }
                 WKind::ModEntry { index, .. } => {
                     if self.mod_pick == index && s.mods.installed.get(index).is_some_and(|m| m.has_settings) {

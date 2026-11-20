@@ -865,9 +865,17 @@ impl Game<'_> {
             let min_y = self.world.bottom_y();
             g.chunk_borders(block, min_y, min_y + self.world.layout().height() - 1);
         }
-        if !self.show_hitboxes {
+        if !self.show_hitboxes || self.mods_hide_hitboxes() {
             return g;
         }
+        self.hitbox_gizmos(alpha, &mut g);
+        g
+    }
+    /// Every entity's hitbox (F3+B): drawn into `g`, or recorded as
+    /// [`horizon_client::gizmos::EntityBox`]es when `g.record` is set.
+    pub(super) fn hitbox_gizmos(&self, alpha: f32, g: &mut Gizmos) {
+        use horizon_client::gizmos::EntityTag;
+        let tag = |kind: &str| Some(EntityTag { kind: kind.to_owned(), ..EntityTag::default() });
         let lerp = |a: f64, b: f64| a + f64::from(alpha) * (b - a);
         let lerpf = |a: f32, b: f32| a + alpha * (b - a);
         let guests = self.lan.iter().flat_map(|h| h.models.values());
@@ -884,6 +892,13 @@ impl Game<'_> {
                 lerpf(m.previous_head_pitch, m.head_pitch),
                 lerpf(m.previous_head_yaw, m.head_yaw),
             );
+            g.tag = Some(EntityTag {
+                id: m.id,
+                kind: m.kind.id.clone(),
+                hurt_time: m.hurt_time,
+                vehicle: m.extra.mount,
+                own: false,
+            });
             g.hitbox(
                 pos,
                 (m.width(), m.height()),
@@ -899,6 +914,7 @@ impl Game<'_> {
                 lerp(item.previous.z, item.position.z),
             ];
             // EntityType.ITEM: 0.25 by 0.25, eyes at 0.2125.
+            g.tag = tag("minecraft:item");
             g.hitbox(pos, (0.25, 0.25), 0.2125, false, (0.0, 0.0));
         }
         // The other entities (EntityTypes sizes; eyes at 0.85 of the height
@@ -913,16 +929,19 @@ impl Game<'_> {
         for p in &self.paintings {
             let (min, max) = p.bounds();
             let centre = std::array::from_fn(|i| (min[i] + max[i]) / 2.0);
+            g.tag = tag("minecraft:painting");
             g.entity_box(min, max, centre, 0.425, false, step_view(p.step()));
         }
         for f in self.item_frames.iter().filter(|f| !f.invisible) {
             let (min, max) = f.bounds();
             let centre = std::array::from_fn(|i| (min[i] + max[i]) / 2.0);
+            g.tag = tag("minecraft:item_frame");
             g.entity_box(min, max, centre, 0.0, false, step_view(f.step()));
         }
         for c in &self.cushions {
             let (min, max) = c.bounds();
             let p = c.position;
+            g.tag = tag("minecraft:interaction");
             g.entity_box(min, max, [p.x, p.y, p.z], 0.2125, false, (0.0, c.yaw));
         }
         for a in self.armor_stands.iter().filter(|a| !a.invisible) {
@@ -934,10 +953,12 @@ impl Game<'_> {
                 _ => ((0.5, 1.975), 1.7775),
             };
             let p = a.position;
+            g.tag = tag("minecraft:armor_stand");
             g.hitbox([p.x, p.y, p.z], size, eye, true, (0.0, a.yaw));
         }
         for b in &self.boats {
             let h = super::boats::HEIGHT as f32;
+            g.tag = tag("minecraft:boat");
             g.hitbox(
                 at(b.previous, b.position),
                 (super::boats::WIDTH as f32, h),
@@ -951,6 +972,7 @@ impl Game<'_> {
                 super::minecarts::WIDTH as f32,
                 super::minecarts::HEIGHT as f32,
             );
+            g.tag = tag("minecraft:minecart");
             g.hitbox(
                 at(c.previous, c.position),
                 (w, h),
@@ -960,6 +982,7 @@ impl Game<'_> {
             );
         }
         for o in &self.orbs {
+            g.tag = tag("minecraft:experience_orb");
             g.hitbox(
                 at(o.previous, o.position),
                 (0.5, 0.5),
@@ -969,6 +992,7 @@ impl Game<'_> {
             );
         }
         for f in &self.falling {
+            g.tag = tag("minecraft:falling_block");
             g.hitbox(
                 at(f.previous, f.position),
                 (0.98, 0.98),
@@ -978,6 +1002,7 @@ impl Game<'_> {
             );
         }
         for t in &self.tnts {
+            g.tag = tag("minecraft:tnt");
             g.hitbox(
                 at(t.previous, t.position),
                 (0.98, 0.98),
@@ -988,6 +1013,7 @@ impl Game<'_> {
         }
         for c in &self.crystals {
             let p = c.position;
+            g.tag = tag("minecraft:end_crystal");
             g.hitbox([p.x, p.y, p.z], (2.0, 2.0), 1.7, false, (0.0, 0.0));
         }
         for p in &self.creatures.projectiles {
@@ -1003,6 +1029,21 @@ impl Game<'_> {
                 K::WindCharge | K::BreezeWindCharge => (0.3125, 0.0),
                 K::LargeFireball { .. } => (1.0, 0.85),
             };
+            g.tag = tag(match p.kind {
+                K::Arrow { .. } => "minecraft:arrow",
+                K::Trident => "minecraft:trident",
+                K::Snowball => "minecraft:snowball",
+                K::Egg => "minecraft:egg",
+                K::EnderPearl => "minecraft:ender_pearl",
+                K::LlamaSpit => "minecraft:llama_spit",
+                K::Potion { .. } => "minecraft:splash_potion",
+                K::SmallFireball => "minecraft:small_fireball",
+                K::ShulkerBullet { .. } => "minecraft:shulker_bullet",
+                K::WitherSkull { .. } => "minecraft:wither_skull",
+                K::WindCharge => "minecraft:wind_charge",
+                K::BreezeWindCharge => "minecraft:breeze_wind_charge",
+                K::LargeFireball { .. } => "minecraft:fireball",
+            });
             g.hitbox(
                 at(p.previous, p.position),
                 (size, size),
@@ -1012,6 +1053,7 @@ impl Game<'_> {
             );
         }
         for t in &self.tridents {
+            g.tag = tag("minecraft:trident");
             g.hitbox(
                 at(t.previous, t.position),
                 (0.5, 0.5),
@@ -1023,6 +1065,7 @@ impl Game<'_> {
         // EntityType.EYE_OF_ENDER: 0.25 by 0.25, never turned.
         for (previous, now) in self.end.eye_motions() {
             let v = |p: glam::DVec3| Vec3::new(p.x, p.y, p.z);
+            g.tag = tag("minecraft:eye_of_ender");
             g.hitbox(
                 at(v(previous), v(now)),
                 (0.25, 0.25),
@@ -1036,6 +1079,7 @@ impl Game<'_> {
             let v = r.velocity;
             let yaw = v.x.atan2(v.z).to_degrees() as f32;
             let pitch = v.y.atan2(v.x.hypot(v.z)).to_degrees() as f32;
+            g.tag = tag("minecraft:firework_rocket");
             g.hitbox(
                 at(r.previous, r.position),
                 (0.25, 0.25),
@@ -1050,13 +1094,16 @@ impl Game<'_> {
             .map(|h| (h.previous, h.position))
             .chain(self.remote_hooks.iter().map(|h| (h.previous, h.position)))
         {
+            g.tag = tag("minecraft:fishing_bobber");
             g.hitbox(at(h.0, h.1), (0.25, 0.25), 0.2125, false, (0.0, 0.0));
         }
         for b in &self.bolts {
+            g.tag = tag("minecraft:lightning_bolt");
             g.hitbox(b.at, (0.0, 0.0), 0.0, false, (0.0, 0.0));
         }
         // The dragon: 16 by 8, a living entity; its parts follow.
         if let Some(d) = &self.dragon {
+            g.tag = tag("minecraft:ender_dragon");
             g.hitbox(
                 at(d.previous, d.position),
                 (16.0, 8.0),
@@ -1067,7 +1114,13 @@ impl Game<'_> {
         }
         // The dragon's parts.
         for (id, b) in self.special_targets() {
-            if (super::dragon::SPECIAL..super::dragon::SPECIAL + 8).contains(&id) {
+            if (super::dragon::SPECIAL..super::dragon::SPECIAL + 8).contains(&id) && g.record {
+                g.tag = tag("minecraft:ender_dragon_part");
+                let min = [b.min(Axis::X), b.min(Axis::Y), b.min(Axis::Z)];
+                let max = [b.max(Axis::X), b.max(Axis::Y), b.max(Axis::Z)];
+                let centre = std::array::from_fn(|i| (min[i] + max[i]) / 2.0);
+                g.entity_box(min, max, centre, 0.0, false, (0.0, 0.0));
+            } else if (super::dragon::SPECIAL..super::dragon::SPECIAL + 8).contains(&id) {
                 g.cuboid(
                     [b.min(Axis::X), b.min(Axis::Y), b.min(Axis::Z)],
                     [b.max(Axis::X), b.max(Axis::Y), b.max(Axis::Z)],
@@ -1086,6 +1139,7 @@ impl Game<'_> {
                 lerp(self.previous_position.y, p.position.y),
                 lerp(self.previous_position.z, p.position.z),
             ];
+            g.tag = Some(EntityTag { kind: "minecraft:player".into(), own: true, ..EntityTag::default() });
             g.hitbox(
                 pos,
                 (d.width, d.height),
@@ -1094,7 +1148,6 @@ impl Game<'_> {
                 (self.pitch, self.yaw),
             );
         }
-        g
     }
 }
 

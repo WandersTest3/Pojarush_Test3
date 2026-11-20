@@ -1,7 +1,7 @@
 id = "pojarush_modmenu"
-name = "PH Mod Menu"
-version = "1.3.0"
-description = "A Mod Menu like Fabric's: the installed mods with icon, name and description on the left, and the picked one's version, authors, license, links and settings on the right, with a search box. Open it with its icon beside Accessibility on the title screen and the pause menu, or with M (Controls > Key Binds)."
+name = "PR Mod Menu"
+version = "1.3.1"
+description = "A Mod Menu like Fabric's: the installed mods with icon, name and description on the left, and the picked one's version, authors, license, links and settings on the right, with a search box. Sort A to Z or Z to A and filter by mods with settings, on or off. Open it with its icon in the top right corner of the title screen and the pause menu, or with M (Controls > Key Binds)."
 
 authors = ["Wanders_Test3"]
 api = "0.1"
@@ -18,7 +18,7 @@ sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods
 issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
 
 [translations.pt_br]
-description = "Um Mod Menu como o do Fabric: os mods instalados com ícone, nome e descrição à esquerda, e a versão, os autores, a licença, os links e as configurações do escolhido à direita, com barra de pesquisa. Abra pelo ícone ao lado de Acessibilidade na tela inicial e no menu de pausa, ou com M (Controles > Atalhos)."
+description = "Um Mod Menu como o do Fabric: os mods instalados com ícone, nome e descrição à esquerda, e a versão, os autores, a licença, os links e as configurações do escolhido à direita, com barra de pesquisa. Ordene de A a Z ou de Z a A e filtre por mods com configurações, ligados ou desligados. Abra pelo ícone no canto superior direito da tela inicial e do menu de pausa, ou com M (Controles > Atalhos)."
 
 [translations.pt_pt]
-description = "Um Mod Menu como o do Fabric: os mods instalados com ícone, nome e descrição à esquerda, e a versão, os autores, a licença, as ligações e as definições do escolhido à direita, com barra de pesquisa. Abre pelo ícone ao lado de Acessibilidade no ecrã inicial e no menu de pausa, ou com M (Controlos > Teclas)."
+description = "Um Mod Menu como o do Fabric: os mods instalados com ícone, nome e descrição à esquerda, e a versão, os autores, a licença, as ligações e as definições do escolhido à direita, com barra de pesquisa. Ordena de A a Z ou de Z a A e filtra por mods com definições, ligados ou desligados. Abre pelo ícone no canto superior direito do ecrã inicial e do menu de pausa, ou com M (Controlos > Teclas)."

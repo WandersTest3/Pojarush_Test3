@@ -682,8 +682,20 @@ impl Game<'_> {
         offset_y: f32,
         look: (f32, f32),
     ) {
-        let Some(m) = self.player_model.as_ref() else {
-            return;
+        // Before a world (the title screen's menus) there is no player: the
+        // preview is a fresh player model with the account's skin.
+        let fallback;
+        let m = match self.player_model.as_ref() {
+            Some(m) => m,
+            None => {
+                let Some(kind) = self.res.player_type().clone() else {
+                    return;
+                };
+                let mut model = Mob::new(0, kind, horizon_core::geometry::Vec3::new(0.0, 0.0, 0.0), 0.0);
+                model.cape = self.mod_models.cape.clone();
+                fallback = model;
+                &fallback
+            }
         };
         if self
             .player
@@ -750,6 +762,40 @@ impl Game<'_> {
             .filter(|p| p.fire_ticks > 0 && !p.spectator)
             .map(|p| (p.dimensions.width, p.dimensions.height));
         let quads = player_preview_quads(verts, gui, fire, &atlas.sprites);
+        let start = batch.vertices.len();
+        for (_, p, uv, color) in quads {
+            batch.quad_3d(p, uv, color);
+        }
+        batch.depth_since(start, [x0, y0, x1, y1]);
+    }
+    /// A cape alone in `[x0, y0, x1, y1]`, its texture at `uv` in the GUI
+    /// atlas, swinging slowly to show its sides (a mod's `cape:` entity box).
+    pub(super) fn draw_cape_box(&self, batch: &mut HudBatch, [x0, y0, x1, y1]: [f32; 4], uv: [f32; 4]) {
+        let Some(kind) = self.res.player_type().clone() else {
+            return;
+        };
+        let mut m = Mob::new(0, kind, horizon_core::geometry::Vec3::new(0.0, 0.0, 0.0), 0.0);
+        let seconds = self.started.elapsed().as_secs_f32();
+        m.body_yaw = (seconds * 0.9).sin() * 40.0;
+        m.previous_body_yaw = m.body_yaw;
+        m.yaw = m.body_yaw;
+        m.head_yaw = m.body_yaw;
+        m.previous_head_yaw = m.head_yaw;
+        m.previous = m.position;
+        let camera = glam::DVec3::new(m.position.x, m.position.y, m.position.z);
+        let base = horizon_client::mobs::render::base_transform(&m, 1.0, camera);
+        let mut verts = Vec::new();
+        horizon_client::mobs::render::cape(&m, 1.0, base, uv, 240 | 240 << 8, self.res.mob_data(), &mut verts);
+        if verts.is_empty() {
+            return;
+        }
+        let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+        let size = ((y1 - y0) * 0.9 / 1.05).min((x1 - x0) * 0.9 / 0.7);
+        let gui = glam::Mat4::from_translation(glam::Vec3::new(cx, cy, 0.0))
+            * glam::Mat4::from_scale(glam::Vec3::new(size, size, -size))
+            * glam::Mat4::from_translation(glam::Vec3::new(0.0, 1.4 - 0.5, 0.0))
+            * glam::Mat4::from_rotation_z(std::f32::consts::PI);
+        let quads = player_preview_quads(verts, gui, None, &self.gui.atlas.sprites);
         let start = batch.vertices.len();
         for (_, p, uv, color) in quads {
             batch.quad_3d(p, uv, color);

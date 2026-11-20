@@ -65,6 +65,47 @@ interface game {
     /// distant terrain when LOD Distance is on), as of this tick. None when
     /// nothing is hit, and on the title screen.
     raycast: func(distance: f32) -> option<hit>;
+    /// An entity near the player as this frame draws it, with the hitbox
+    /// F3+B shows.
+    record entity {
+        /// The game's id for it (`Entity.getId`); 0 for the ones the client
+        /// keeps without one (items, projectiles, vehicles).
+        id: u32,
+        /// `minecraft:zombie`, `minecraft:item`, `minecraft:player`, ...
+        kind: string,
+        /// Its position between the last two ticks, as this frame shows it.
+        x: f64,
+        y: f64,
+        z: f64,
+        /// Its hitbox's corners.
+        min-x: f64,
+        min-y: f64,
+        min-z: f64,
+        max-x: f64,
+        max-y: f64,
+        max-z: f64,
+        /// Eye height above the hitbox's bottom.
+        eye-height: f32,
+        /// A living entity (mobs, players, armor stands).
+        living: bool,
+        /// Where it looks, in degrees, as `player`'s.
+        yaw: f32,
+        pitch: f32,
+        /// Ticks left of its red flash after a hit (10 down to 0).
+        hurt-time: s32,
+        /// The id of the entity it rides.
+        vehicle: option<u32>,
+        /// The crosshair is on it (`Minecraft.hitResult`).
+        targeted: bool,
+        /// The player's own.
+        mine: bool,
+    }
+    /// The entities whose position lies within `distance` blocks (at most
+    /// 256) of the player, nearest first, as of this frame; empty on the
+    /// title screen. The game gathers them only while a mod calls this.
+    entities: func(distance: f32) -> list<entity>;
+    /// The hitboxes are shown (F3+B).
+    hitboxes-shown: func() -> bool;
 }
 
 /// Capability `chat`: messages only the local player sees.
@@ -208,10 +249,14 @@ interface ui {
         /// The mod's own name for the widget.
         id: u32,
         /// `player`: the player as they look now (skin, armour, held items,
-        /// the cape); else an entity type, `minecraft:zombie`. An unknown
-        /// type draws nothing.
+        /// the cape), on the title screen too; `cape:FILE`: a cape alone,
+        /// its texture a PNG in the mod's `models/` folder (64 by 32, as a
+        /// player's cape), swinging slowly; else an entity type,
+        /// `minecraft:zombie`. An unknown type draws nothing. A click on the
+        /// box is `ui-events::select(id, 0)`.
         entity: string,
-        /// The box's height in GUI pixels, 24 to 200; it is as wide as its column.
+        /// The box's height in GUI pixels, 24 to 200. Up to 64 it is a tile,
+        /// four to a row; higher, it is as wide as its column.
         height: u32,
         /// The head and body turn toward the cursor, as in the inventory;
         /// else the model faces the player.
@@ -637,6 +682,47 @@ interface render {
     /// Distance setting, when on, wins. One far terrain shows at a time: the
     /// first loaded mod's.
     set-far-terrain: func(far-terrain: option<far-terrain>);
+    /// A point in the world, in blocks.
+    record world-pos {
+        x: f64,
+        y: f64,
+        z: f64,
+    }
+    /// A line in the world: ARGB colour, width in pixels (0.5 to 16).
+    record world-line {
+        start: world-pos,
+        end: world-pos,
+        color: u32,
+        width: f32,
+    }
+    /// The twelve edges of a box in the world.
+    record world-box {
+        min: world-pos,
+        max: world-pos,
+        color: u32,
+        width: f32,
+    }
+    /// A small mark in the world, `size` pixels thick.
+    record world-point {
+        at: world-pos,
+        color: u32,
+        size: f32,
+    }
+    /// What `set-world-shapes` draws, as vanilla's gizmos (`Gizmos.line`,
+    /// `arrow`, `cuboid`, `point`).
+    variant world-shape {
+        line(world-line),
+        arrow(world-line),
+        cuboid(world-box),
+        point(world-point),
+    }
+    /// Draws lines in the world every frame until the next call: `shapes`
+    /// hidden by the blocks in front of them, `on-top` over everything. At
+    /// most 8192 of each; the rest are dropped. Empty lists clear them.
+    set-world-shapes: func(shapes: list<world-shape>, on-top: list<world-shape>);
+    /// Leaves out the game's own hitboxes (F3+B) while true, for a mod that
+    /// draws its own with `set-world-shapes`.
+    hide-hitboxes: func(hide: bool);
 }
 
 /// What the game calls. Only the hooks `init` asks for are ever called.

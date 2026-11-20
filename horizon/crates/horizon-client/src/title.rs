@@ -1043,7 +1043,7 @@ impl Title {
                 .into_iter()
                 .enumerate()
                 {
-                    let left = if self.mod_button.is_some() { cx - 46.0 } else { cx - 34.0 };
+                    let left = cx - 34.0;
                     let mut button = b(
                         left + i as f32 * 24.0,
                         y + 72.0,
@@ -1055,9 +1055,9 @@ impl Title {
                     button.icon = Some((icon, 15.0));
                     buttons.push(button);
                 }
-                // A mod's icon button after them, as Mod Menu adds its own.
+                // A mod's icon button in the top right corner (Mod Menu's).
                 if let Some(label) = &self.mod_button {
-                    buttons.push(b(cx + 26.0, y + 72.0, 20.0, label, true, 20));
+                    buttons.push(b(w - 24.0, 4.0, 20.0, label, true, 20));
                 }
                 buttons
             }

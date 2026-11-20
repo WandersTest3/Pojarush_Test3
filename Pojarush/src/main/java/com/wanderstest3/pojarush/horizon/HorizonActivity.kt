@@ -141,6 +141,7 @@ class HorizonActivity : GameActivity() {
     }
 
     private var overlay: HorizonOverlay? = null
+    private var backDown = false
     private var prewarmed = false
 
     override fun onResume() {
@@ -178,7 +179,14 @@ class HorizonActivity : GameActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (event.repeatCount == 0 && overlay?.back() != true) sendKey(KeyEvent.KEYCODE_ESCAPE, true)
+            if (event.isFromSource(android.view.InputDevice.SOURCE_MOUSE)) {
+                if (event.repeatCount == 0) overlay?.mouseButton(1, true)
+                return true
+            }
+            if (event.repeatCount == 0) {
+                backDown = overlay?.back() != true
+                if (backDown) sendKey(KeyEvent.KEYCODE_ESCAPE, true)
+            }
             return true
         }
         return super.onKeyDown(keyCode, event)
@@ -186,7 +194,12 @@ class HorizonActivity : GameActivity() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            sendKey(KeyEvent.KEYCODE_ESCAPE, false)
+            if (event.isFromSource(android.view.InputDevice.SOURCE_MOUSE)) {
+                overlay?.mouseButton(1, false)
+                return true
+            }
+            if (backDown) sendKey(KeyEvent.KEYCODE_ESCAPE, false)
+            backDown = false
             return true
         }
         return super.onKeyUp(keyCode, event)

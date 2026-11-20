@@ -266,6 +266,17 @@ o jogador (`"player"`) ou uma entidade (`"minecraft:zombie"`) numa caixa, virada
 `ui::set_resets(&[ids])` diz quais botões e sliders voltam ao padrão com Shift + clique: o jogo chama
 `ui_select(id, u32::MAX)`. Nas opções das shaders, Shift + clique também volta a opção ao padrão do pack.
 
+Nível 13: `game::entities(distância)` lista as entidades perto do jogador como o quadro as mostra (id, tipo, posição,
+hitbox, altura dos olhos, para onde olham, tempo de dano, veículo, se estão na mira), `game::hitboxes_shown()` diz se o
+F3+B está ligado, `render::set_world_shapes(formas, por_cima)` desenha linhas, setas, caixas e pontos no mundo e
+`render::hide_hitboxes(true)` tira as hitboxes do próprio jogo (o porte do Combat Hitboxes em `horizon/mods/combat-hitboxes`
+usa isso). Widgets `entity` de até 64 pixels de altura viram blocos, quatro por linha; `"cape:ARQUIVO"` desenha em 3D uma
+capa da pasta `models/` do mod; clicar num `entity` chama `ui_select(id, 0)`.
+
+Céu personalizado: o motor lê `assets/minecraft/optifine/sky/world0/skyN.properties` (e `mcpatcher/sky`, e `world1`
+para o End) e os céus `square-textured` do FabricSkyboxes em `assets/fabricskyboxes/sky/*.json`, com fade por horário,
+rotação com o sol, clima e os modos de mistura do OptiFine. Shader packs que desenham o próprio céu têm prioridade.
+
 Teclas dos mods (`input::register_key`) aparecem em Controles > Atalhos, numa seção por mod, com botão de restaurar o
 padrão. Páginas de configuração organizam botões e sliders em duas colunas. Nome e descrição traduzidos no manifesto:
 

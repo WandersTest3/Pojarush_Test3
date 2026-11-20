@@ -160,6 +160,7 @@ pub mod panorama;
 mod readback;
 mod resident;
 mod stars;
+mod custom_sky;
 mod sunrise_fan;
 mod timing;
 pub mod translucency;
@@ -379,6 +380,8 @@ pub struct Frame<'a> {
     /// the sky's rotation (camera-relative world from star space) and the
     /// star brightness.
     pub stars: Option<(Mat4, f32)>,
+    /// The resource packs' custom sky layers to draw this frame (`crate::custom_sky`).
+    pub custom_sky: &'a [crate::custom_sky::LayerDraw],
     /// First-person hand and held item, drawn after clearing depth.
     pub hand: &'a [Vertex],
     /// `CameraRenderState.hudFov`: the hand's own field of view
@@ -526,6 +529,7 @@ pub struct Renderer {
     celestial_buffer: wgpu::Buffer,
     end_sky: end_sky::EndSky,
     stars: stars::Stars,
+    custom_sky: custom_sky::CustomSkyRenderer,
     /// The glowing entities' outline (`LevelRenderer.entityOutlineTarget`).
     entity_outline: entity_outline::EntityOutline,
     panorama: panorama::Panorama,
@@ -2779,6 +2783,7 @@ impl Renderer {
         let uploads = upload::Uploads::new(&device);
         let section_uploads = upload::Uploads::with_chunk(&device, SECTION_UPLOAD_CHUNK);
         let stars = stars::Stars::new(&device, config.format.remove_srgb_suffix());
+        let custom_sky = custom_sky::CustomSkyRenderer::new(&device, config.format.remove_srgb_suffix());
         let entity_outline = entity_outline::EntityOutline::new(
             &device,
             (&entity_shader, &entity_layout, &entity_vertex),
@@ -2862,6 +2867,7 @@ impl Renderer {
             celestial_buffer,
             end_sky: end_sky::EndSky::default(),
             stars,
+            custom_sky,
             entity_outline,
             panorama,
             border_pipeline,
@@ -3871,6 +3877,10 @@ impl Renderer {
     }
     /// The Mipmap Levels option: block textures sample at most `levels`
     /// reduced copies (0: none).
+    /// The resource packs' custom skies: their textures uploaded, replacing the last ones.
+    pub fn set_custom_sky(&mut self, sky: &crate::custom_sky::CustomSky) {
+        self.custom_sky.set(&self.device, &self.queue, sky);
+    }
     pub fn set_mipmap_levels(&mut self, levels: u32) {
         let levels = crate::sprites::sprite_mipmap_limit(
             levels,
@@ -4822,6 +4832,9 @@ impl Renderer {
             frame.glowing,
             [self.config.width, self.config.height],
         );
+        if !frame.title && self.custom_sky.has_layers() {
+            self.custom_sky.prepare(&mut self.uploads, &mut encoder, jittered, frame.custom_sky);
+        }
         if let Some((rotation, brightness)) = frame.stars {
             self.stars.prepare(
                 &mut self.uploads,
@@ -5188,6 +5201,8 @@ impl Renderer {
                             pass.draw(0..3, 0..1);
                         }
                     }
+                    self.custom_sky.draw(&mut pass);
+                    pass.set_bind_group(0, &self.group, &[]);
                 }
                 if frame.title {
                     self.panorama.draw(&mut pass);
@@ -5198,6 +5213,12 @@ impl Renderer {
                     pass.set_index_buffer(self.indices.slice(..), wgpu::IndexFormat::Uint32);
                     if frame.end_sky {
                         self.end_sky.draw(&mut pass);
+                        if !pack_draws_sky {
+                            self.custom_sky.draw(&mut pass);
+                            pass.set_pipeline(&self.celestial_pipeline);
+                            pass.set_bind_group(0, &self.entity_group, &[]);
+                            pass.set_index_buffer(self.indices.slice(..), wgpu::IndexFormat::Uint32);
+                        }
                     }
                     if celestial_vertices > 0 && !pack_draws_celestial {
                         pass.set_vertex_buffer(0, self.celestial_buffer.slice(..));

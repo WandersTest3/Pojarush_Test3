@@ -131,20 +131,26 @@ class ControlsView(
     fun syncPointerCapture() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val want = physicalMouse && captured && !editMode && hasWindowFocus()
-        if (want && !pointerCaptured) {
-            isFocusable = true
-            isFocusableInTouchMode = true
-            if (!isFocused) requestFocus()
-            if (hasPointerCapture()) {
-                pointerCaptured = true
-            } else {
+        if (want) {
+            if (!hasPointerCapture()) {
+                isFocusable = true
+                isFocusableInTouchMode = true
+                if (!isFocused) requestFocus()
                 requestPointerCapture()
-                pointerCaptured = true
             }
-        } else if (!want && pointerCaptured) {
+            pointerCaptured = true
+        } else if (pointerCaptured || hasPointerCapture()) {
             if (hasPointerCapture()) releasePointerCapture()
             pointerCaptured = false
         }
+    }
+
+    fun mouseButton(button: Int, down: Boolean) {
+        if (captured && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && button in capturedButtonsDown.indices) {
+            if (capturedButtonsDown[button] == down) return
+            capturedButtonsDown[button] = down
+        }
+        mouse(button, down)
     }
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager

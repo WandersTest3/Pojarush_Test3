@@ -18,6 +18,7 @@ pub mod chat;
 pub mod chunk;
 pub mod chunk_map;
 pub mod clouds;
+pub mod custom_sky;
 pub mod collisions;
 pub mod command_block;
 pub mod containers;

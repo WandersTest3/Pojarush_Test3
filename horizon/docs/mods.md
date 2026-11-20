@@ -93,6 +93,16 @@ API level 12 adds `ui::open_screen_v3` and `ui::set_settings_v3`, which take eve
 entity type (`"minecraft:zombie"`) drawn in 3D in a box of `height` GUI pixels, turned toward the
 cursor when `follow_cursor`. `ui::set_resets(ids)` names the buttons and sliders that Shift + click
 puts back at the mod's default: the game calls `ui_select(id, u32::MAX)` for them.
+API level 13 draws in the world and reads the entities around the player:
+`game::entities(distance)` lists them nearest first as this frame shows them (id, type, position,
+hitbox, eye height, where they look, hurt time, the vehicle, whether the crosshair is on them),
+`game::hitboxes_shown()` says whether F3+B is on, `render::set_world_shapes(shapes, on_top)` draws
+lines, arrows, boxes and points in the world every frame until the next call, and
+`render::hide_hitboxes(true)` leaves out the game's own F3+B boxes for a mod that draws its own
+(`mods/combat-hitboxes` ports Combat Hitboxes this way). An `entity` widget 64 pixels high or less
+is a tile, four to a row; `"cape:FILE"` draws a cape from the mod's `models/` in 3D; a click on an
+`entity` widget is `ui_select(id, 0)`. A mod that opens its own screen (or `ui::open_shader_packs`)
+in `ui_settings_opened` shows it in place of its settings page.
 
 ### Content mods (API 0.2)
 

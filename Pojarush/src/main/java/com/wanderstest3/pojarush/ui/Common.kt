@@ -69,7 +69,7 @@ fun pojarushColors(accent: Color) = darkColorScheme(
 
 object UiPrefs {
     var accent by androidx.compose.runtime.mutableStateOf(DefaultAccent)
-    var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.60f)
+    var menuBackground by androidx.compose.runtime.mutableFloatStateOf(0.50f)
     var menuBlur by androidx.compose.runtime.mutableFloatStateOf(12f)
     var minecraftFont by androidx.compose.runtime.mutableStateOf(true)
     var customFont by androidx.compose.runtime.mutableStateOf("")

@@ -494,3 +494,40 @@ mod tests {
         assert!(reload_waits(true, true));
     }
 }
+
+impl Game<'_> {
+    /// The packs' custom sky layers for this frame (`horizon_client::custom_sky`), read again
+    /// whenever the resource root changes.
+    pub(super) fn custom_sky_draws(
+        &mut self,
+        title: bool,
+        celestial: f32,
+        rain: f32,
+        thunder: f32,
+    ) -> Vec<horizon_client::custom_sky::LayerDraw> {
+        let root = self.options.resources.clone();
+        if self.custom_sky.0 != root && self.renderer.is_some() {
+            let mut sky = horizon_client::custom_sky::CustomSky::load(&root);
+            if let Some(r) = self.renderer.as_mut() {
+                r.set_custom_sky(&sky);
+            }
+            for layer in sky.worlds.values_mut().flatten() {
+                layer.rgba = Vec::new();
+            }
+            if !sky.is_empty() {
+                log::info!("Custom sky: {} layer(s) from the resource packs", sky.all().count());
+            }
+            self.custom_sky = (root, sky);
+        }
+        if title || self.custom_sky.1.is_empty() || !self.settings.horizon.sky {
+            return Vec::new();
+        }
+        let world = match self.dim {
+            super::Dim::Overworld => 0,
+            super::Dim::End => 1,
+            _ => return Vec::new(),
+        };
+        self.custom_sky.1.draws(world, self.world.day_time, celestial, rain, thunder)
+    }
+}
+

@@ -44,7 +44,7 @@ mod ui_bindings {
     });
 }
 pub use bindings::horizon::mods::{
-    game::{Clock, Hit, Player},
+    game::{Clock, Entity as ModEntity, Hit, Player},
     hud::{Corner, Line},
 };
 use bindings::{
@@ -119,6 +119,11 @@ pub fn take_ui_requests() -> Vec<UiRequest> {
     REQUESTS.lock().map(|mut r| std::mem::take(&mut *r)).unwrap_or_default()
 }
 
+/// Whether a mod made a request not yet taken.
+pub fn ui_request_pending() -> bool {
+    REQUESTS.lock().is_ok_and(|r| !r.is_empty())
+}
+
 fn request(r: UiRequest) {
     if let Ok(mut q) = REQUESTS.lock()
         && q.len() < 64
@@ -167,8 +172,13 @@ pub use render_bindings::horizon::mods::input::{Event as InputEvent, HeldItem, I
 pub use render_bindings::horizon::mods::render::{
     Corner as RenderCorner, FarTerrain as ModFarTerrain, FillShape, FrameRate, ItemShape,
     Minimap as ModMinimap, Point as RenderPoint, QuadShape, Rect as RenderRect, Shape, SpriteShape,
-    HudDrag, ModelPlace, TextShape, Zoom as ModZoom,
+    HudDrag, ModelPlace, TextShape, WorldBox, WorldLine, WorldPoint, WorldPos, WorldShape,
+    Zoom as ModZoom,
 };
+/// Shapes in the world one mod may draw per list (`render.set-world-shapes`).
+pub const MAX_WORLD_SHAPES: usize = 8192;
+/// How far `game.entities` reaches.
+pub const ENTITIES_MAX: f32 = 256.0;
 
 /// A model a mod placed in the world (`render.spawn-model`).
 #[derive(Clone, Debug)]
@@ -207,6 +217,19 @@ fn model_file(name: &str) -> bool {
         && !name.starts_with('/')
 }
 use render_bindings::{RenderHost, horizon::mods::render};
+/// A world shape with finite corners and its width in 0.5 to 16 pixels;
+/// none when a coordinate is not finite or lies past 30 million blocks.
+fn world_shape_ok(shape: WorldShape) -> Option<WorldShape> {
+    let ok = |p: &WorldPos| [p.x, p.y, p.z].iter().all(|v| v.is_finite() && v.abs() <= 3.0e7);
+    let width = |w: f32| if w.is_finite() { w.clamp(0.5, 16.0) } else { 1.0 };
+    Some(match shape {
+        WorldShape::Line(l) if ok(&l.start) && ok(&l.end) => WorldShape::Line(WorldLine { width: width(l.width), ..l }),
+        WorldShape::Arrow(l) if ok(&l.start) && ok(&l.end) => WorldShape::Arrow(WorldLine { width: width(l.width), ..l }),
+        WorldShape::Cuboid(b) if ok(&b.min) && ok(&b.max) => WorldShape::Cuboid(WorldBox { width: width(b.width), ..b }),
+        WorldShape::Point(p) if ok(&p.at) => WorldShape::Point(WorldPoint { size: width(p.size), ..p }),
+        _ => return None,
+    })
+}
 /// Capability `recipes`'s imports (docs/mods.md): the game's recipes and items.
 mod recipes_bindings {
     wasmtime::component::bindgen!({
@@ -282,6 +305,12 @@ pub struct Snapshot {
     /// its distance from the eye, for `game.raycast`; the game works it out
     /// only while a mod calls it ([`Mods::wants_raycast`]).
     pub view_hit: Option<(f32, Hit)>,
+    /// The entities around the player as this frame draws them, nearest
+    /// first, for `game.entities`; gathered only while a mod calls it
+    /// ([`Mods::wants_entities`]).
+    pub entities: Arc<[ModEntity]>,
+    /// F3+B is on (`game.hitboxes-shown`).
+    pub hitboxes_shown: bool,
     /// Every item and recipe, for capability `recipes`; the game makes them
     /// once, and only while a mod reads them ([`Mods::wants_recipes`]).
     pub recipes: Option<Arc<Recipes>>,
@@ -427,7 +456,7 @@ impl Entry {
     pub fn has_ui_settings(&self) -> bool {
         self.run.as_ref().is_some_and(|r| {
             let d = r.store.data();
-            !d.ui.settings.is_empty() || !d.input.keys.is_empty()
+            !d.ui.settings.is_empty()
         })
     }
 }
@@ -440,6 +469,8 @@ struct Running {
     hooks: Hooks,
     /// It imports `game.raycast`.
     raycasts: bool,
+    /// It imports `game.entities`.
+    entities: bool,
     /// It imports capability `recipes`.
     reads_recipes: bool,
 }
@@ -537,6 +568,10 @@ struct State {
     hud_scale: f32,
     hud_always: bool,
     hud_drag: Option<RenderRect>,
+    /// `render.set-world-shapes`: (depth-tested, on top).
+    world_shapes: (Vec<WorldShape>, Vec<WorldShape>),
+    /// `render.hide-hitboxes`.
+    hide_hitboxes: bool,
     title_button: Option<String>,
     video_button: Option<String>,
     cape: Option<String>,
@@ -753,6 +788,8 @@ impl Mods {
             hud_scale: 1.0,
             hud_always: false,
             hud_drag: None,
+            world_shapes: (Vec::new(), Vec::new()),
+            hide_hitboxes: false,
             title_button: None,
             video_button: None,
             models: BTreeMap::new(),
@@ -827,6 +864,7 @@ impl Mods {
             ui,
             hooks,
             raycasts: functions.iter().any(|f| f == "game.raycast"),
+            entities: functions.iter().any(|f| f == "game.entities"),
             reads_recipes: functions.iter().any(|f| f.starts_with("recipes.")),
         }))
     }
@@ -1138,6 +1176,23 @@ impl Mods {
         self.entries
             .iter()
             .any(|e| e.run.as_ref().is_some_and(|r| r.raycasts))
+    }
+    /// Some running mod calls `game.entities`: the snapshot needs
+    /// [`Snapshot::entities`].
+    pub fn wants_entities(&self) -> bool {
+        self.entries
+            .iter()
+            .any(|e| e.run.as_ref().is_some_and(|r| r.entities))
+    }
+    /// The running mods' world shapes (`render.set-world-shapes`).
+    pub fn world_shapes(&self) -> impl Iterator<Item = &(Vec<WorldShape>, Vec<WorldShape>)> {
+        self.entries.iter().filter_map(|e| Some(&e.run.as_ref()?.store.data().world_shapes))
+    }
+    /// A running mod draws the hitboxes itself (`render.hide-hitboxes`).
+    pub fn hides_hitboxes(&self) -> bool {
+        self.entries
+            .iter()
+            .any(|e| e.run.as_ref().is_some_and(|r| r.store.data().hide_hitboxes))
     }
     /// The panel beside container screens (`browser.set-items`): the first
     /// running mod with items or recipes, its index, the panel's version and
@@ -1475,6 +1530,14 @@ impl Mods {
         self.ui_event(i, |ui, s| ui.horizon_mods_ui_events().call_closed(s));
     }
     /// The player opened mod `i`'s settings page.
+    /// Whether mod `i` asked for its own screen in the last hook (as
+    /// `settings-opened` may, to show it instead of a settings page); the
+    /// request is taken.
+    pub fn take_open_screen(&mut self, i: usize) -> bool {
+        let before = self.out.len();
+        self.out.retain(|o| !matches!(o, Output::OpenScreen { owner } if *owner == i));
+        before != self.out.len()
+    }
     pub fn ui_settings_opened(&mut self, i: usize) {
         self.ui_event(i, |ui, s| {
             ui.horizon_mods_ui_events().call_settings_opened(s)
@@ -1666,6 +1729,25 @@ impl game::Host for State {
         let (at, hit) = self.snapshot.view_hit.as_ref()?;
         // NaN compares false: no hit.
         (*at <= distance.min(RAYCAST_MAX) && !distance.is_nan()).then(|| hit.clone())
+    }
+    fn entities(&mut self, distance: f32) -> Vec<ModEntity> {
+        let Some(p) = &self.snapshot.player else {
+            return Vec::new();
+        };
+        if distance.is_nan() {
+            return Vec::new();
+        }
+        let r = f64::from(distance.clamp(0.0, ENTITIES_MAX));
+        let r2 = r * r;
+        self.snapshot
+            .entities
+            .iter()
+            .filter(|e| (e.x - p.x).powi(2) + (e.y - p.y).powi(2) + (e.z - p.z).powi(2) <= r2)
+            .cloned()
+            .collect()
+    }
+    fn hitboxes_shown(&mut self) -> bool {
+        self.snapshot.hitboxes_shown
     }
 }
 impl browser::Host for State {
@@ -2139,6 +2221,15 @@ impl render::Host for State {
         if self.hud_drag.is_none() {
             self.drag = None;
         }
+    }
+    fn set_world_shapes(&mut self, shapes: Vec<WorldShape>, on_top: Vec<WorldShape>) {
+        let keep = |list: Vec<WorldShape>| -> Vec<WorldShape> {
+            list.into_iter().filter_map(world_shape_ok).take(MAX_WORLD_SHAPES).collect()
+        };
+        self.world_shapes = (keep(shapes), keep(on_top));
+    }
+    fn hide_hitboxes(&mut self, hide: bool) {
+        self.hide_hitboxes = hide;
     }
     fn take_hud_drag(&mut self) -> Option<HudDrag> {
         self.drag.take().map(|(dx, dy, done)| HudDrag { dx, dy, done })

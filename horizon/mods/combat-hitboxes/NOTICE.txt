@@ -1,0 +1,11 @@
+Combat Hitboxes (Horizon port)
+
+Original mod: Combat Hitboxes 1.0.11 by Sootysplash, licensed under the
+Apache License 2.0 (LICENSE.txt). The icon is the original mod's.
+
+This port re-implements the mod's behaviour against the Horizon mod API. Changes:
+- Rewritten in Rust as a Horizon .hmod; the settings use Horizon's settings page
+  instead of Cloth Config.
+- The "hide stuck arrows" option is left out: Horizon draws no arrows stuck in
+  players.
+- Colours are picked from a fixed palette instead of a colour picker.

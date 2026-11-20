@@ -18,6 +18,34 @@ pub struct Line {
 pub struct Gizmos {
     pub lines: Vec<Line>,
     pub on_top: Vec<Line>,
+    /// Record each hitbox as an [`EntityBox`] (for mods) instead of drawing it.
+    pub record: bool,
+    /// What the next hitbox belongs to.
+    pub tag: Option<EntityTag>,
+    pub boxes: Vec<EntityBox>,
+}
+
+/// Who a recorded hitbox belongs to.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct EntityTag {
+    pub id: u32,
+    pub kind: String,
+    pub hurt_time: i32,
+    pub vehicle: Option<u32>,
+    pub own: bool,
+}
+
+/// One entity's hitbox as `EntityHitboxDebugRenderer` would draw it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EntityBox {
+    pub tag: EntityTag,
+    pub min: [f64; 3],
+    pub max: [f64; 3],
+    pub position: [f64; 3],
+    pub eye_height: f32,
+    pub living: bool,
+    /// (x, y) rotations: pitch, yaw.
+    pub view: (f32, f32),
 }
 
 /// `CommonColors`.
@@ -108,6 +136,17 @@ impl Gizmos {
                 end[2] + f64::from(t.z),
             ];
             self.line(from, end, color, width);
+        }
+    }
+    /// `Gizmos.point`: a small three-axis cross of `size` pixels' width.
+    pub fn point(&mut self, at: [f64; 3], color: u32, size: f32) {
+        let r = 0.03;
+        for axis in 0..3 {
+            let mut a = at;
+            let mut b = at;
+            a[axis] -= r;
+            b[axis] += r;
+            self.line(a, b, color, size);
         }
     }
     /// `ChunkBorderRenderer.emitGizmos` around the camera entity's block.
@@ -217,6 +256,19 @@ impl Gizmos {
         living: bool,
         view: (f32, f32),
     ) {
+        let tag = self.tag.take();
+        if self.record {
+            self.boxes.push(EntityBox {
+                tag: tag.unwrap_or_default(),
+                min,
+                max,
+                position,
+                eye_height,
+                living,
+                view,
+            });
+            return;
+        }
         self.cuboid(min, max, WHITE, STROKE_WIDTH);
         if living {
             let eye = min[1] + f64::from(eye_height);

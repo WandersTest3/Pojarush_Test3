@@ -2083,6 +2083,8 @@ struct Game<'a> {
     /// Map textures waiting for the next HUD batch to upload them.
     map_patches: Vec<horizon_client::font::Patch>,
     mod_models: mod_models::ModModels,
+    /// The packs' custom skies and the resource root they were read from.
+    custom_sky: (PathBuf, horizon_client::custom_sky::CustomSky),
     text_displays: std::collections::HashMap<i32, text_displays::RemoteTextDisplay>,
     interactions: std::collections::HashMap<i32, interactions::RemoteInteraction>,
     /// The fence knots a server tracks to this client, by entity id, at their
@@ -12945,6 +12947,11 @@ impl Game<'_> {
             lines.extend(g.lines);
             on_top = g.on_top;
         }
+        if self.player.is_some() && !self.ui.hide_gui {
+            let (mod_lines, mod_on_top) = self.mod_world_lines();
+            lines.extend(mod_lines);
+            on_top.extend(mod_on_top);
+        }
         let view = horizon_client::camera::view_matrix(view_yaw, view_pitch);
         let at = camera.to_array();
         // GameRenderer.render3dHud: the debug crosshair, first person with the HUD shown.
@@ -13086,6 +13093,7 @@ impl Game<'_> {
             self.dragon_fireball_geometry(camera, alpha, &mut dragon);
             entities.extend(dragon);
         }
+        let custom_sky = self.custom_sky_draws(title, sky.sun_angle / 360.0, rain, thunder);
         let (celestial, stars) = if title {
             (Vec::new(), None)
         } else if self.dim == Dim::Overworld
@@ -13238,6 +13246,7 @@ impl Game<'_> {
                 &[]
             },
             stars: stars.filter(|_| self.settings.horizon.sky || title),
+            custom_sky: &custom_sky,
             hand: &hand,
             hand_fov_degrees: self.hud_fov_degrees(camera_alpha as f32, camera.to_array()),
             screen: &screen,
@@ -13344,7 +13353,7 @@ impl Game<'_> {
             || self.remote_loading();
         let blurred = loading
             || self.title.as_ref().is_some_and(|t| {
-                matches!(self.screen, Screen::Options | Screen::Win)
+                matches!(self.screen, Screen::Options | Screen::Win | Screen::Mod)
                     || !matches!(t.mode, horizon_client::title::Mode::Main)
             })
             || (self.title.is_none()
@@ -13352,7 +13361,18 @@ impl Game<'_> {
                 && (self.screen.blurs_background(self.pause_menu)
                     || self.dialog_open()
                     || (self.screen == Screen::Win && self.win_screen_pauses())));
-        let radius = self.settings.menu_blur as f32;
+        let mut radius = self.settings.menu_blur as f32;
+        let mod_page = self.screen == Screen::Mod
+            || (self.screen == Screen::Options
+                && matches!(
+                    self.ui.options.page(),
+                    horizon_client::options_ui::Page::ModMenu
+                        | horizon_client::options_ui::Page::ShaderPacks
+                        | horizon_client::options_ui::Page::ShaderOptions
+                ));
+        if mod_page {
+            radius = radius.max(5.0);
+        }
         (blurred && radius >= 1.0).then_some(radius)
     }
     /// `LevelExtractor` / `LevelRenderer`: the world border wall this frame.
@@ -13981,6 +14001,11 @@ impl ApplicationHandler for Game<'_> {
             self.physical_keys.clear();
             self.physical_buttons.clear();
         }
+        if let WindowEvent::MouseInput { state, button: MouseButton::Left, .. } = &event
+            && self.mod_hud_mouse(*state == ElementState::Pressed)
+        {
+            return;
+        }
         if let WindowEvent::ModifiersChanged(m) = &event {
             self.modifiers = m.state();
         }
@@ -14143,6 +14168,7 @@ impl ApplicationHandler for Game<'_> {
                     if let Some(r) = &self.renderer {
                         let b = HudBatch::new([r.config.width, r.config.height]);
                         self.cursor = (position.x as f32 / b.scale, position.y as f32 / b.scale);
+                        self.mod_hud_mouse_move();
                         if self.dialog_open() {
                             self.dialog_drag();
                         }
@@ -15401,6 +15427,7 @@ impl<'a> Game<'a> {
             dragon_model: prepared.dragon_model,
             map_patches: Vec::new(),
             mod_models: Default::default(),
+            custom_sky: Default::default(),
             text_displays: Default::default(),
             interactions: Default::default(),
             remote_knots: Default::default(),
@@ -16431,6 +16458,7 @@ fn loading_frame(hud: &HudBatch) -> Frame<'_> {
         see_through: &[],
         celestial: &[],
         stars: None,
+        custom_sky: &[],
         hand: &[],
         hand_fov_degrees: 70.0,
         screen: &[],

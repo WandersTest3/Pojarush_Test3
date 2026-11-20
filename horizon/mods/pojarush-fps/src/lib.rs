@@ -35,8 +35,6 @@ const S_X: u32 = 21;
 const S_Y: u32 = 22;
 const S_PAD: u32 = 25;
 const S_OPACITY: u32 = 26;
-const MOVE: u32 = 13;
-const DONE: u32 = 14;
 
 struct Fps {
     show: bool,
@@ -173,7 +171,6 @@ impl Fps {
             button(BACKGROUND, format!("{}: {}", t[2], on_off(t, self.background))),
             button(COLOR, format!("{}: {}", t[3], t[15 + self.color as usize])),
             button(CORNER, t[4].into()),
-            button(MOVE, t[9].into()),
             self.slider_widget(S_SIZE),
             self.slider_widget(S_X),
             self.slider_widget(S_Y),
@@ -411,21 +408,6 @@ impl Mod for Fps {
             BACKGROUND => self.background = !self.background,
             COLOR => self.color = (self.color + 1) % COLORS.len() as u32,
             RESET => self.defaults(),
-            MOVE => {
-                let t = strings();
-                ui::open_screen(&ui::Screen {
-                    title: t[0].into(),
-                    widgets: vec![
-                        ui::Widget::Text(ui::TextWidget { id: 1, text: t[10].into(), color: 0xB98CF2 }),
-                        ui::Widget::Button(ButtonWidget { id: DONE, label: t[24].into() }),
-                    ],
-                });
-                return;
-            }
-            DONE => {
-                ui::close_screen();
-                return;
-            }
             _ => return,
         }
         self.drawn = false;

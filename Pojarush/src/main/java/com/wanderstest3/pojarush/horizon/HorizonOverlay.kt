@@ -56,7 +56,6 @@ import com.wanderstest3.pojarush.controls.ControlSettings
 import com.wanderstest3.pojarush.ui.Change
 import com.wanderstest3.pojarush.ui.ControlEditor
 import com.wanderstest3.pojarush.ui.ControlsSettings
-import com.wanderstest3.pojarush.ui.GraphicsApiSettings
 import com.wanderstest3.pojarush.ui.LayoutSettings
 import com.wanderstest3.pojarush.ui.MouseSettings
 import com.wanderstest3.pojarush.ui.PojarushTheme
@@ -90,6 +89,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     private val poll = object : Runnable {
         override fun run() {
             if (panel != Panel.EDITOR) controls.setCaptured(HorizonBridge.isCaptured())
+            controls.syncPointerCapture()
             controls.menuHold = panel != Panel.NONE
             controls.typing = HorizonBridge.isTyping()
             activity.fieldBottom = if (controls.typing) HorizonBridge.fieldBottom() else 1f
@@ -120,6 +120,8 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
     }
 
     override fun sendKey(code: Int, down: Boolean) = activity.sendKey(code, down)
+
+    fun mouseButton(button: Int, down: Boolean) = controls.mouseButton(button, down)
 
     fun back(): Boolean = when (panel) {
         Panel.NONE -> false
@@ -237,6 +239,12 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                     QuickChip(stringResource(R.string.overlay_send_key)) {
                         panel = Panel.SEND_KEY
                     }
+                }
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     QuickChip(stringResource(R.string.overlay_close_game)) {
                         confirmClose = true
                     }
@@ -258,7 +266,6 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                         1 -> MouseSettings(settings, ::apply)
                         else -> {
                             ResolutionSettings(settings, ::apply)
-                            GraphicsApiSettings(settings)
                         }
                     }
                 }

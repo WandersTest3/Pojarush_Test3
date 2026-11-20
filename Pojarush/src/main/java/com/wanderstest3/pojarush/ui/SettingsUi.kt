@@ -183,7 +183,7 @@ fun MenuButtonSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
         CardTitle(stringResource(R.string.menu_button_title))
         SettingSlider(stringResource(R.string.menu_button_size), settings.menuSize, 20f..80f, 2f, { "${it.toInt()} dp" }, default = 30f) { settings.menuSize = it; onChange(Change.MENU_BUTTON) }
         SettingSlider(stringResource(R.string.menu_button_opacity), settings.menuOpacity, 0.05f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.50f) { settings.menuOpacity = it; onChange(Change.MENU_BUTTON) }
-        SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }, default = 0.50f) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
+        SettingSlider(stringResource(R.string.menu_button_radius), settings.menuRadius, 0f..0.50f, 0.05f, { "${Math.round(it * 200)}%" }, default = 0.25f) { settings.menuRadius = it; onChange(Change.MENU_BUTTON) }
         Hint(if (icon.isEmpty()) stringResource(R.string.menu_button_icon_none) else stringResource(R.string.mouse_cursor_current, File(icon).name))
         val iconFiles = remember(iconVersion) { ControlLayouts.history(ControlLayouts.menuIconDir()) }
         if (iconFiles.isNotEmpty()) {
@@ -347,7 +347,7 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
     var heightText by remember { mutableStateOf(settings.fixedHeight.toString()) }
     var version by remember { mutableIntStateOf(0) }
     fun applyPercent(p: Int) {
-        val v = p.coerceIn(10, 100)
+        val v = p.coerceIn(1, 100)
         percent = v
         percentText = v.toString()
         settings.renderScale = v / 100f
@@ -382,13 +382,13 @@ fun ResolutionSettings(settings: ControlSettings, onChange: (Change) -> Unit) {
             }, label = { Text(stringResource(R.string.graphics_mode_fixed)) })
         }
         if (!fixed) {
-            SettingSlider(stringResource(R.string.graphics_mode_percent), percent.toFloat(), 10f..100f, 1f, { "${it.toInt()}%" }, default = 100f) { applyPercent(it.toInt()) }
+            SettingSlider(stringResource(R.string.graphics_mode_percent), percent.toFloat(), 1f..100f, 1f, { "${it.toInt()}%" }, default = 100f) { applyPercent(it.toInt()) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = percentText,
                     onValueChange = { t ->
                         percentText = t.filter(Char::isDigit).take(3)
-                        percentText.toIntOrNull()?.takeIf { it in 10..100 }?.let {
+                        percentText.toIntOrNull()?.takeIf { it in 1..100 }?.let {
                             percent = it
                             settings.renderScale = it / 100f
                             version++

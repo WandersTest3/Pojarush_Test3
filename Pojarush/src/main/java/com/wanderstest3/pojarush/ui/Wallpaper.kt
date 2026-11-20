@@ -290,7 +290,7 @@ fun InterfaceSettings(settings: ControlSettings) {
                 }
             }
         }
-        SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.60f) {
+        SettingSlider(stringResource(R.string.menu_background), settings.menuBackground, 0f..1.00f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.50f) {
             settings.menuBackground = it
             UiPrefs.menuBackground = it
         }
@@ -505,7 +505,7 @@ fun WallpaperSettings(settings: ControlSettings) {
             }
         }
         if (path.isNotEmpty()) {
-            SettingSlider(stringResource(R.string.wallpaper_dim), settings.wallpaperDim, 0f..0.90f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.25f) {
+            SettingSlider(stringResource(R.string.wallpaper_dim), settings.wallpaperDim, 0f..0.90f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.20f) {
                 settings.wallpaperDim = it
                 WallpaperState.version++
             }

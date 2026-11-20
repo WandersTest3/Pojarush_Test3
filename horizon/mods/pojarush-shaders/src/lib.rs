@@ -168,6 +168,7 @@ impl Mod for Shaders {
 
     fn ui_settings_opened(&mut self) {
         self.page();
+        ui::open_shader_packs();
     }
 }
 

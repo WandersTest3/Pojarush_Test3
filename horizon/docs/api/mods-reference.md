@@ -121,11 +121,39 @@ A block along the player's view.
 | `z` | `f64` |  |
 | `block` | `string` | `minecraft:stone`, ... |
 
+### record `entity`
+
+An entity near the player as this frame draws it, with the hitbox F3+B shows.
+
+| Field | Type | |
+| --- | --- | --- |
+| `id` | `u32` | The game's id for it (`Entity.getId`); 0 for the ones the client keeps without one (items, projectiles, vehicles). |
+| `kind` | `string` | `minecraft:zombie`, `minecraft:item`, `minecraft:player`, ... |
+| `x` | `f64` | Its position between the last two ticks, as this frame shows it. |
+| `y` | `f64` |  |
+| `z` | `f64` |  |
+| `min-x` | `f64` | Its hitbox's corners. |
+| `min-y` | `f64` |  |
+| `min-z` | `f64` |  |
+| `max-x` | `f64` |  |
+| `max-y` | `f64` |  |
+| `max-z` | `f64` |  |
+| `eye-height` | `f32` | Eye height above the hitbox's bottom. |
+| `living` | `bool` | A living entity (mobs, players, armor stands). |
+| `yaw` | `f32` | Where it looks, in degrees, as `player`'s. |
+| `pitch` | `f32` |  |
+| `hurt-time` | `s32` | Ticks left of its red flash after a hit (10 down to 0). |
+| `vehicle` | `option<u32>` | The id of the entity it rides. |
+| `targeted` | `bool` | The crosshair is on it (`Minecraft.hitResult`). |
+| `mine` | `bool` | The player's own. |
+
 | Function | Signature | What it does |
 | --- | --- | --- |
 | `get-player` | `func() -> option<player>` | None on the title screen. |
 | `get-clock` | `func() -> option<clock>` | None on the title screen. |
 | `raycast` | `func(distance: f32) -> option<hit>` | The first block along the player's view (fluids pass), up to `distance` blocks (at most 1024; past the loaded chunks, across the distant terrain when LOD Distance is on), as of this tick. None when nothing is hit, and on the title screen. |
+| `entities` | `func(distance: f32) -> list<entity>` | The entities whose position lies within `distance` blocks (at most 256) of the player, nearest first, as of this frame; empty on the title screen. The game gathers them only while a mod calls this. |
+| `hitboxes-shown` | `func() -> bool` | The hitboxes are shown (F3+B). |
 
 ## `chat`
 
@@ -271,8 +299,8 @@ A player or an entity drawn in 3D in a box, lit as the inventory's player is (AP
 | Field | Type | |
 | --- | --- | --- |
 | `id` | `u32` | The mod's own name for the widget. |
-| `entity` | `string` | `player`: the player as they look now (skin, armour, held items, the cape); else an entity type, `minecraft:zombie`. An unknown type draws nothing. |
-| `height` | `u32` | The box's height in GUI pixels, 24 to 200; it is as wide as its column. |
+| `entity` | `string` | `player`: the player as they look now (skin, armour, held items, the cape), on the title screen too; `cape:FILE`: a cape alone, its texture a PNG in the mod's `models/` folder (64 by 32, as a player's cape), swinging slowly; else an entity type, `minecraft:zombie`. An unknown type draws nothing. A click on the box is `ui-events::select(id, 0)`. |
+| `height` | `u32` | The box's height in GUI pixels, 24 to 200. Up to 64 it is a tile, four to a row; higher, it is as wide as its column. |
 | `follow-cursor` | `bool` | The head and body turn toward the cursor, as in the inventory; else the model faces the player. |
 
 ### variant `widget-v3`
@@ -559,6 +587,59 @@ Where a mod's model stands: its feet in world coordinates, its yaw and pitch in 
 | `distance` | `u32` | How far the distant terrain reaches, in chunks: 64 to 1024. On integrated graphics other than Apple's the game caps it lower. |
 | `reduced` | `bool` | Coarser far tiles, as the Far Detail setting's Reduced: 2 to 4 ms less GPU time per frame on integrated graphics. |
 
+### record `world-pos`
+
+A point in the world, in blocks.
+
+| Field | Type | |
+| --- | --- | --- |
+| `x` | `f64` |  |
+| `y` | `f64` |  |
+| `z` | `f64` |  |
+
+### record `world-line`
+
+A line in the world: ARGB colour, width in pixels (0.5 to 16).
+
+| Field | Type | |
+| --- | --- | --- |
+| `start` | `world-pos` |  |
+| `end` | `world-pos` |  |
+| `color` | `u32` |  |
+| `width` | `f32` |  |
+
+### record `world-box`
+
+The twelve edges of a box in the world.
+
+| Field | Type | |
+| --- | --- | --- |
+| `min` | `world-pos` |  |
+| `max` | `world-pos` |  |
+| `color` | `u32` |  |
+| `width` | `f32` |  |
+
+### record `world-point`
+
+A small mark in the world, `size` pixels thick.
+
+| Field | Type | |
+| --- | --- | --- |
+| `at` | `world-pos` |  |
+| `color` | `u32` |  |
+| `size` | `f32` |  |
+
+### variant `world-shape`
+
+What `set-world-shapes` draws, as vanilla's gizmos (`Gizmos.line`, `arrow`, `cuboid`, `point`).
+
+| Case | Payload | |
+| --- | --- | --- |
+| `line` | `world-line` |  |
+| `arrow` | `world-line` |  |
+| `cuboid` | `world-box` |  |
+| `point` | `world-point` |  |
+
 | Function | Signature | What it does |
 | --- | --- | --- |
 | `set-hud` | `func(shapes: list<shape>)` | Replaces the mod's HUD shapes: up to 1024, drawn every frame in order over the HUD (after the hotbar, under chat and screens), hidden with the HUD (F1). An empty list removes them. |
@@ -587,6 +668,8 @@ Where a mod's model stands: its feet in world coordinates, its yaw and pitch in 
 | `set-player-cape` | `func(texture: string) -> result<_, string>` | Gives the local player this cape, a 64x32 PNG in the mod's `models/` (also drawn on its elytra), in place of its account's; empty gives the account's back. |
 | `set-minimap` | `func(minimap: option<minimap>)` | Shows a map of the world around the player in `corner`, stacked with the game's overlays and the mods' panels, until the next call (none hides it). It looks like a map item: vanilla's map colours with their height shading and water depth, and the player's arrow. Underground, under a roof and in the Nether it maps the floor around the player's height. The game keeps the map's tiles and refreshes them within its own frame budget; hidden, they are dropped. One map shows at a time: the first loaded mod's. |
 | `set-far-terrain` | `func(far-terrain: option<far-terrain>)` | Draws the world beyond the render distance as distant terrain, out to `distance` chunks, until the next call (none ends it). The game builds it on its own workers, from the chunks already loaded or saved and, where nobody has been, from the world's generator; the simulation distance doesn't change. Only worlds whose generator the game has (single player and a LAN world you host) show it. The player's own LOD Distance setting, when on, wins. One far terrain shows at a time: the first loaded mod's. |
+| `set-world-shapes` | `func(shapes: list<world-shape>, on-top: list<world-shape>)` | Draws lines in the world every frame until the next call: `shapes` hidden by the blocks in front of them, `on-top` over everything. At most 8192 of each; the rest are dropped. Empty lists clear them. |
+| `hide-hitboxes` | `func(hide: bool)` | Leaves out the game's own hitboxes (F3+B) while true, for a mod that draws its own with `set-world-shapes`. |
 
 ## `events`
 

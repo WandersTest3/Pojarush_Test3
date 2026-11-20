@@ -1,0 +1,20 @@
+[package]
+name = "combat_hitboxes"
+version = "1.0.11"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+description = "Horizon port of Sootysplash's Combat Hitboxes: hitboxes that help with attack timing and reach."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+horizon-mod-sdk = { path = "../../crates/horizon-mod-sdk" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+
+[workspace]

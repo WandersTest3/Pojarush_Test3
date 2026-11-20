@@ -50,6 +50,10 @@ pub(super) struct ModsState {
     pub(super) dev: Vec<PathBuf>,
     /// The options page a mod's settings page was opened from, to go back to.
     pub(super) settings_from: Option<horizon_client::options_ui::Page>,
+    /// A mod's draggable HUD area held with the mouse: the mod and the
+    /// cursor's last position in GUI pixels.
+    #[cfg(feature = "mods")]
+    pub(super) hud_mouse: Option<(usize, f32, f32)>,
     /// When dev mods were last checked for a rebuild.
     #[cfg(feature = "mods")]
     checked: Option<Instant>,
@@ -134,6 +138,9 @@ struct ModScreen {
     owner: usize,
     /// Opened from Options > Mods: Done and Esc return there.
     settings: bool,
+    /// The mod's own screen shown for its settings (`settings-opened`
+    /// opened it): Done and Esc return to Options too.
+    back: bool,
     /// What the mod's screen replaced (Playing, Chat, ...), to restore.
     under: Screen,
     /// One scroll per `list` widget, in widget order.
@@ -301,6 +308,12 @@ impl Game<'_> {
     pub(super) fn mod_screen_scroll(&mut self, _delta: f32) {}
     pub(super) fn mod_screen_drag(&mut self) {}
     pub(super) fn mod_screen_release(&mut self) {}
+    pub(super) fn mods_hide_hitboxes(&self) -> bool {
+        false
+    }
+    pub(super) fn mod_world_lines(&self) -> (Vec<horizon_client::gizmos::Line>, Vec<horizon_client::gizmos::Line>) {
+        (Vec::new(), Vec::new())
+    }
 }
 /// What the launcher writes beside a game it built with native mods: their ids under `mods`.
 const BUILD_INFO: &str = "native-mods.json";
@@ -527,11 +540,95 @@ impl Game<'_> {
             font_widths: self.mods.font_widths.clone(),
             players,
             view_hit: self.mod_view_hit(),
+            entities: self.mod_entities(),
+            hitboxes_shown: self.show_hitboxes,
             recipes,
             known_recipes,
             placing: self.mod_recipe_screen(),
             creative: self.creative,
         }
+    }
+    /// The entities around the player as this frame draws them
+    /// (`game.entities`), from the hitboxes F3+B shows.
+    fn mod_entities(&self) -> std::sync::Arc<[horizon_mods::ModEntity]> {
+        if !self.mods.mods.wants_entities() {
+            return std::sync::Arc::from([]);
+        }
+        let Some(p) = &self.player else {
+            return std::sync::Arc::from([]);
+        };
+        let alpha = self.clock.fraction() as f32;
+        let mut g = horizon_client::gizmos::Gizmos {
+            record: true,
+            ..Default::default()
+        };
+        self.hitbox_gizmos(alpha, &mut g);
+        let target = self
+            .mob_hit()
+            .filter(|&(_, d)| self.before_block(d))
+            .map(|(i, _)| self.mobs[i].id);
+        let at = [p.position.x, p.position.y, p.position.z];
+        let max = f64::from(horizon_mods::ENTITIES_MAX);
+        let mut out: Vec<(f64, horizon_mods::ModEntity)> = g
+            .boxes
+            .into_iter()
+            .filter_map(|b| {
+                let d2 = (0..3).map(|i| (b.position[i] - at[i]).powi(2)).sum::<f64>();
+                (d2 <= max * max).then(|| {
+                    let targeted = !b.tag.own && b.tag.id != 0 && Some(b.tag.id) == target;
+                    (
+                        d2,
+                        horizon_mods::ModEntity {
+                            id: b.tag.id,
+                            kind: b.tag.kind,
+                            x: b.position[0],
+                            y: b.position[1],
+                            z: b.position[2],
+                            min_x: b.min[0],
+                            min_y: b.min[1],
+                            min_z: b.min[2],
+                            max_x: b.max[0],
+                            max_y: b.max[1],
+                            max_z: b.max[2],
+                            eye_height: b.eye_height,
+                            living: b.living,
+                            yaw: b.view.1,
+                            pitch: b.view.0,
+                            hurt_time: b.tag.hurt_time,
+                            vehicle: b.tag.vehicle,
+                            targeted,
+                            mine: b.tag.own,
+                        },
+                    )
+                })
+            })
+            .collect();
+        out.sort_by(|a, b| a.0.total_cmp(&b.0));
+        out.into_iter().map(|(_, e)| e).collect()
+    }
+    /// A running mod draws the hitboxes itself (`render.hide-hitboxes`).
+    pub(super) fn mods_hide_hitboxes(&self) -> bool {
+        self.mods.mods.hides_hitboxes()
+    }
+    /// The running mods' world shapes as gizmo lines: (depth-tested, on top).
+    pub(super) fn mod_world_lines(&self) -> (Vec<horizon_client::gizmos::Line>, Vec<horizon_client::gizmos::Line>) {
+        use horizon_mods::WorldShape as S;
+        let mut lines = horizon_client::gizmos::Gizmos::default();
+        let mut top = horizon_client::gizmos::Gizmos::default();
+        let p = |w: &horizon_mods::WorldPos| [w.x, w.y, w.z];
+        for (shapes, on_top) in self.mods.mods.world_shapes() {
+            for (list, g) in [(shapes, &mut lines), (on_top, &mut top)] {
+                for shape in list {
+                    match shape {
+                        S::Line(l) => g.line(p(&l.start), p(&l.end), l.color, l.width),
+                        S::Arrow(l) => g.arrow(p(&l.start), p(&l.end), l.color, l.width),
+                        S::Cuboid(b) => g.cuboid(p(&b.min), p(&b.max), b.color, b.width),
+                        S::Point(pt) => g.point(p(&pt.at), pt.color, pt.size),
+                    }
+                }
+            }
+        }
+        (lines.lines, top.lines)
     }
     /// The first block along the player's view within
     /// [`horizon_mods::RAYCAST_MAX`] and its distance from the eye
@@ -815,11 +912,15 @@ impl Game<'_> {
         self.mods.title_click = None;
     }
     fn open_shader_page(&mut self, page: Page) {
+        let from = self.mods.settings_from.take();
         self.mods.screen = None;
         if self.screen == Screen::Playing && self.title.is_none() {
             self.capture(false);
         }
-        self.open_options(self.title.is_some());
+        match from {
+            Some(from) => self.open_options_at(self.title.is_some(), from),
+            None => self.open_options(self.title.is_some()),
+        }
         self.ui.options.show(Page::ShaderPacks);
         self.settings.shader_packs =
             horizon_client::shader_pack_list::scan(&Self::shader_packs_dir());
@@ -1083,7 +1184,34 @@ impl Game<'_> {
         let mut out = Vec::with_capacity(widgets.len());
         let mut y = MOD_UI_TOP + keys as f32 * MOD_UI_KEY_ROW;
         let mut left_open = false;
+        // Small entity boxes (64 pixels high or less) sit four to a row.
+        let mut tile = 0usize;
+        let mut tile_h = 0.0f32;
         for w in widgets {
+            if let UiWidget::Entity(e) = w
+                && e.height <= MOD_UI_TILE_MAX
+            {
+                let wh = e.height.max(24) as f32;
+                if left_open {
+                    y += 26.0;
+                    left_open = false;
+                }
+                let tw = ((MOD_UI_WIDE - 3.0 * MOD_UI_GAP / 2.0) / 4.0).floor();
+                out.push((-MOD_UI_WIDE / 2.0 + tile as f32 * (tw + MOD_UI_GAP / 2.0), y, tw, wh));
+                tile_h = tile_h.max(wh);
+                tile += 1;
+                if tile == 4 {
+                    y += tile_h + 6.0;
+                    tile = 0;
+                    tile_h = 0.0;
+                }
+                continue;
+            }
+            if tile > 0 {
+                y += tile_h + 6.0;
+                tile = 0;
+                tile_h = 0.0;
+            }
             let half = matches!(w, UiWidget::Button(_) | UiWidget::Slider(_));
             let wh = match w {
                 UiWidget::Text(_) => 12.0,
@@ -1105,6 +1233,9 @@ impl Game<'_> {
             }
             y += wh + 6.0;
         }
+        if tile > 0 {
+            y += tile_h + 6.0;
+        }
         let max = (y - 6.0 - (h - MOD_UI_BOTTOM)).max(0.0);
         let page = page.clamp(0.0, max);
         (
@@ -1115,8 +1246,12 @@ impl Game<'_> {
     }
     /// A row at `wy`, `wh` high, lies wholly inside the page's view (below the
     /// title, above Done).
-    fn mod_ui_shown(h: f32, wy: f32, wh: f32) -> bool {
+    fn mod_ui_whole(h: f32, wy: f32, wh: f32) -> bool {
         wy >= MOD_UI_TOP - 0.5 && wy + wh <= h - MOD_UI_BOTTOM + 0.5
+    }
+    /// Any part of a row lies inside the page's view: drawn clipped to it.
+    fn mod_ui_shown(h: f32, wy: f32, wh: f32) -> bool {
+        wy + wh > MOD_UI_TOP && wy < h - MOD_UI_BOTTOM
     }
     /// A mod pushes its screen (`ui.open-screen`), or Options > Mods opens
     /// its settings page (`settings`, the mod's `installed` index).
@@ -1127,8 +1262,19 @@ impl Game<'_> {
         if self.title.is_some() && !settings && !from_title {
             return;
         }
+        let mut settings = settings;
+        let mut back = false;
         if settings {
             self.mods.mods.ui_settings_opened(owner);
+            if self.mods.mods.take_open_screen(owner) {
+                settings = false;
+                back = true;
+            } else if horizon_mods::ui_request_pending() {
+                self.show_mod_output();
+                return;
+            }
+        }
+        if settings {
             let keys = self.mods.mods.keys_of(owner);
             if self.mods.mods.settings_widgets(owner).is_empty() && keys.is_empty() {
                 self.show_mod_output();
@@ -1138,6 +1284,7 @@ impl Game<'_> {
         self.mods.screen = Some(ModScreen {
             owner,
             settings,
+            back,
             under: self.screen,
             scrolls: Vec::new(),
             binding: None,
@@ -1157,7 +1304,7 @@ impl Game<'_> {
         let Some(ms) = self.mods.screen.take() else {
             return;
         };
-        if ms.settings {
+        if ms.settings || ms.back {
             let page = self.mods.settings_from.take().unwrap_or(Page::Mods);
             self.open_options_at(self.title.is_some(), page);
         } else {
@@ -1174,6 +1321,7 @@ impl Game<'_> {
     /// The mod's screen or settings page: its title over widgets stacked
     /// down the middle, a Done button, Esc to leave (vanilla's menus).
     pub(super) fn draw_mod_screen(&mut self, batch: &mut HudBatch) {
+        self.sync_player_cape();
         let Some(ms) = self.mods.screen.as_mut() else {
             // The screen was dropped while it was up: back to the world,
             // mouse held again like any return to Playing.
@@ -1198,6 +1346,8 @@ impl Game<'_> {
         let in_world = self.player.is_some();
         if in_world {
             batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, 0xA010_0010);
+        } else {
+            batch.fill(atlas, 0.0, 0.0, batch.width, batch.height, 0x7010_0010);
         }
         ui::menu_background(batch, atlas, 0.0, 0.0, batch.width, batch.height, in_world);
         ui::centered_text(
@@ -1217,6 +1367,7 @@ impl Game<'_> {
             Self::mod_ui_layout(batch.height, keys.len(), widgets, ms.page);
         ms.page = ms.page.clamp(0.0, max);
         let view_h = batch.height;
+        let clip_start = batch.vertices.len();
         for (i, k) in keys.iter().enumerate() {
             let wy = key_rows[i];
             if !Self::mod_ui_shown(view_h, wy, 20.0) {
@@ -1240,7 +1391,8 @@ impl Game<'_> {
         let mut list_i = 0usize;
         for (w, &(dx, wy, col, wh)) in widgets.iter().zip(&layout) {
             let x = cx + dx;
-            if !Self::mod_ui_shown(view_h, wy, wh) {
+            let whole_only = matches!(w, UiWidget::Entity(_) | UiWidget::Item(_));
+            if !Self::mod_ui_shown(view_h, wy, wh) || (whole_only && !Self::mod_ui_whole(view_h, wy, wh)) {
                 if matches!(w, UiWidget::List(_)) {
                     ms.scrolls.resize_with(list_i + 1, ui::Scroll::default);
                     list_i += 1;
@@ -1296,7 +1448,15 @@ impl Game<'_> {
                     );
                 }
                 UiWidget::Entity(e) => {
-                    batch.fill(atlas, x, wy, col, wh, 0x6000_0000);
+                    let hover = ui::hovered(self.cursor, x, wy, col, wh);
+                    batch.fill(atlas, x, wy, col, wh, if hover { 0x9057_197F } else { 0x6000_0000 });
+                    if hover {
+                        let rim = 0xFFB9_8CF2;
+                        batch.fill(atlas, x, wy, col, 1.0, rim);
+                        batch.fill(atlas, x, wy + wh - 1.0, col, 1.0, rim);
+                        batch.fill(atlas, x, wy, 1.0, wh, rim);
+                        batch.fill(atlas, x + col - 1.0, wy, 1.0, wh, rim);
+                    }
                     entities.push(([x, wy, x + col, wy + wh], e.entity.clone(), e.follow_cursor));
                 }
                 UiWidget::Item(i) => {
@@ -1354,6 +1514,7 @@ impl Game<'_> {
                 }
             }
         }
+        batch.clip_since(clip_start, 0.0, MOD_UI_TOP, batch.width, view_h - MOD_UI_BOTTOM);
         if max > 0.0 {
             let content = view_h - MOD_UI_BOTTOM - MOD_UI_TOP + max;
             ui::scrollbar(
@@ -1378,7 +1539,23 @@ impl Game<'_> {
             true,
             hover,
         );
+        let owner_path = self
+            .mods
+            .screen
+            .as_ref()
+            .and_then(|ms| self.mods.mods.entries().get(ms.owner))
+            .map(|e| e.path.clone());
         for ([x0, y0, x1, y1], entity, follow) in entities {
+            if let Some(file) = entity.strip_prefix("cape:") {
+                let uv = owner_path
+                    .as_ref()
+                    .filter(|_| !file.contains("..") && file.ends_with(".png"))
+                    .and_then(|p| self.model_texture(p, &format!("models/{file}")));
+                if let Some(uv) = uv {
+                    self.draw_cape_box(batch, [x0, y0, x1, y1], uv);
+                }
+                continue;
+            }
             self.draw_entity_box(batch, x0, y0, x1, y1, &entity, follow);
         }
         for (id, ix, iy) in items {
@@ -1421,10 +1598,13 @@ impl Game<'_> {
         let x = cx - MOD_UI_COLUMN / 2.0;
         // A key row waits for the key to bind.
         let keys = Self::mod_page_keys(&self.mods.mods, ms);
-        let (key_rows, layout, _) = Self::mod_ui_layout(h, keys.len(), widgets, page);
+        let (key_rows, layout, page_max) = Self::mod_ui_layout(h, keys.len(), widgets, page);
         let picked = (0..keys.len()).find(|&i| {
             let wy = key_rows[i];
-            Self::mod_ui_shown(h, wy, 20.0) && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
+            Self::mod_ui_shown(h, wy, 20.0)
+                && cursor.1 >= MOD_UI_TOP
+                && cursor.1 < h - MOD_UI_BOTTOM
+                && ui::hovered(cursor, x, wy, MOD_UI_COLUMN, 20.0)
         });
         if let Some(i) = picked {
             let name = keys[i].name.clone();
@@ -1437,9 +1617,10 @@ impl Game<'_> {
         let mut list_i = 0usize;
         // The `ui_select` call needs `&mut`: find the pick first.
         let mut hit = None;
+        let in_band = cursor.1 >= MOD_UI_TOP && cursor.1 < h - MOD_UI_BOTTOM;
         for (w, &(dx, wy, col, wh)) in widgets.iter().zip(&layout) {
             let x = cx + dx;
-            if !Self::mod_ui_shown(h, wy, wh) {
+            if !in_band || !Self::mod_ui_shown(h, wy, wh) {
                 if matches!(w, UiWidget::List(_)) {
                     list_i += 1;
                 }
@@ -1473,6 +1654,16 @@ impl Game<'_> {
                 self.show_mod_output();
                 return;
             }
+            // An entity box is `select(id, 0)` too.
+            if let UiWidget::Entity(e) = w
+                && ui::hovered(cursor, x, wy, col, wh)
+            {
+                self.audio.play_button_click();
+                let owner = self.mods.screen.as_ref().map_or(0, |ms| ms.owner);
+                self.mods.mods.ui_select(owner, e.id, 0);
+                self.show_mod_output();
+                return;
+            }
             // A button is `select(id, 0)`.
             if let UiWidget::Button(b) = w
                 && ui::hovered(cursor, x, wy, col, 20.0)
@@ -1500,7 +1691,16 @@ impl Game<'_> {
             self.mods.mods.ui_select(owner, id, row);
             self.show_mod_output();
         } else if let Some(ms) = self.mods.screen.as_mut() {
-            ms.pan = Some((cursor.1, ms.page));
+            // Only the scrollbar drags the page; the thumb follows the cursor.
+            let bar_x = cx + MOD_UI_WIDE / 2.0 + 6.0;
+            if page_max > 0.0
+                && cursor.0 >= bar_x - 3.0
+                && cursor.0 < bar_x + 9.0
+                && cursor.1 >= MOD_UI_TOP
+                && cursor.1 < h - MOD_UI_BOTTOM
+            {
+                ms.pan = Some((cursor.1, ms.page));
+            }
         }
     }
     /// The slider position under cursor column `cx` of a track at `x`.
@@ -1511,10 +1711,20 @@ impl Game<'_> {
     /// A drag moved the cursor: the dragged slider follows it.
     pub(super) fn mod_screen_drag(&mut self) {
         let cursor_y = self.cursor.1;
-        if let Some(ms) = self.mods.screen.as_mut()
+        if let Some(ms) = self.mods.screen.as_ref()
             && let Some((from, start)) = ms.pan
         {
-            ms.page = (start - (cursor_y - from)).max(0.0);
+            let (_, h) = self.gui_size();
+            let keys = Self::mod_page_keys(&self.mods.mods, ms).len();
+            let max = Self::mod_ui_view(&self.mods.mods, ms)
+                .map_or(0.0, |(_, widgets)| Self::mod_ui_layout(h, keys, widgets, ms.page).2);
+            let track = (h - MOD_UI_BOTTOM - MOD_UI_TOP).max(1.0);
+            let content = track + max;
+            let bar = ui::scrollbar_thumb(MOD_UI_TOP, h - MOD_UI_BOTTOM, content, start).map_or(track, |(_, b)| b);
+            let per = if track - bar > 0.0 { max / (track - bar) } else { 0.0 };
+            if let Some(ms) = self.mods.screen.as_mut() {
+                ms.page = (start + (cursor_y - from) * per).clamp(0.0, max);
+            }
             return;
         }
         let Some(ms) = self.mods.screen.as_ref() else {
@@ -1633,6 +1843,8 @@ const MOD_UI_BOTTOM: f32 = 34.0;
 const MOD_UI_COLUMN: f32 = 200.0;
 #[cfg(feature = "mods")]
 const MOD_UI_WIDE: f32 = 310.0;
+/// Entity boxes this high or lower are tiles, four to a row.
+const MOD_UI_TILE_MAX: u32 = 64;
 #[cfg(feature = "mods")]
 const MOD_UI_HALF: f32 = 150.0;
 #[cfg(feature = "mods")]

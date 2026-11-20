@@ -526,7 +526,7 @@ pub fn list_background(
     );
 }
 /// The visible scrollbar thumb, shared by painting and pointer input.
-pub(crate) fn scrollbar_thumb(
+pub fn scrollbar_thumb(
     top: f32,
     bottom: f32,
     content: f32,

@@ -201,7 +201,7 @@ impl Game<'_> {
     pub(super) fn mod_attached_geometry(&mut self, _camera: glam::DVec3, _alpha: f64, _out: &mut Vec<Vertex>) {}
     /// The cape a mod gives the local player: uploaded, kept in the atlas and worn.
     #[cfg(feature = "mods")]
-    fn sync_player_cape(&mut self) {
+    pub(super) fn sync_player_cape(&mut self) {
         let wanted = self.mods.mods.player_cape().map(|(p, f)| (p.to_owned(), f.to_owned()));
         let sprite = wanted.and_then(|(path, file)| {
             let [u0, v0, u1, v1] = self.model_texture(&path, &format!("models/{file}"))?;
