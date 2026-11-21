@@ -1,6 +1,6 @@
 id = "acvcape"
 name = "Acv Cape"
-version = "1.0.33"
+version = "1.0.34"
 description = "Wear any cape you like. Port of the Fabric mod Acv Cape to Horizon: the Java, Bedrock and Dungeons II capes in tabs, each one shown in 3D beside your player wearing it, favorites and No Cape. The cape is also drawn on the elytra. Open it with R or from its settings."
 authors = ["Wanders_Test3"]
 api = "0.1"

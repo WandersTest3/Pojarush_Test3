@@ -30,6 +30,7 @@ data class RegistryEntry(
     companion object {
         const val HORIZON = 0
         const val MODRINTH = 1
+        const val POJARUSH = 2
     }
 
     val packKind: PackKind?
@@ -43,8 +44,15 @@ data class RegistryEntry(
 
 object ModRegistry {
     const val SITE = "https://playhorizon.dev/mods"
+    const val POJARUSH_SITE = "https://wanderstest3.github.io/Pojarush_Test3-Mods/"
     private const val GAME = "26.3"
     private const val INDEX = "https://horizon-rust.github.io/horizon-mods/index.json"
+    private const val POJARUSH_INDEX = POJARUSH_SITE + "index.json"
+
+    fun site(source: Int): String = if (source == RegistryEntry.POJARUSH) POJARUSH_SITE else SITE
+
+    fun page(entry: RegistryEntry): String? =
+        if (entry.source == RegistryEntry.POJARUSH) POJARUSH_SITE + "mod.html?id=" + android.net.Uri.encode(entry.id) else null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -52,29 +60,34 @@ object ModRegistry {
         .followRedirects(true)
         .build()
 
-    @Volatile private var cached: List<RegistryEntry>? = null
+    private val cached = java.util.concurrent.ConcurrentHashMap<Int, List<RegistryEntry>>()
     private val icons = HashMap<String, Bitmap?>()
 
-    fun cachedEntries(): List<RegistryEntry>? = cached
+    fun cachedEntries(source: Int = RegistryEntry.POJARUSH): List<RegistryEntry>? = cached[source]
 
-    fun fetch(force: Boolean = false): List<RegistryEntry> {
-        if (!force) cached?.let { return it }
-        val text = client.newCall(Request.Builder().url(INDEX).build()).execute().use { r ->
+    fun fetch(force: Boolean = false, source: Int = RegistryEntry.POJARUSH): List<RegistryEntry> {
+        if (!force) cached[source]?.let { return it }
+        val url = if (source == RegistryEntry.POJARUSH) POJARUSH_INDEX else INDEX
+        val request = Request.Builder().url(url).apply { if (force) header("Cache-Control", "no-cache") }.build()
+        val text = client.newCall(request).execute().use { r ->
             if (!r.isSuccessful) throw IOException("HTTP ${r.code}")
             r.body?.string() ?: throw IOException("Empty index")
         }
         val root = JSONObject(text)
         val revoked = HashSet<String>()
+        val revokedIds = HashSet<String>()
         root.optJSONArray("revoked")?.let { arr ->
             for (i in 0 until arr.length()) {
                 val r = arr.optJSONObject(i) ?: continue
-                revoked += r.optString("sha256")
+                    val sha = r.optString("sha256")
+                if (sha.isNotEmpty()) revoked += sha else revokedIds += r.optString("id")
             }
         }
         val projects = root.getJSONArray("projects")
         val out = ArrayList<RegistryEntry>()
         for (i in 0 until projects.length()) {
             val p = projects.getJSONObject(i)
+            if (p.optString("id") in revokedIds) continue
             val versions = p.optJSONArray("versions") ?: continue
             if (versions.length() == 0) continue
             val v = (0 until versions.length()).map { versions.getJSONObject(it) }
@@ -97,10 +110,11 @@ object ModRegistry {
                 size = file.optLong("size"),
                 sha256 = sha,
                 downloads = p.optLong("downloads", 0L),
+                source = source,
             )
         }
         out.sortByDescending { it.downloads }
-        cached = out
+        cached[source] = out
         return out
     }
 
@@ -126,10 +140,20 @@ object ModRegistry {
         return folder.takeIf { it.isDirectory }
     }
 
+    fun olderVersions(entry: RegistryEntry): List<File> {
+        if (entry.source == RegistryEntry.MODRINTH || entry.packKind != PackKind.MOD) return emptyList()
+        val files = GameFiles.dir(PackKind.MOD).listFiles() ?: return emptyList()
+        return files.filter { f ->
+            f.isFile && f.name != entry.fileName && f.name.endsWith(".hmod") &&
+                (f.name == "${entry.id}.hmod" || f.name.startsWith("${entry.id}-"))
+        }
+    }
+
     fun install(entry: RegistryEntry, progress: (Float) -> Unit): PackEntry {
         val kind = entry.packKind ?: throw IOException("Not supported on Android")
         if (!entry.url.startsWith("https://")) throw IOException("Invalid download URL")
         HorizonManager.ensureFolders()
+        val older = olderVersions(entry)
         return GameFiles.install(kind, entry.fileName) { out ->
             val digest = MessageDigest.getInstance("SHA-256")
             client.newCall(Request.Builder().url(entry.url).build()).execute().use { r ->
@@ -153,6 +177,6 @@ object ModRegistry {
             if (entry.sha256.isNotEmpty() && !hex.equals(entry.sha256, ignoreCase = true)) {
                 throw IOException("SHA-256 mismatch")
             }
-        }
+        }.also { older.forEach { it.delete() } }
     }
 }

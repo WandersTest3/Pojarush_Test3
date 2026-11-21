@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,27 +64,37 @@ fun RegistryBrowser(kind: PackKind, onInstalled: () -> Unit) {
     }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var entries by remember { mutableStateOf(ModRegistry.cachedEntries()) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var source by rememberSaveable { mutableIntStateOf(RegistryEntry.POJARUSH) }
+    var entries by remember(source) { mutableStateOf(ModRegistry.cachedEntries(source)) }
+    var error by remember(source) { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var reload by remember { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }
     var installedVersion by remember { mutableIntStateOf(0) }
-    LaunchedEffect(reload) {
+    LaunchedEffect(reload, source) {
         if (entries != null && reload == 0) return@LaunchedEffect
         loading = true
         error = null
-        runCatching { withContext(Dispatchers.IO) { ModRegistry.fetch(force = reload > 0) } }
+        runCatching { withContext(Dispatchers.IO) { ModRegistry.fetch(force = reload > 0, source = source) } }
             .onSuccess { entries = it }
             .onFailure { error = it.message ?: it.javaClass.simpleName }
         loading = false
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        listOf(RegistryEntry.POJARUSH to "Pojarush Mods", RegistryEntry.HORIZON to "Horizon").forEach { (id, label) ->
+            androidx.compose.material3.FilterChip(
+                selected = source == id,
+                onClick = { if (source != id) { source = id; reload = 0 } },
+                label = { Text(label) },
+            )
+        }
     }
     val failedText = stringResource(R.string.registry_failed, "%s")
     val doneText = stringResource(R.string.registry_installed_toast, "%s")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         OutlinedButton(onClick = { reload++ }, enabled = !loading) { Text(stringResource(R.string.registry_refresh)) }
         OutlinedButton(onClick = {
-            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModRegistry.SITE))) }
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModRegistry.site(source)))) }
         }) { Text(stringResource(R.string.registry_open_site), maxLines = 1, modifier = Modifier.basicMarquee()) }
     }
     OutlinedTextField(
@@ -117,8 +128,12 @@ fun RegistryBrowser(kind: PackKind, onInstalled: () -> Unit) {
     if (shown.isEmpty() && !loading) Hint(stringResource(R.string.registry_empty))
     shown.forEach { entry ->
         val installed = remember(entry.fileName, installedVersion) { ModRegistry.installedFile(entry) != null }
+        val update = remember(entry.fileName, installedVersion) { !installed && ModRegistry.olderVersions(entry).isNotEmpty() }
         val progress = RegistryState.progress[entry.id]
-        RegistryRow(entry, installed, progress) {
+        val page = ModRegistry.page(entry)
+        RegistryRow(entry, installed, progress, update = update, onOpen = page?.let { url ->
+            { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
+        }) {
             RegistryState.progress[entry.id] = 0f
             scope.launch {
                 val result = runCatching {
@@ -140,7 +155,14 @@ fun RegistryBrowser(kind: PackKind, onInstalled: () -> Unit) {
 }
 
 @Composable
-private fun RegistryRow(entry: RegistryEntry, installed: Boolean, progress: Float?, onInstall: () -> Unit) {
+private fun RegistryRow(
+    entry: RegistryEntry,
+    installed: Boolean,
+    progress: Float?,
+    update: Boolean = false,
+    onOpen: (() -> Unit)? = null,
+    onInstall: () -> Unit,
+) {
     val icon by produceState<Bitmap?>(null, entry.icon) {
         value = withContext(Dispatchers.IO) { ModRegistry.icon(entry) }
     }
@@ -149,6 +171,7 @@ private fun RegistryRow(entry: RegistryEntry, installed: Boolean, progress: Floa
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(Color.White.copy(alpha = 0.06f))
+            .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -169,8 +192,11 @@ private fun RegistryRow(entry: RegistryEntry, installed: Boolean, progress: Floa
             Column(modifier = Modifier.weight(1f)) {
                 Text(entry.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, modifier = Modifier.basicMarquee())
                 Text(
-                    if (entry.source == RegistryEntry.MODRINTH) "Minecraft ${entry.game} · ${entry.authors} · ${formatCount(entry.downloads)} ⬇"
-                    else "${entry.version} · ${entry.authors} · ${formatSize(entry.size)}",
+                    when (entry.source) {
+                        RegistryEntry.MODRINTH -> "Minecraft ${entry.game} · ${entry.authors} · ${formatCount(entry.downloads)} ⬇"
+                        RegistryEntry.POJARUSH -> "${entry.version} · ${entry.authors} · ${formatSize(entry.size)} · ${formatCount(entry.downloads)} ⬇"
+                        else -> "${entry.version} · ${entry.authors} · ${formatSize(entry.size)}"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     modifier = Modifier.basicMarquee(),
@@ -180,6 +206,7 @@ private fun RegistryRow(entry: RegistryEntry, installed: Boolean, progress: Floa
             when {
                 progress != null -> CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 installed -> OutlinedButton(onClick = {}, enabled = false) { Text(stringResource(R.string.registry_installed)) }
+                update -> Button(onClick = onInstall) { Text(stringResource(R.string.registry_update)) }
                 else -> Button(onClick = onInstall) { Text(stringResource(R.string.registry_install)) }
             }
         }

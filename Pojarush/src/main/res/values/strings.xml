@@ -263,7 +263,7 @@
     <string name="editor_mirror_size_desc">Changing the width also changes the height (and the other way around).</string>
     <string name="registry_tab_installed">Installed</string>
     <string name="registry_tab_download">Download</string>
-    <string name="registry_desc">Downloads from playhorizon.dev, checked with SHA-256 and installed in the right folder.</string>
+    <string name="registry_desc">Downloads from the Pojarush Mods site or Horizon\'s registry, checked with SHA-256 and installed in the right folder.</string>
     <string name="registry_refresh">Refresh</string>
     <string name="registry_open_site">Open site</string>
     <string name="registry_search">Search</string>
@@ -294,6 +294,9 @@
     <string name="onboarding_wallpaper_fhd">Full HD · 33 MB</string>
     <string name="onboarding_wallpaper_skip">Skip</string>
     <string name="overlay_send_key">Send key</string>
+    <string name="overlay_send_keys_hint">Pick up to 4 keys, pressed together in this order</string>
+    <string name="overlay_send_keys_send">Send</string>
+    <string name="overlay_send_keys_clear">Clear</string>
     <string name="custom_font">Your own font</string>
     <string name="custom_font_choose">Choose font (.ttf, .otf)</string>
     <string name="custom_font_default">Use default font</string>
@@ -364,6 +367,7 @@
     <string name="mod_menu_license">License</string>
     <string name="color_slots_hint">Tap an empty circle to save the current color; tap a saved color to use it, hold it to clear.</string>
     <string name="registry_open_modrinth">Open Modrinth</string>
+    <string name="registry_update">Update</string>
     <string name="registry_load_more">Load more</string>
     <string name="menu_music_title">Menu music</string>
     <string name="menu_music_none">No music. With one, the wallpaper video\'s sound is muted.</string>

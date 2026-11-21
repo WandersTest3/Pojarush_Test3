@@ -19,6 +19,8 @@ pub(super) struct ModModels {
     animations: HashMap<Key, Arc<HashMap<String, Animation>>>,
     /// Textures in the atlas's model slots, by file, with the frame they were last drawn.
     slots: Vec<Option<(Key, u64, [f32; 2])>>,
+    /// Small textures (64 by 32 at most, a cape) eight to a slot: the cells of the last slots.
+    cells: Vec<Option<(Key, u64, [f32; 2])>>,
     failed: HashMap<Key, ()>,
     /// When each playing animation (by serial) started, in seconds.
     started: HashMap<u64, f64>,
@@ -34,6 +36,9 @@ pub(super) struct ModModels {
 }
 
 const MOD_CAPE: &str = "horizon/modcape";
+
+/// Small textures to one 128 by 128 model slot: two columns of four 64 by 32 cells.
+const CELLS_PER_SLOT: usize = 8;
 
 const PLAYER_SKIN: &str = "player:skin";
 
@@ -318,13 +323,31 @@ impl Game<'_> {
     pub(super) fn model_texture(&mut self, path: &Path, file: &str) -> Option<[f32; 4]> {
         let key = (path.to_owned(), file.to_owned());
         let frame = self.mod_models.frame;
-        let slots = horizon_client::hud::MODEL_SLOTS;
+        let cell_slots = horizon_client::hud::MODEL_CELL_SLOTS;
+        let slots = horizon_client::hud::MODEL_SLOTS - cell_slots;
+        let cells = cell_slots * CELLS_PER_SLOT;
         if self.mod_models.slots.len() < slots {
             self.mod_models.slots.resize(slots, None);
+        }
+        if self.mod_models.cells.len() < cells {
+            self.mod_models.cells.resize(cells, None);
         }
         let rect = |game: &Self, i: usize| {
             game.gui.atlas.sprites.get(&format!("horizon/model{i}")).copied()
         };
+        let cell_uv = |game: &Self, c: usize, size: [f32; 2]| {
+            let r = rect(game, slots + c / CELLS_PER_SLOT)?;
+            let k = c % CELLS_PER_SLOT;
+            let (ox, oy) = ((k % 2) as f32 * 0.5, (k / 2) as f32 * 0.25);
+            let (du, dv) = (r.u1 - r.u0, r.v1 - r.v0);
+            let (u0, v0) = (r.u0 + du * ox, r.v0 + dv * oy);
+            Some([u0, v0, u0 + du * size[0], v0 + dv * size[1]])
+        };
+        if let Some(c) = self.mod_models.cells.iter().position(|s| s.as_ref().is_some_and(|(k, ..)| *k == key)) {
+            let size = self.mod_models.cells[c].as_ref().map_or([0.5, 0.25], |s| s.2);
+            self.mod_models.cells[c] = Some((key, frame, size));
+            return cell_uv(self, c, size);
+        }
         if let Some(i) = self.mod_models.slots.iter().position(|s| s.as_ref().is_some_and(|(k, ..)| *k == key)) {
             let size = self.mod_models.slots[i].as_ref().map_or([1.0; 2], |s| s.2);
             self.mod_models.slots[i] = Some((key, frame, size));
@@ -341,6 +364,32 @@ impl Game<'_> {
             self.mod_models.failed.insert(key, ());
             return None;
         };
+        let (w, h) = (self.gui.atlas.width as f32, self.gui.atlas.height as f32);
+        let size = [iw as f32 / 128.0, ih as f32 / 128.0];
+        if iw <= 64 && ih <= 32 && cells > 0 {
+            let c = (0..cells)
+                .min_by_key(|c| self.mod_models.cells[*c].as_ref().map_or(0, |(_, f, _)| *f + 1))
+                .unwrap_or(0);
+            if self.mod_models.cells[c].as_ref().is_some_and(|(_, f, _)| *f == frame) {
+                return None;
+            }
+            let r = rect(self, slots + c / CELLS_PER_SLOT)?;
+            let k = c % CELLS_PER_SLOT;
+            let mut rgba = vec![0u8; 64 * 32 * 4];
+            for y in 0..ih as usize {
+                let row = &pixels[y * iw as usize * 4..(y + 1) * iw as usize * 4];
+                rgba[y * 64 * 4..y * 64 * 4 + row.len()].copy_from_slice(row);
+            }
+            self.map_patches.push(horizon_client::font::Patch {
+                x: (r.u0 * w).round() as u32 + (k % 2) as u32 * 64,
+                y: (r.v0 * h).round() as u32 + (k / 2) as u32 * 32,
+                width: 64,
+                height: 32,
+                rgba,
+            });
+            self.mod_models.cells[c] = Some((key, frame, size));
+            return cell_uv(self, c, size);
+        }
         let i = (0..slots)
             .min_by_key(|i| self.mod_models.slots[*i].as_ref().map_or(0, |(_, f, _)| *f + 1))
             .unwrap_or(0);
@@ -348,7 +397,6 @@ impl Game<'_> {
             return None;
         }
         let r = rect(self, i)?;
-        let (w, h) = (self.gui.atlas.width as f32, self.gui.atlas.height as f32);
         // The slot is 128x128: the texture fills its top-left corner.
         let mut rgba = vec![0u8; 128 * 128 * 4];
         for y in 0..ih as usize {
@@ -362,7 +410,6 @@ impl Game<'_> {
             height: 128,
             rgba,
         });
-        let size = [iw as f32 / 128.0, ih as f32 / 128.0];
         self.mod_models.slots[i] = Some((key, frame, size));
         Some([r.u0, r.v0, r.u0 + (r.u1 - r.u0) * size[0], r.v0 + (r.v1 - r.v0) * size[1]])
     }

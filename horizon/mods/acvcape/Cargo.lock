@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "acvcape"
-version = "1.0.33"
+version = "1.0.34"
 dependencies = [
  "horizon-mod-sdk",
 ]

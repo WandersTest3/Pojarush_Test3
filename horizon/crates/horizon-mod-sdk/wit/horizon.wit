@@ -249,7 +249,11 @@ interface ui {
         /// The mod's own name for the widget.
         id: u32,
         /// `player`: the player as they look now (skin, armour, held items,
-        /// the cape), on the title screen too; `cape:FILE`: a cape alone,
+        /// the cape), on the title screen too; `player:back`: the same seen
+        /// from behind, the cape facing out; `column`: no box, it splits the
+        /// screen as Mod Menu's is, the widgets before it in a left column that
+        /// stays put and the ones after it in a right column that scrolls;
+        /// `cape:FILE`: a cape alone,
         /// its texture a PNG in the mod's `models/` folder (64 by 32, as a
         /// player's cape), swinging slowly; else an entity type,
         /// `minecraft:zombie`. An unknown type draws nothing. A click on the

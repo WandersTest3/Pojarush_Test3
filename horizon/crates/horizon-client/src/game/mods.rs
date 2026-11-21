@@ -1182,9 +1182,59 @@ impl Game<'_> {
             .map(|i| MOD_UI_TOP + i as f32 * MOD_UI_KEY_ROW)
             .collect::<Vec<_>>();
         let mut out = Vec::with_capacity(widgets.len());
-        let mut y = MOD_UI_TOP + keys as f32 * MOD_UI_KEY_ROW;
+        let top = MOD_UI_TOP + keys as f32 * MOD_UI_KEY_ROW;
+        let (y, right) = match Self::mod_ui_split(widgets) {
+            Some(at) => {
+                let left = -MOD_UI_SPLIT_LEFT - MOD_UI_GAP / 2.0 + MOD_UI_SPLIT_SHIFT;
+                Self::mod_ui_column(&widgets[..at], left, MOD_UI_SPLIT_LEFT, top, &mut out);
+                out.push((0.0, top, 0.0, 0.0));
+                let start = out.len();
+                let x = MOD_UI_GAP / 2.0 + MOD_UI_SPLIT_SHIFT;
+                let y = Self::mod_ui_column(&widgets[at + 1..], x, MOD_UI_SPLIT_RIGHT, top, &mut out);
+                (y, start)
+            }
+            None => {
+                let y = Self::mod_ui_column(widgets, -MOD_UI_WIDE / 2.0, MOD_UI_WIDE, top, &mut out);
+                (y, 0)
+            }
+        };
+        let max = (y - 6.0 - (h - MOD_UI_BOTTOM)).max(0.0);
+        let page = page.clamp(0.0, max);
+        (
+            key_rows.into_iter().map(|y| y - page).collect(),
+            out.into_iter()
+                .enumerate()
+                .map(|(i, (x, y, ww, wh))| (x, if i >= right { y - page } else { y }, ww, wh))
+                .collect(),
+            max,
+        )
+    }
+    /// Where a `column` entity box splits the page as Mod Menu's is: the widgets before it stay
+    /// in a left column, the ones after it scroll in the right one.
+    fn mod_ui_split(widgets: &[UiWidget]) -> Option<usize> {
+        widgets
+            .iter()
+            .position(|w| matches!(w, UiWidget::Entity(e) if e.entity == "column"))
+    }
+    /// The scrollbar's x beside the scrolling widgets, from the middle of the screen.
+    fn mod_ui_bar_x(widgets: &[UiWidget]) -> f32 {
+        if Self::mod_ui_split(widgets).is_some() {
+            MOD_UI_GAP / 2.0 + MOD_UI_SPLIT_SHIFT + MOD_UI_SPLIT_RIGHT + 6.0
+        } else {
+            MOD_UI_WIDE / 2.0 + 6.0
+        }
+    }
+    /// Stacks `widgets` down a column `wide` pixels wide at `x` from `y`: buttons and sliders two
+    /// to a row, small entity boxes four to a row. Where the column ends.
+    fn mod_ui_column(
+        widgets: &[UiWidget],
+        x: f32,
+        wide: f32,
+        mut y: f32,
+        out: &mut Vec<(f32, f32, f32, f32)>,
+    ) -> f32 {
+        let half_w = ((wide - MOD_UI_GAP) / 2.0).floor();
         let mut left_open = false;
-        // Small entity boxes (64 pixels high or less) sit four to a row.
         let mut tile = 0usize;
         let mut tile_h = 0.0f32;
         for w in widgets {
@@ -1196,8 +1246,8 @@ impl Game<'_> {
                     y += 26.0;
                     left_open = false;
                 }
-                let tw = ((MOD_UI_WIDE - 3.0 * MOD_UI_GAP / 2.0) / 4.0).floor();
-                out.push((-MOD_UI_WIDE / 2.0 + tile as f32 * (tw + MOD_UI_GAP / 2.0), y, tw, wh));
+                let tw = ((wide - 3.0 * MOD_UI_GAP / 2.0) / 4.0).floor();
+                out.push((x + tile as f32 * (tw + MOD_UI_GAP / 2.0), y, tw, wh));
                 tile_h = tile_h.max(wh);
                 tile += 1;
                 if tile == 4 {
@@ -1220,15 +1270,15 @@ impl Game<'_> {
                 UiWidget::Entity(e) => e.height as f32,
             };
             if half && left_open {
-                out.push((MOD_UI_GAP / 2.0, y - 26.0, MOD_UI_HALF, wh));
+                out.push((x + wide - half_w, y - 26.0, half_w, wh));
                 left_open = false;
                 continue;
             }
             if half {
-                out.push((-MOD_UI_WIDE / 2.0, y, MOD_UI_HALF, wh));
+                out.push((x, y, half_w, wh));
                 left_open = true;
             } else {
-                out.push((-MOD_UI_WIDE / 2.0, y, MOD_UI_WIDE, wh));
+                out.push((x, y, wide, wh));
                 left_open = false;
             }
             y += wh + 6.0;
@@ -1236,13 +1286,7 @@ impl Game<'_> {
         if tile > 0 {
             y += tile_h + 6.0;
         }
-        let max = (y - 6.0 - (h - MOD_UI_BOTTOM)).max(0.0);
-        let page = page.clamp(0.0, max);
-        (
-            key_rows.into_iter().map(|y| y - page).collect(),
-            out.into_iter().map(|(x, y, ww, wh)| (x, y - page, ww, wh)).collect(),
-            max,
-        )
+        y
     }
     /// A row at `wy`, `wh` high, lies wholly inside the page's view (below the
     /// title, above Done).
@@ -1447,6 +1491,7 @@ impl Game<'_> {
                         color,
                     );
                 }
+                UiWidget::Entity(e) if e.entity == "column" => {}
                 UiWidget::Entity(e) => {
                     let hover = ui::hovered(self.cursor, x, wy, col, wh);
                     batch.fill(atlas, x, wy, col, wh, if hover { 0x9057_197F } else { 0x6000_0000 });
@@ -1520,7 +1565,7 @@ impl Game<'_> {
             ui::scrollbar(
                 batch,
                 atlas,
-                cx + MOD_UI_WIDE / 2.0 + 6.0,
+                cx + Self::mod_ui_bar_x(widgets),
                 MOD_UI_TOP,
                 view_h - MOD_UI_BOTTOM,
                 content,
@@ -1692,7 +1737,7 @@ impl Game<'_> {
             self.show_mod_output();
         } else if let Some(ms) = self.mods.screen.as_mut() {
             // Only the scrollbar drags the page; the thumb follows the cursor.
-            let bar_x = cx + MOD_UI_WIDE / 2.0 + 6.0;
+            let bar_x = cx + Self::mod_ui_bar_x(widgets);
             if page_max > 0.0
                 && cursor.0 >= bar_x - 3.0
                 && cursor.0 < bar_x + 9.0
@@ -1845,8 +1890,14 @@ const MOD_UI_COLUMN: f32 = 200.0;
 const MOD_UI_WIDE: f32 = 310.0;
 /// Entity boxes this high or lower are tiles, four to a row.
 const MOD_UI_TILE_MAX: u32 = 64;
+/// A split page: the fixed left column's width, the scrolling right one's, and how far the pair
+/// sits right of the middle.
 #[cfg(feature = "mods")]
-const MOD_UI_HALF: f32 = 150.0;
+const MOD_UI_SPLIT_LEFT: f32 = 150.0;
+#[cfg(feature = "mods")]
+const MOD_UI_SPLIT_RIGHT: f32 = 230.0;
+#[cfg(feature = "mods")]
+const MOD_UI_SPLIT_SHIFT: f32 = -40.0;
 #[cfg(feature = "mods")]
 const MOD_UI_GAP: f32 = 10.0;
 /// A key row's height with its gap, as the widgets below it space out.

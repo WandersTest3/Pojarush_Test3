@@ -45,6 +45,7 @@ private val Dark = Color(0xFF3C3C3C)
 private val FaceUsed = Color(0xFF2B2B2B)
 private val FacePressed = Color(0xFF5A5A5A)
 private val Panel = Color(0xFF1E1E1E)
+private val FaceSelected = Color(0xFF57197F)
 
 private val short = mapOf(
     "Caps Lock" to "CapsLk", "Left Shift" to "Shift", "Right Shift" to "Shift", "Left Ctrl" to "Ctrl", "Right Ctrl" to "Ctrl",
@@ -89,12 +90,13 @@ private fun layout(context: Context): Layout {
 }
 
 @Composable
-private fun PixelKey(label: String, enabled: Boolean, blocked: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun PixelKey(label: String, enabled: Boolean, blocked: Boolean, modifier: Modifier, selected: Boolean = false, onClick: () -> Unit) {
     val source = remember { MutableInteractionSource() }
     val pressed = source.collectIsPressedAsState().value
     val face = when {
         blocked || !enabled -> FaceUsed
         pressed -> FacePressed
+        selected -> FaceSelected
         else -> Face
     }
     val top = if (pressed) Dark else Light
@@ -135,7 +137,7 @@ private fun PixelKey(label: String, enabled: Boolean, blocked: Boolean, modifier
 private val LocalKeyHeight = androidx.compose.runtime.compositionLocalOf { 34.dp }
 
 @Composable
-private fun KeyRow(keys: List<Key>, disabled: Set<Action>, modifier: Modifier = Modifier, onPick: (Action) -> Unit) {
+private fun KeyRow(keys: List<Key>, disabled: Set<Action>, modifier: Modifier = Modifier, selected: Collection<Action> = emptyList(), onPick: (Action) -> Unit) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         keys.forEach { key ->
             if (key.action == null && !key.blocked) {
@@ -146,6 +148,7 @@ private fun KeyRow(keys: List<Key>, disabled: Set<Action>, modifier: Modifier = 
                     enabled = key.action != null && key.action !in disabled,
                     blocked = key.blocked,
                     modifier = Modifier.weight(key.weight),
+                    selected = key.action != null && key.action in selected,
                 ) { key.action?.let(onPick) }
             }
         }
@@ -165,6 +168,7 @@ private fun SideTitle(text: String) {
 fun VisualKeyboard(
     disabled: Set<Action> = emptySet(),
     showSpecials: Boolean = true,
+    selected: Collection<Action> = emptyList(),
     onPick: (Action) -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -181,9 +185,9 @@ fun VisualKeyboard(
             for (row in board.main.indices) {
                 val spacing = if (row == 1) 4.dp else 0.dp
                 Row(modifier = Modifier.fillMaxWidth().padding(top = spacing), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    KeyRow(board.main[row], disabled, Modifier.weight(15f), onPick)
-                    KeyRow(board.nav[row], disabled, Modifier.weight(3f), onPick)
-                    KeyRow(board.pad[row], disabled, Modifier.weight(4f), onPick)
+                    KeyRow(board.main[row], disabled, Modifier.weight(15f), selected, onPick)
+                    KeyRow(board.nav[row], disabled, Modifier.weight(3f), selected, onPick)
+                    KeyRow(board.pad[row], disabled, Modifier.weight(4f), selected, onPick)
                 }
             }
         }

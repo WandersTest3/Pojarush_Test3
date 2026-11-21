@@ -450,8 +450,19 @@ class ControlsView(
             savedToggles = toggled.copyOf()
             savedLocks = stickLocked.copyOf()
         }
+        val keep = if (editMode) emptyList() else toggled.indices.filter { i ->
+            toggled[i] && i < layout.buttons.size && layout.buttons[i].toggle.any(::isShift)
+        }
         releaseAll()
+        keep.forEach { i ->
+            toggled[i] = true
+            layout.buttons[i].toggle.filter(::isShift).forEach(::down)
+        }
+        if (keep.isNotEmpty()) invalidate()
     }
+
+    private fun isShift(a: Action) =
+        a is Action.Key && (a.code == KeyEvent.KEYCODE_SHIFT_LEFT || a.code == KeyEvent.KEYCODE_SHIFT_RIGHT)
 
     fun resumeIfPossible() {
         val toggles = savedToggles ?: return
@@ -796,6 +807,7 @@ class ControlsView(
         if (b.spam && b.press.isNotEmpty()) startSpam(i, b) else b.press.forEach(::down)
         if (b.toggle.isNotEmpty()) {
             toggled[i] = !toggled[i]
+            savedToggles?.let { if (i < it.size) it[i] = toggled[i] }
             if (toggled[i]) b.toggle.forEach(::down) else b.toggle.forEach(::up)
         }
         invalidate()

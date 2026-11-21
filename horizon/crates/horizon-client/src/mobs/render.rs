@@ -1409,9 +1409,29 @@ fn render_visible(
     let overlay = u32::from(red_overlay(m));
     let s = anim::state(m, alpha);
     let (model_key, mut texture) = body(m);
+    if !avatar(m) {
+        let subject = crate::random_entities::Subject {
+            seed: u64::from(m.id),
+            y: m.position.y.floor() as i32,
+            name: m.custom_name.as_deref(),
+            baby: m.is_baby(),
+            health: m.health,
+        };
+        if let Some(t) = crate::random_entities::pick(&texture, &subject, &|n| atlas(n).is_some()) {
+            texture = t;
+        }
+    }
     let layered = m.kind.layer(&model_key).cloned();
-    let custom = if layered.is_none() { super::cem::get(&m.kind.id, &m.kind.model) } else { None };
-    let model = layered.unwrap_or_else(|| m.kind.model.clone());
+    let custom = match &layered {
+        None => super::cem::get(&m.kind.id, &m.kind.model),
+        Some(l) => super::cem::layer_id(&model_key).and_then(|id| super::cem::get(&id, l)),
+    };
+    let model = match (&custom, &layered) {
+        (Some((c, _)), _) => c.clone(),
+        (None, Some(l)) => l.clone(),
+        (None, None) => m.kind.model.clone(),
+    };
+    let custom = custom.map(|(_, cem)| cem);
     let mut poses = Poses::new(&model);
     anim::setup(m, &s, &mut poses, &data.animations);
     if let Some(cem) = &custom {

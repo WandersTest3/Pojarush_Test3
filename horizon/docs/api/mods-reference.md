@@ -299,7 +299,7 @@ A player or an entity drawn in 3D in a box, lit as the inventory's player is (AP
 | Field | Type | |
 | --- | --- | --- |
 | `id` | `u32` | The mod's own name for the widget. |
-| `entity` | `string` | `player`: the player as they look now (skin, armour, held items, the cape), on the title screen too; `cape:FILE`: a cape alone, its texture a PNG in the mod's `models/` folder (64 by 32, as a player's cape), swinging slowly; else an entity type, `minecraft:zombie`. An unknown type draws nothing. A click on the box is `ui-events::select(id, 0)`. |
+| `entity` | `string` | `player`: the player as they look now (skin, armour, held items, the cape), on the title screen too; `player:back`: the same seen from behind, the cape facing out; `column`: no box, it splits the screen as Mod Menu's is, the widgets before it in a left column that stays put and the ones after it in a right column that scrolls; `cape:FILE`: a cape alone, its texture a PNG in the mod's `models/` folder (64 by 32, as a player's cape), swinging slowly; else an entity type, `minecraft:zombie`. An unknown type draws nothing. A click on the box is `ui-events::select(id, 0)`. |
 | `height` | `u32` | The box's height in GUI pixels, 24 to 200. Up to 64 it is a tile, four to a row; higher, it is as wide as its column. |
 | `follow-cursor` | `bool` | The head and body turn toward the cursor, as in the inventory; else the model faces the player. |
 

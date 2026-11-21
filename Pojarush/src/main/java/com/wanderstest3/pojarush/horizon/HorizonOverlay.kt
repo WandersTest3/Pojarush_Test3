@@ -275,6 +275,10 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
 
     @Composable
     private fun SendKeyPanel() {
+        val names = remember {
+            com.wanderstest3.pojarush.controls.ActionCatalog.all(context).associate { (name, action) -> action to name }
+        }
+        val chosen = remember { androidx.compose.runtime.mutableStateListOf<com.wanderstest3.pojarush.controls.Action.Key>() }
         Box(
             modifier = Modifier.fillMaxSize().background(Color(0x99000000)).clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -289,16 +293,47 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.overlay_send_key), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.overlay_send_key), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (chosen.isEmpty()) stringResource(R.string.overlay_send_keys_hint)
+                            else chosen.joinToString(" + ") { names[it] ?: "?" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (chosen.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFB98BDB)
+                        )
+                    }
+                    TextButton(onClick = { chosen.clear() }, enabled = chosen.isNotEmpty()) {
+                        Text(stringResource(R.string.overlay_send_keys_clear))
+                    }
+                    TextButton(onClick = {
+                        val keys = chosen.map { it.code }
+                        panel = Panel.NONE
+                        sendCombo(keys)
+                    }, enabled = chosen.isNotEmpty()) { Text(stringResource(R.string.overlay_send_keys_send)) }
                     TextButton(onClick = { panel = Panel.SETTINGS }) { Text(stringResource(R.string.overlay_close)) }
                 }
-                com.wanderstest3.pojarush.ui.VisualKeyboard(showSpecials = false) { action ->
+                com.wanderstest3.pojarush.ui.VisualKeyboard(showSpecials = false, selected = chosen) { action ->
                     if (action is com.wanderstest3.pojarush.controls.Action.Key) {
-                        panel = Panel.NONE
-                        activity.tapKey(action.code)
+                        if (action in chosen) chosen.remove(action)
+                        else if (chosen.size < 4) chosen.add(action)
                     }
                 }
             }
+        }
+    }
+
+    private fun sendCombo(keys: List<Int>) {
+        if (keys.isEmpty()) return
+        val step = 40L
+        var at = 120L
+        keys.forEach { code ->
+            uiHandler.postDelayed({ activity.sendKey(code, true) }, at)
+            at += step
+        }
+        at += 60L
+        keys.asReversed().forEach { code ->
+            uiHandler.postDelayed({ activity.sendKey(code, false) }, at)
+            at += step
         }
     }
 

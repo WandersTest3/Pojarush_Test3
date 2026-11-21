@@ -510,11 +510,10 @@ impl MobTypes {
                 },
             );
         }
-        for (id, t) in out.iter_mut() {
-            if let Some(model) = cem::apply(root, id, &t.model) {
-                t.model = model;
-            }
+        for (id, t) in &out {
+            cem::apply_type(root, id, t);
         }
+        crate::random_entities::reload(root);
         Ok(Self { types: out })
     }
 }

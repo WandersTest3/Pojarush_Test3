@@ -14,16 +14,14 @@ const KEY: &str = "open_menu";
 const TABS: u32 = 10;
 const NONE: u32 = 20;
 const FAVORITE: u32 = 21;
-const PREV: u32 = 22;
-const NEXT: u32 = 23;
 const CAPE: u32 = 100;
-const PAGE: usize = 20;
+const MAX_WIDGETS: usize = 64;
 
-fn strings() -> [&'static str; 15] {
+fn strings() -> [&'static str; 13] {
     match ui::language().as_str() {
-        "pt_br" => ["Acv Cape", "Abrir Menu de Capas", "Todas", "Java", "Bedrock", "Dungeons II", "Favoritos", "Sem Capa", "Favoritar", "Remover Favorito", "Capa atual", "Nenhum favorito ainda. Escolha uma capa e toque em Favoritar.", "Nenhuma capa encontrada.", "< Anterior", "Próxima >"],
-        "pt_pt" => ["Acv Cape", "Abrir Menu de Capas", "Todas", "Java", "Bedrock", "Dungeons II", "Favoritos", "Sem Capa", "Adicionar aos Favoritos", "Remover dos Favoritos", "Capa atual", "Ainda não há favoritos. Escolhe uma capa e toca em Adicionar aos Favoritos.", "Não foram encontradas capas.", "< Anterior", "Seguinte >"],
-        _ => ["Acv Cape", "Open Cape Menu", "All", "Java", "Bedrock", "Dungeons II", "Favorites", "No Cape", "Favorite", "Remove Favorite", "Current cape", "No favorites yet. Pick a cape and press Favorite.", "No capes found.", "< Previous", "Next >"],
+        "pt_br" => ["Acv Cape", "Abrir Menu de Capas", "Todas", "Java", "Bedrock", "Dungeons II", "Favoritos", "Sem Capa", "Favoritar", "Desfavoritar", "Capa atual", "Nenhum favorito ainda.", "Nenhuma capa encontrada."],
+        "pt_pt" => ["Acv Cape", "Abrir Menu de Capas", "Todas", "Java", "Bedrock", "Dungeons II", "Favoritos", "Sem Capa", "Favoritar", "Desfavoritar", "Capa atual", "Ainda não há favoritos.", "Não foram encontradas capas."],
+        _ => ["Acv Cape", "Open Cape Menu", "All", "Java", "Bedrock", "Dungeons II", "Favorites", "No Cape", "Favorite", "Unfavorite", "Current cape", "No favorites yet.", "No capes found."],
     }
 }
 
@@ -32,7 +30,6 @@ struct Acv {
     tab: u32,
     favorites: Vec<usize>,
     shown: Vec<usize>,
-    page: usize,
     screen: bool,
 }
 
@@ -64,21 +61,27 @@ impl Acv {
                 _ => self.favorites.contains(&i),
             })
             .collect();
-        let pages = self.shown.len().div_ceil(PAGE).max(1);
-        self.page = self.page.min(pages - 1);
         let mut w = Vec::new();
-        let current = self.cape.map_or(t[7], |i| CAPES[i].1);
-        w.push(Widget::Text(TextWidget { id: 0, text: format!("{}: {current}", t[10]), color: 0xB98CF2 }));
-        w.push(Widget::Entity(EntityWidget { id: 0, entity: "player".into(), height: 100, follow_cursor: true }));
+        w.push(Widget::Entity(EntityWidget { id: 0, entity: "player:back".into(), height: 76, follow_cursor: true }));
         for (k, label) in [t[2], t[3], t[4], t[5], t[6]].iter().enumerate() {
             let mark = if self.tab == k as u32 { "> " } else { "" };
             w.push(Widget::Button(ButtonWidget { id: TABS + k as u32, label: format!("{mark}{label}") }));
         }
+        w.push(Widget::Button(ButtonWidget { id: NONE, label: t[7].into() }));
+        if let Some(c) = self.cape {
+            let label = if self.favorites.contains(&c) { t[9] } else { t[8] };
+            w.push(Widget::Button(ButtonWidget { id: FAVORITE, label: label.into() }));
+        }
+        w.push(Widget::Entity(EntityWidget { id: 0, entity: "column".into(), height: 24, follow_cursor: false }));
         if self.shown.is_empty() {
             let empty = if self.tab == 4 { t[11] } else { t[12] };
             w.push(Widget::Text(TextWidget { id: 0, text: empty.into(), color: 0xAAAAAA }));
         } else {
-            for (k, &i) in self.shown.iter().enumerate().skip(self.page * PAGE).take(PAGE) {
+            if w.len() + self.shown.len() < MAX_WIDGETS {
+                w.push(Widget::Text(TextWidget { id: 0, text: self.current(), color: 0xB98CF2 }));
+            }
+            let room = MAX_WIDGETS - w.len();
+            for (k, &i) in self.shown.iter().enumerate().take(room) {
                 w.push(Widget::Entity(EntityWidget {
                     id: CAPE + k as u32,
                     entity: format!("cape:capes/{}.png", CAPES[i].0),
@@ -86,24 +89,21 @@ impl Acv {
                     follow_cursor: false,
                 }));
             }
-            if pages > 1 {
-                w.push(Widget::Button(ButtonWidget { id: PREV, label: t[13].into() }));
-                w.push(Widget::Button(ButtonWidget { id: NEXT, label: format!("{} {}/{}", t[14], self.page + 1, pages) }));
-            }
-        }
-        w.push(Widget::Button(ButtonWidget { id: NONE, label: t[7].into() }));
-        if let Some(c) = self.cape {
-            let label = if self.favorites.contains(&c) { t[9] } else { t[8] };
-            w.push(Widget::Button(ButtonWidget { id: FAVORITE, label: label.into() }));
         }
         w
+    }
+
+    fn current(&self) -> String {
+        let t = strings();
+        format!("{}: {}", t[10], self.cape.map_or(t[7], |i| CAPES[i].1))
     }
 
     fn refresh(&mut self) {
         let widgets = self.widgets();
         ui::set_settings_v3(&widgets);
         if self.screen {
-            ui::open_screen_v3(&ScreenV3 { title: strings()[0].into(), widgets });
+            let title = format!("{} - {}", strings()[0], self.current());
+            ui::open_screen_v3(&ScreenV3 { title, widgets });
         }
     }
 }
@@ -117,7 +117,7 @@ impl Mod for Acv {
         let cape = get("cape").and_then(find);
         let tab = get("tab").and_then(|v| v.parse().ok()).filter(|t| *t <= 4).unwrap_or(0);
         let favorites = get("favorites").map(|v| v.split(',').filter_map(find).collect()).unwrap_or_default();
-        let mut acv = Acv { cape, tab, favorites, shown: Vec::new(), page: 0, screen: false };
+        let mut acv = Acv { cape, tab, favorites, shown: Vec::new(), screen: false };
         acv.wear();
         acv.refresh();
         Ok((acv, Registration::new().on_frame()))
@@ -142,12 +142,6 @@ impl Mod for Acv {
                 self.cape = Some(i);
                 self.wear();
             }
-            PREV => self.page = self.page.saturating_sub(1),
-            NEXT => {
-                if (self.page + 1) * PAGE < self.shown.len() {
-                    self.page += 1;
-                }
-            }
             NONE => {
                 self.cape = None;
                 self.wear();
@@ -160,10 +154,7 @@ impl Mod for Acv {
                     self.favorites.push(c);
                 }
             }
-            t if (TABS..TABS + 5).contains(&t) => {
-                self.tab = t - TABS;
-                self.page = 0;
-            }
+            t if (TABS..TABS + 5).contains(&t) => self.tab = t - TABS,
             _ => return,
         }
         self.save();
@@ -175,6 +166,7 @@ impl Mod for Acv {
     }
 
     fn ui_settings_opened(&mut self) {
+        self.screen = true;
         self.refresh();
     }
 }

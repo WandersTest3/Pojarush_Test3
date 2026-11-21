@@ -342,6 +342,15 @@ pub struct MeshFacts {
 }
 pub struct MeshTables {
     info: Vec<Info>,
+    /// Each sprite layer's OptiFine emissive layer, `u16::MAX` for none.
+    emissive: Vec<u16>,
+    /// OptiFine connected textures, each state's first block rule (`u16::MAX` for none) and
+    /// each state's block, for the rules that connect by block.
+    ctm: std::sync::Arc<crate::ctm::Rules>,
+    ctm_state: Vec<u16>,
+    block_of: Vec<u32>,
+    /// OptiFine natural textures: each sprite layer's turns and flip.
+    natural: std::collections::HashMap<u32, (u8, bool)>,
     pub visibility: FaceVisibility,
     water_still: u16,
     water_flow: u16,
@@ -491,8 +500,38 @@ impl MeshTables {
                 cover,
             });
         }
+        let ctm = render.ctm.clone();
+        let mut ctm_state = Vec::new();
+        let mut block_of = Vec::with_capacity(facts.states.len());
+        let mut blocks: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
+        for (id, s) in facts.states.iter().enumerate() {
+            let next = blocks.len() as u32;
+            block_of.push(*blocks.entry(&*s.name).or_insert(next));
+            if ctm.is_empty() {
+                continue;
+            }
+            let props = assets.registry.state(BlockStateId(id as u32)).map(|st| &st.properties);
+            let rule = ctm.rules.iter().position(|r| {
+                r.tile_layers.is_empty()
+                    && r.blocks.iter().any(|b| {
+                        b.matches(&s.name, |k| props.and_then(|p| p.get(k)).map(String::as_str))
+                    })
+            });
+            ctm_state.push(rule.map_or(u16::MAX, |r| r as u16));
+        }
+        let mut emissive = vec![u16::MAX; layers as usize];
+        for (&base, &e) in &render.emissive_layers {
+            if let Some(slot) = emissive.get_mut(base as usize) {
+                *slot = e as u16;
+            }
+        }
         Ok(Self {
             info,
+            emissive,
+            ctm,
+            ctm_state,
+            block_of,
+            natural: render.natural.clone(),
             visibility,
             water_still: layer("minecraft:block/water_still")?,
             water_flow: layer("minecraft:block/water_flow")?,
@@ -500,6 +539,21 @@ impl MeshTables {
             lava_still: layer("minecraft:block/lava_still")?,
             lava_flow: layer("minecraft:block/lava_flow")?,
         })
+    }
+    /// The connected-texture rule for a face drawn with sprite `layer` of block state `id`: a
+    /// tile rule first, then a block rule.
+    fn ctm_rule(&self, layer: u32, id: u32) -> Option<&crate::ctm::Rule> {
+        if self.ctm.is_empty() {
+            return None;
+        }
+        let i = match self.ctm.by_tile.get(&layer) {
+            Some(&i) => i,
+            None => match self.ctm_state.get(id as usize) {
+                Some(&r) if r != u16::MAX => r as usize,
+                _ => return None,
+            },
+        };
+        self.ctm.rules.get(i)
     }
     pub fn facts(&self, state: BlockStateId) -> Option<MeshFacts> {
         let i = self.info.get(state.0 as usize)?;
@@ -942,6 +996,8 @@ impl Mesher<'_> {
                                 face,
                                 ao,
                                 state,
+                                id,
+                                [world.x, world.y, world.z],
                             );
                         }
                     }
@@ -979,6 +1035,8 @@ impl Mesher<'_> {
         face: &BakedFace,
         ao: bool,
         state: &Info,
+        id: u32,
+        world: [i32; 3],
     ) {
         let q = &face.quad;
         let tier = state.tier.max(hdr_tier("", q.light_emission));
@@ -1008,28 +1066,165 @@ impl Mesher<'_> {
         } else {
             &mut out.solid
         };
-        for i in 0..4 {
+        use horizon_assets::model::Direction as D;
+        let f = match q.facing {
+            D::Down => 0,
+            D::Up => 1,
+            D::North => 2,
+            D::South => 3,
+            D::West => 4,
+            D::East => 5,
+        };
+        let pick = self.tables.ctm_rule(face.layer, id).and_then(|rule| {
+            let block = self.tables.block_of.get(id as usize).copied();
+            let connects = |o: [i32; 3]| {
+                let n = pad.blocks[pi(pos[0] + o[0], pos[1] + o[1], pos[2] + o[2])];
+                match rule.connect {
+                    crate::ctm::Connect::State => n == id,
+                    _ => n != 0 && self.tables.block_of.get(n as usize).copied() == block,
+                }
+            };
+            rule.pick(f, world, &connects)
+        });
+        let positions: [[f32; 3]; 4] = std::array::from_fn(|i| {
+            let p = q.positions[i];
+            [p[0] + origin[0], p[1] + origin[1], p[2] + origin[2]]
+        });
+        let colors: [u32; 4] = std::array::from_fn(|i| {
             let g = gray[i] as u32;
             let rgb = match tint {
                 Some(t) => [16, 8, 0].map(|shift| g * (t >> shift & 255) / 255),
                 None => [g; 3],
             };
-            let p = q.positions[i];
-            target.push(TerrainVertex::new(
-                [p[0] + origin[0], p[1] + origin[1], p[2] + origin[2]],
-                q.uv[i],
-                // Opaque leaves (forceOpaque) and quads over opaque texels draw in the
-                // solid layer: no alpha cutout (a dirt path's side skips its clear top row).
-                if face.opaque && !face.translucent || !self.cutout_leaves && state.leaves {
-                    face.layer as u16 | OPAQUE_LAYER
-                } else {
-                    face.layer as u16
-                },
-                emitting(pack_rgb(rgb), tier),
-                pack_coords(lighting::with_emission(coords[i], q.light_emission)),
-            ));
+            emitting(pack_rgb(rgb), tier)
+        });
+        let lights: [u16; 4] =
+            std::array::from_fn(|i| pack_coords(lighting::with_emission(coords[i], q.light_emission)));
+        // Opaque leaves (forceOpaque) and quads over opaque texels draw in the solid layer: no
+        // alpha cutout (a dirt path's side skips its clear top row). A connected texture's tile
+        // keeps the cutout.
+        let mut uvs = q.uv;
+        if pick.is_none()
+            && let Some(&(turns, flip)) = self.tables.natural.get(&face.layer)
+        {
+            natural_uvs(&mut uvs, turns, flip, world, f);
+        }
+        let opaque = (face.opaque && !face.translucent || !self.cutout_leaves && state.leaves) && pick.is_none();
+        let flag = |layer: u32| if opaque { layer as u16 | OPAQUE_LAYER } else { layer as u16 };
+        let drawn = match pick {
+            None | Some(crate::ctm::Pick::Tile(_)) => {
+                let layer = match pick {
+                    Some(crate::ctm::Pick::Tile(t)) => t,
+                    _ => face.layer,
+                };
+                for i in 0..4 {
+                    target.push(TerrainVertex::new(positions[i], uvs[i], flag(layer), colors[i], lights[i]));
+                }
+                [layer; 4]
+            }
+            Some(crate::ctm::Pick::Quarters(layers)) => {
+                let mid = [0, 1].map(|k| (0..4).map(|i| uvs[i][k]).sum::<f32>() / 4.0);
+                for (a, b) in [(0.0, 0.0), (0.5, 0.0), (0.0, 0.5), (0.5, 0.5)] {
+                    let corners = [(a, b), (a + 0.5, b), (a + 0.5, b + 0.5), (a, b + 0.5)];
+                    let uv = corners.map(|(s, t)| bilerp_f(&uvs, s, t));
+                    let centre = [0, 1].map(|k| uv.iter().map(|v| v[k]).sum::<f32>() / 4.0);
+                    let quarter = usize::from(centre[1] >= mid[1]) * 2 + usize::from(centre[0] >= mid[0]);
+                    let layer = layers[quarter];
+                    for (k, &(s, t)) in corners.iter().enumerate() {
+                        target.push(TerrainVertex::new(
+                            bilerp_f(&positions, s, t),
+                            uv[k],
+                            flag(layer),
+                            bilerp_bytes(&colors, s, t),
+                            bilerp_bytes(&lights.map(u32::from), s, t) as u16,
+                        ));
+                    }
+                }
+                layers
+            }
+        };
+        // OptiFine emissive textures: the `_e` sprite again over the face, at full brightness.
+        let n = NORMAL_NUDGE[f];
+        let rgb = match tint {
+            Some(t) => [16, 8, 0].map(|shift| t >> shift & 255),
+            None => [255; 3],
+        };
+        if drawn.iter().all(|l| *l == drawn[0]) {
+            let Some(&e) = self.tables.emissive.get(drawn[0] as usize) else { return };
+            if e == u16::MAX {
+                return;
+            }
+            for i in 0..4 {
+                let p = positions[i];
+                target.push(TerrainVertex::new(
+                    [p[0] + n[0], p[1] + n[1], p[2] + n[2]],
+                    uvs[i],
+                    e,
+                    emitting(pack_rgb(rgb), tier),
+                    pack_coords(lighting::with_emission(coords[i], 15)),
+                ));
+            }
         }
     }
+}
+/// OptiFine natural textures: a full face's UVs turned by a quarter (or half) turn and flipped,
+/// chosen by the block's position and the face.
+fn natural_uvs(uvs: &mut [[f32; 2]; 4], turns: u8, flip: bool, world: [i32; 3], f: usize) {
+    let full = |k: usize| {
+        let lo = uvs.iter().map(|v| v[k]).fold(f32::MAX, f32::min);
+        let hi = uvs.iter().map(|v| v[k]).fold(f32::MIN, f32::max);
+        lo <= 0.001 && hi >= 0.999
+    };
+    if !full(0) || !full(1) {
+        return;
+    }
+    let mut h = (world[0] as u32).wrapping_mul(0x9E37_79B1)
+        ^ (world[1] as u32).wrapping_mul(0x85EB_CA77)
+        ^ (world[2] as u32).wrapping_mul(0xC2B2_AE3D)
+        ^ (f as u32).wrapping_mul(0x27D4_EB2F);
+    h ^= h >> 16;
+    h = h.wrapping_mul(0x7FEB_352D);
+    h ^= h >> 15;
+    let turn = match turns {
+        4 => h & 3,
+        2 => (h & 1) * 2,
+        _ => 0,
+    };
+    let mirror = flip && h & 4 != 0;
+    for uv in uvs.iter_mut() {
+        let (mut u, mut v) = (uv[0], uv[1]);
+        if mirror {
+            u = 1.0 - u;
+        }
+        for _ in 0..turn {
+            (u, v) = (1.0 - v, u);
+        }
+        *uv = [u, v];
+    }
+}
+const NORMAL_NUDGE: [[f32; 3]; 6] = [
+    [0.0, -0.002, 0.0],
+    [0.0, 0.002, 0.0],
+    [0.0, 0.0, -0.002],
+    [0.0, 0.0, 0.002],
+    [-0.002, 0.0, 0.0],
+    [0.002, 0.0, 0.0],
+];
+/// The point at (`s`, `t`) of a quad whose corners run 0 (0, 0), 1 (1, 0), 2 (1, 1), 3 (0, 1).
+fn bilerp_f<const N: usize>(c: &[[f32; N]; 4], s: f32, t: f32) -> [f32; N] {
+    std::array::from_fn(|k| {
+        let top = c[0][k] + (c[1][k] - c[0][k]) * s;
+        let bottom = c[3][k] + (c[2][k] - c[3][k]) * s;
+        top + (bottom - top) * t
+    })
+}
+/// `bilerp_f` over each byte of packed values (colours, light).
+fn bilerp_bytes(c: &[u32; 4], s: f32, t: f32) -> u32 {
+    (0..4).fold(0, |out, b| {
+        let byte = |v: u32| (v >> (b * 8) & 255) as f32;
+        let v = bilerp_f(&[[byte(c[0])], [byte(c[1])], [byte(c[2])], [byte(c[3])]], s, t)[0];
+        out | (v.round().clamp(0.0, 255.0) as u32) << (b * 8)
+    })
 }
 /// Snapshot of the 3x3 chunk neighbourhood used by a worker job.
 pub type Region = [[Option<Arc<Chunk>>; 3]; 3];

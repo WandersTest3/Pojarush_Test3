@@ -125,8 +125,10 @@ pub const MINIMAP_SPRITE: &str = "horizon/minimap";
 /// skin past them shows the default skin until a slot frees up.
 /// Atlas slots (32x32) for mods' icons.
 pub const MOD_ICON_SLOTS: usize = 64;
-/// Atlas slots (128x128) for the textures of mods' models.
-pub const MODEL_SLOTS: usize = 8;
+/// Atlas slots (128x128) for the textures of mods' models; the last
+/// `MODEL_CELL_SLOTS` of them hold small textures (a cape) eight to a slot.
+pub const MODEL_SLOTS: usize = 12;
+pub const MODEL_CELL_SLOTS: usize = 4;
 pub const SKIN_SLOTS: usize = 128;
 /// Reused by the visible rows of the classic world selector.
 pub const WORLD_ICON_SLOTS: usize = 32;
@@ -624,6 +626,16 @@ impl HudAtlas {
                 );
             }
         }
+        // OptiFine Random Entities' variants, named under their texture's folder (`entity/...`).
+        let random = [
+            root.join("assets/minecraft/optifine/random/entity"),
+            root.join("assets/minecraft/mcpatcher/mob"),
+        ];
+        if folders.contains(&"entity") {
+            for dir in &random {
+                walk(dir, &mut files);
+            }
+        }
         let assets = root.join("assets");
         // Content mods' GUI textures, for their screens: `<namespace>:gui/...`.
         if full && let Ok(namespaces) = fs::read_dir(&assets) {
@@ -641,6 +653,9 @@ impl HudAtlas {
         let decode_one = |path: &PathBuf| -> Option<Decoded> {
             let name = match path.strip_prefix(&textures) {
                 Ok(rel) => rel.with_extension("").to_string_lossy().replace('\\', "/"),
+                Err(_) if let Some(rel) = random.iter().find_map(|d| path.strip_prefix(d).ok()) => {
+                    format!("entity/{}", rel.with_extension("").to_string_lossy().replace('\\', "/"))
+                }
                 Err(_) => {
                     let rel = path.strip_prefix(&assets).ok()?.with_extension("");
                     let rel = rel.to_string_lossy().replace('\\', "/");

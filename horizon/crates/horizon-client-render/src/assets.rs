@@ -96,6 +96,58 @@ pub struct RenderAssets {
     pub translucent_layers: Vec<bool>,
     /// Each layer's `MipmapGenerator` settings.
     pub sprite_mips: Vec<crate::mipmap::Settings>,
+    /// OptiFine emissive textures: a block sprite's layer to its `<sprite>_e` layer, drawn
+    /// over it at full brightness (`optifine/emissive.properties`).
+    pub emissive_layers: std::collections::HashMap<u32, u32>,
+    /// OptiFine connected textures (`optifine/ctm`).
+    pub ctm: Arc<crate::ctm::Rules>,
+    /// OptiFine natural textures (`optifine/natural.properties`): a sprite layer's turns (1, 2
+    /// or 4) and whether it may flip.
+    pub natural: std::collections::HashMap<u32, (u8, bool)>,
+}
+/// `optifine/natural.properties`: texture name to turns and flip, for the sprites in `layers`.
+pub fn natural_textures(
+    root: &Path,
+    layers: &std::collections::BTreeMap<String, u32>,
+) -> std::collections::HashMap<u32, (u8, bool)> {
+    let mut out = std::collections::HashMap::new();
+    let Some(text) = ["optifine", "mcpatcher"]
+        .iter()
+        .find_map(|d| std::fs::read_to_string(root.join(format!("assets/minecraft/{d}/natural.properties"))).ok())
+    else {
+        return out;
+    };
+    let props = horizon_optifine::Properties::parse(&text);
+    for (name, value) in &props.entries {
+        let v = value.trim();
+        let turns = if v.starts_with('4') { 4 } else if v.starts_with('2') { 2 } else { 1 };
+        let flip = v.ends_with('F') || v.ends_with('f');
+        if turns == 1 && !flip {
+            continue;
+        }
+        let name = name.trim().strip_suffix(".png").unwrap_or(name.trim());
+        let id = match name.split_once(':') {
+            Some((ns, rest)) if rest.contains('/') => format!("{ns}:{rest}"),
+            Some((ns, rest)) => format!("{ns}:block/{rest}"),
+            None if name.contains('/') => format!("minecraft:{name}"),
+            None => format!("minecraft:block/{name}"),
+        };
+        if let Some(&layer) = layers.get(&id) {
+            out.insert(layer, (turns, flip));
+        }
+    }
+    out
+}
+/// `optifine/emissive.properties`' `suffix.emissive` (OptiFine reads emissive textures only
+/// when a pack has the file).
+pub fn emissive_suffix(root: &Path) -> Option<String> {
+    ["optifine", "mcpatcher"].iter().find_map(|dir| {
+        let text = std::fs::read_to_string(root.join(format!("assets/minecraft/{dir}/emissive.properties"))).ok()?;
+        text.lines().find_map(|l| {
+            let (k, v) = l.split_once(['=', ':'])?;
+            (k.trim() == "suffix.emissive").then(|| v.trim().to_owned()).filter(|v| !v.is_empty())
+        })
+    })
 }
 fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
@@ -231,6 +283,29 @@ impl RenderAssets {
         for stage in 0..10 {
             sprites.insert(root, &format!("minecraft:block/destroy_stage_{stage}"))?;
         }
+        let ctm = if draws { crate::ctm::load(root, &mut sprites) } else { crate::ctm::Rules::default() };
+        let mut emissive_layers = std::collections::HashMap::new();
+        if draws && let Some(suffix) = emissive_suffix(root) {
+            let names: Vec<(String, u32)> = sprites.layers.iter().map(|(k, v)| (k.clone(), *v)).collect();
+            for (name, layer) in names {
+                if name.ends_with(&suffix) {
+                    continue;
+                }
+                let (ns, path) = name.split_once(':').unwrap_or(("minecraft", name.as_str()));
+                if !path.starts_with("block/") && !path.starts_with("../optifine/") {
+                    continue;
+                }
+                if root.join(format!("assets/{ns}/textures/{path}{suffix}.png")).is_file()
+                    && let Ok(e) = sprites.insert(root, &format!("{name}{suffix}"))
+                {
+                    emissive_layers.insert(layer, e);
+                }
+            }
+            if !emissive_layers.is_empty() {
+                log::info!("Emissive textures: {} block sprite(s) with {suffix}", emissive_layers.len());
+            }
+        }
+        let natural = if draws { natural_textures(root, &sprites.layers) } else { Default::default() };
         sprites.save_disk_cache();
         if draws {
             sprites.finish();
@@ -252,6 +327,9 @@ impl RenderAssets {
             sprite_layers: sprites.layers,
             translucent_layers: sprites.translucent,
             sprite_mips: sprites.mips,
+            emissive_layers,
+            ctm: Arc::new(ctm),
+            natural,
         })
     }
 }

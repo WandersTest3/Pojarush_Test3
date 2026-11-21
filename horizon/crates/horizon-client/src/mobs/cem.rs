@@ -22,40 +22,73 @@ pub struct Cem {
     vars: Vec<String>,
 }
 
-/// Each mob type's custom model, with the address of the model part tree it belongs to:
-/// the server thread loads the mob types again without the resource packs.
-static TYPES: RwLock<Option<HashMap<String, (usize, Arc<Cem>)>>> = RwLock::new(None);
+/// Each mob type's custom model and animations, with the address of the vanilla model they
+/// replace: the server thread loads the mob types again without the resource packs, and a pack
+/// reload swaps them without reloading the mob types.
+type Entry = (usize, Arc<Part>, Arc<Cem>);
+static TYPES: RwLock<Option<HashMap<String, Entry>>> = RwLock::new(None);
 static VARS: Mutex<Option<HashMap<u32, Vec<f32>>>> = Mutex::new(None);
 
-/// The custom model of mob type `id` (`minecraft:creeper`) drawn with `model`, if a pack has one.
-pub fn get(id: &str, model: &Arc<Part>) -> Option<Arc<Cem>> {
+/// The custom model of mob type `id` (`minecraft:creeper`) whose vanilla model is `model`, if a
+/// pack has one: the model to draw and its animations.
+pub fn get(id: &str, model: &Arc<Part>) -> Option<(Arc<Part>, Arc<Cem>)> {
     let t = TYPES.read().ok()?;
-    let (at, cem) = t.as_ref()?.get(id)?;
-    (*at == Arc::as_ptr(model) as usize).then(|| cem.clone())
+    let (at, custom, cem) = t.as_ref()?.get(id)?;
+    (*at == Arc::as_ptr(model) as usize).then(|| (custom.clone(), cem.clone()))
 }
 
-/// Applies `<root>/assets/minecraft/optifine/cem/<name>.jem` to `model`: the new model, its
-/// animations registered for it.
-pub fn apply(root: &Path, id: &str, model: &Part) -> Option<Arc<Part>> {
+/// Applies `<root>/assets/minecraft/optifine/cem/<name>.jem` to `model`, registering the new
+/// model and its animations for it; true when the pack has one for `id`.
+pub fn apply(root: &Path, id: &str, model: &Arc<Part>) -> bool {
     let name = id.rsplit(':').next().unwrap_or(id);
     let dir = root.join("assets/minecraft/optifine/cem");
     let path = dir.join(format!("{name}.jem"));
-    let text = std::fs::read(&path).ok()?;
-    let jem: Value = serde_json::from_slice(&text).ok()?;
-    let mut model = model.clone();
-    let (cem, ok) = build(root, &dir, &jem, &mut model);
+    let Some(jem) = std::fs::read(&path).ok().and_then(|t| serde_json::from_slice::<Value>(&t).ok()) else {
+        return false;
+    };
+    let mut custom = Part::clone(model);
+    let (cem, ok) = build(root, &dir, &jem, &mut custom);
     if !ok {
-        return None;
+        return false;
     }
-    let model = Arc::new(model);
     if let Ok(mut t) = TYPES.write() {
         t.get_or_insert_with(HashMap::new)
-            .insert(id.to_owned(), (Arc::as_ptr(&model) as usize, Arc::new(cem)));
+            .insert(id.to_owned(), (Arc::as_ptr(model) as usize, Arc::new(custom), Arc::new(cem)));
     }
     if let Ok(mut v) = VARS.lock() {
         *v = None;
     }
-    Some(model)
+    true
+}
+
+/// Forgets every custom model and applies the packs under `root` again to `types` (each mob
+/// type's id and vanilla model): `Minecraft.reloadResourcePacks` for the entity models.
+pub fn reload<'a>(root: &Path, types: impl IntoIterator<Item = (&'a String, &'a super::MobType)>) -> usize {
+    if let Ok(mut t) = TYPES.write() {
+        *t = None;
+    }
+    if let Ok(mut v) = VARS.lock() {
+        *v = None;
+    }
+    types.into_iter().map(|(id, t)| apply_type(root, id, t)).sum()
+}
+
+/// Applies the packs to a mob type's model and to its model layers that have a jem of their own
+/// (`zombie_baby.jem` for the `zombie_baby#main` layer); how many models a pack replaced.
+pub fn apply_type(root: &Path, id: &str, t: &super::MobType) -> usize {
+    let mut n = usize::from(apply(root, id, &t.model));
+    for (key, model) in &t.layers {
+        if let Some(layer) = layer_id(key) {
+            n += usize::from(apply(root, &layer, model));
+        }
+    }
+    n
+}
+
+/// The jem name of a model layer (`cow_baby#main` is `minecraft:cow_baby`).
+pub fn layer_id(key: &str) -> Option<String> {
+    let name = key.strip_suffix("#main")?;
+    (!name.is_empty() && !name.contains('#')).then(|| format!("minecraft:{name}"))
 }
 
 fn floats<const N: usize>(v: &Value, default: [f32; N]) -> [f32; N] {

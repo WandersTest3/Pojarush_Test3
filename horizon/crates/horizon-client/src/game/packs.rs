@@ -279,6 +279,16 @@ impl Game<'_> {
         self.random_tick_sections.clear();
         self.portals.sections.clear();
         self.options.resources = root.clone();
+        horizon_client::random_entities::reload(&root);
+        if let Some(rest) = self.res.rest.get() {
+            let n = horizon_client::mobs::cem::reload(
+                &root,
+                rest.mob_types.iter().map(|(id, t)| (id, &**t)),
+            );
+            if n > 0 {
+                log::info!("Custom entity models: {n} mob type(s) from the resource packs");
+            }
+        }
         let context = pack.context.clone();
         self.pack = pack;
         self.gui = gui;

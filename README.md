@@ -271,11 +271,26 @@ hitbox, altura dos olhos, para onde olham, tempo de dano, veículo, se estão na
 F3+B está ligado, `render::set_world_shapes(formas, por_cima)` desenha linhas, setas, caixas e pontos no mundo e
 `render::hide_hitboxes(true)` tira as hitboxes do próprio jogo (o porte do Combat Hitboxes em `horizon/mods/combat-hitboxes`
 usa isso). Widgets `entity` de até 64 pixels de altura viram blocos, quatro por linha; `"cape:ARQUIVO"` desenha em 3D uma
-capa da pasta `models/` do mod; clicar num `entity` chama `ui_select(id, 0)`.
+capa da pasta `models/` do mod; clicar num `entity` chama `ui_select(id, 0)`. `"player:back"` mostra o jogador de
+costas, e um `entity` `"column"` divide a tela como o Mod Menu: os widgets antes dele ficam fixos numa coluna à esquerda
+e os depois dele rolam na coluna da direita.
 
 Céu personalizado: o motor lê `assets/minecraft/optifine/sky/world0/skyN.properties` (e `mcpatcher/sky`, e `world1`
 para o End) e os céus `square-textured` do FabricSkyboxes em `assets/fabricskyboxes/sky/*.json`, com fade por horário,
 rotação com o sol, clima e os modos de mistura do OptiFine. Shader packs que desenham o próprio céu têm prioridade.
+
+Outros recursos do OptiFine em resource packs:
+- **Texturas emissivas:** com `optifine/emissive.properties` (`suffix.emissive=_e`), `textures/block/<nome>_e.png` é
+  desenhada por cima do bloco com brilho máximo; mobs já usavam `<textura>_e`.
+- **Connected Textures** (`optifine/ctm/**/*.properties`): métodos `ctm` (47 peças), `ctm_compact`, `horizontal`,
+  `vertical`, `top`, `random`, `repeat` e `fixed`, com `matchTiles`/`matchBlocks`, `connect`, `faces`, `heights`,
+  `weights`, `symmetry` e `innerSeams`. Ficam de fora os métodos `overlay*`, `horizontal+vertical`,
+  `vertical+horizontal` e regras limitadas por `biomes`.
+- **Natural Textures** (`optifine/natural.properties`): rotação e espelhamento por bloco.
+- **Random Entities** (`optifine/random/entity/...`): `<textura>2.png`, `3`... por mob, com as regras `textures`/`skins`,
+  `weights`, `name`, `heights`, `baby` e `health` (regras com outros testes, como `biomes`, são puladas).
+- **Custom Entity Models** (`optifine/cem/*.jem`): recarregados junto com os resource packs, sem reiniciar, e também
+  para os modelos de filhote (`zombie_baby.jem`), como o Fresh Animations usa.
 
 Teclas dos mods (`input::register_key`) aparecem em Controles > Atalhos, numa seção por mod, com botão de restaurar o
 padrão. Páginas de configuração organizam botões e sliders em duas colunas. Nome e descrição traduzidos no manifesto:

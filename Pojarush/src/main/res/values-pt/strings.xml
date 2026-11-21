@@ -262,7 +262,7 @@
     <string name="editor_mirror_size_desc">Alterar a largura também altera a altura (e vice-versa).</string>
     <string name="registry_tab_installed">Instalados</string>
     <string name="registry_tab_download">Transferir</string>
-    <string name="registry_desc">Transferências do playhorizon.dev, verificadas com SHA-256 e instaladas na pasta certa.</string>
+    <string name="registry_desc">Transferências do site Pojarush Mods ou do registo do Horizon, verificadas com SHA-256 e instaladas na pasta certa.</string>
     <string name="registry_refresh">Atualizar</string>
     <string name="registry_open_site">Abrir site</string>
     <string name="registry_search">Pesquisar</string>
@@ -293,6 +293,9 @@
     <string name="onboarding_wallpaper_fhd">Full HD · 33 MB</string>
     <string name="onboarding_wallpaper_skip">Ignorar</string>
     <string name="overlay_send_key">Enviar tecla</string>
+    <string name="overlay_send_keys_hint">Escolhe até 4 teclas, premidas em conjunto por esta ordem</string>
+    <string name="overlay_send_keys_send">Enviar</string>
+    <string name="overlay_send_keys_clear">Limpar</string>
     <string name="custom_font">O seu próprio tipo de letra</string>
     <string name="custom_font_choose">Escolher tipo de letra (.ttf, .otf)</string>
     <string name="custom_font_default">Usar tipo de letra predefinido</string>
@@ -363,6 +366,7 @@
     <string name="mod_menu_license">Licença</string>
     <string name="color_slots_hint">Toque num círculo vazio para guardar a cor atual; toque numa cor guardada para a usar e mantenha premido para a apagar.</string>
     <string name="registry_open_modrinth">Abrir o Modrinth</string>
+    <string name="registry_update">Atualizar</string>
     <string name="registry_load_more">Carregar mais</string>
     <string name="menu_music_title">Música do menu</string>
     <string name="menu_music_none">Sem música. Com uma, o som do vídeo do papel de parede fica sem som.</string>

@@ -667,7 +667,7 @@ impl Game<'_> {
         size: f32,
         offset_y: f32,
     ) {
-        self.draw_player_preview_at(batch, x0, y0, x1, y1, size, offset_y, self.cursor);
+        self.draw_player_preview_at(batch, x0, y0, x1, y1, size, offset_y, self.cursor, false);
     }
     /// `draw_player_preview` turned toward `look` instead of the cursor.
     #[allow(clippy::too_many_arguments)]
@@ -681,6 +681,7 @@ impl Game<'_> {
         size: f32,
         offset_y: f32,
         look: (f32, f32),
+        back: bool,
     ) {
         // Before a world (the title screen's menus) there is no player: the
         // preview is a fresh player model with the account's skin.
@@ -713,11 +714,17 @@ impl Game<'_> {
         m.extra.model_scale = 0.0;
         // The render state: still, facing out, the head toward the cursor.
         m.previous = m.position;
-        m.body_yaw = 180.0 + x_angle * 20.0;
+        if back {
+            m.body_yaw = -x_angle * 20.0;
+            m.head_yaw = m.body_yaw;
+            m.head_pitch = 0.0;
+        } else {
+            m.body_yaw = 180.0 + x_angle * 20.0;
+            m.head_yaw = m.body_yaw + x_angle * 20.0;
+            m.head_pitch = -y_angle * 20.0;
+        }
         m.previous_body_yaw = m.body_yaw;
-        m.head_yaw = m.body_yaw + x_angle * 20.0;
         m.previous_head_yaw = m.head_yaw;
-        m.head_pitch = -y_angle * 20.0;
         m.previous_head_pitch = m.head_pitch;
         m.position.y += 0.125 * f64::from(u8::from(m.extra.crouching));
         m.previous = m.position;
@@ -755,7 +762,7 @@ impl Game<'_> {
             * glam::Mat4::from_scale(glam::Vec3::new(size, size, -size))
             * glam::Mat4::from_translation(glam::Vec3::new(0.0, height / 2.0 + offset_y, 0.0))
             * glam::Mat4::from_rotation_z(std::f32::consts::PI)
-            * glam::Mat4::from_rotation_x((y_angle * 20.0).to_radians());
+            * glam::Mat4::from_rotation_x(if back { 0.0 } else { (y_angle * 20.0).to_radians() });
         let fire = self
             .player
             .as_ref()
@@ -818,9 +825,12 @@ impl Game<'_> {
     ) {
         let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
         let look = if follow { self.cursor } else { (cx, cy) };
-        if entity == "player" {
+        if entity == "player" || entity == "player:back" {
             let size = ((y1 - y0) / 2.3).min((x1 - x0) / 1.2);
-            self.draw_player_preview_at(batch, x0, y0, x1, y1, size, 0.0625, look);
+            self.draw_player_preview_at(batch, x0, y0, x1, y1, size, 0.0625, look, entity == "player:back");
+            return;
+        }
+        if entity == "column" {
             return;
         }
         let kind = if entity.contains(':') {
