@@ -1,6 +1,7 @@
 use horizon_mod_sdk::{
     Mod, Registration, chat,
     input::{self, Event},
+    render::{self, ItemShape, Point, Shape, TextShape},
     storage,
     ui::{self, ButtonWidget, SliderWidget, TextWidget, WidgetV2 as Widget},
 };
@@ -15,14 +16,15 @@ const DELAY: u32 = 1;
 const HOTBAR: u32 = 2;
 const REPLACE: u32 = 3;
 const NOTIFY: u32 = 4;
+const COUNTER: u32 = 5;
 const RESET: u32 = 9;
 const INFO: u32 = 10;
 const DELAY_MAX: u32 = 20;
 
-const TEXT: [[&str; 12]; 3] = [
-    ["Auto Totem", "Delay", "ticks", "Use hotbar totems", "Replace off-hand item", "Totem count in chat", "Reset to defaults", "On", "Off", "Totems left", "No totems left!", "Toggle Auto Totem"],
-    ["Auto Totem", "Atraso", "ticks", "Usar totens da hotbar", "Trocar item da mão secundária", "Contagem de totens no chat", "Restaurar padrões", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem"],
-    ["Auto Totem", "Atraso", "ticks", "Usar totens da barra rápida", "Trocar item da mão secundária", "Contagem de totens no chat", "Repor predefinições", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem"],
+const TEXT: [[&str; 13]; 3] = [
+    ["Auto Totem", "Delay", "ticks", "Use hotbar totems", "Replace off-hand item", "Totem count in chat", "Reset to defaults", "On", "Off", "Totems left", "No totems left!", "Toggle Auto Totem", "Totem counter above XP"],
+    ["Auto Totem", "Atraso", "ticks", "Usar totens da hotbar", "Trocar item da mão secundária", "Contagem de totens no chat", "Restaurar padrões", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem", "Contador de totens acima do XP"],
+    ["Auto Totem", "Atraso", "ticks", "Usar totens da barra rápida", "Trocar item da mão secundária", "Contagem de totens no chat", "Repor predefinições", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem", "Contador de totens acima do XP"],
 ];
 
 fn lang() -> usize {
@@ -39,13 +41,29 @@ struct AutoTotem {
     hotbar: bool,
     replace: bool,
     notify: bool,
+    counter: bool,
     wait: u32,
     had_totem: bool,
+    shown: Option<(u32, (f32, f32))>,
 }
 
 impl AutoTotem {
+    fn defaults() -> Self {
+        Self {
+            enabled: true,
+            delay: 0,
+            hotbar: true,
+            replace: false,
+            notify: true,
+            counter: true,
+            wait: 0,
+            had_totem: false,
+            shown: None,
+        }
+    }
+
     fn load() -> Self {
-        let mut s = Self { enabled: true, delay: 0, hotbar: true, replace: false, notify: true, wait: 0, had_totem: false };
+        let mut s = Self::defaults();
         if let Some(text) = storage::get(FILE).and_then(|v| String::from_utf8(v).ok()) {
             for line in text.lines() {
                 let Some((k, v)) = line.split_once('=') else { continue };
@@ -56,6 +74,7 @@ impl AutoTotem {
                     "hotbar" => s.hotbar = n == 1,
                     "replace" => s.replace = n == 1,
                     "notify" => s.notify = n == 1,
+                    "counter" => s.counter = n == 1,
                     _ => {}
                 }
             }
@@ -65,12 +84,13 @@ impl AutoTotem {
 
     fn save(&self) {
         let text = format!(
-            "enabled={}\ndelay={}\nhotbar={}\nreplace={}\nnotify={}\n",
+            "enabled={}\ndelay={}\nhotbar={}\nreplace={}\nnotify={}\ncounter={}\n",
             u32::from(self.enabled),
             self.delay,
             u32::from(self.hotbar),
             u32::from(self.replace),
             u32::from(self.notify),
+            u32::from(self.counter),
         );
         let _ = storage::set(FILE, text.as_bytes());
     }
@@ -89,11 +109,12 @@ impl AutoTotem {
             Widget::Button(ButtonWidget { id: HOTBAR, label: format!("{}: {}", t[3], on_off(self.hotbar)) }),
             Widget::Button(ButtonWidget { id: REPLACE, label: format!("{}: {}", t[4], on_off(self.replace)) }),
             Widget::Button(ButtonWidget { id: NOTIFY, label: format!("{}: {}", t[5], on_off(self.notify)) }),
+            Widget::Button(ButtonWidget { id: COUNTER, label: format!("{}: {}", t[12], on_off(self.counter)) }),
             Widget::Button(ButtonWidget { id: RESET, label: t[6].into() }),
             Widget::Text(TextWidget { id: INFO, text: format!("{}: {}", t[9], self.count()), color: 0xB98CF2 }),
         ];
         ui::set_settings_v2(&widgets);
-        ui::set_resets(&[ENABLED, DELAY, HOTBAR, REPLACE, NOTIFY]);
+        ui::set_resets(&[ENABLED, DELAY, HOTBAR, REPLACE, NOTIFY, COUNTER]);
     }
 
     fn count(&self) -> u32 {
@@ -101,15 +122,46 @@ impl AutoTotem {
     }
 
     fn reset(&mut self, id: u32) {
-        let d = Self { enabled: true, delay: 0, hotbar: true, replace: false, notify: true, wait: 0, had_totem: false };
+        let d = Self::defaults();
         match id {
             ENABLED => self.enabled = d.enabled,
             DELAY => self.delay = d.delay,
             HOTBAR => self.hotbar = d.hotbar,
             REPLACE => self.replace = d.replace,
             NOTIFY => self.notify = d.notify,
+            COUNTER => self.counter = d.counter,
             _ => {}
         }
+    }
+
+    /// The totems held: the inventory's and the off hand's, with a totem icon above the XP level
+    /// (where vanilla draws the level, between the hearts and the food).
+    fn draw(&mut self) {
+        let count = self.count();
+        let size = render::gui_size();
+        let shown = (self.enabled && self.counter).then_some((count, size));
+        if shown == self.shown {
+            return;
+        }
+        self.shown = shown;
+        if shown.is_none() {
+            render::set_hud(&[]);
+            return;
+        }
+        let (w, h) = size;
+        let x = (w / 2.0).floor();
+        let y = h - 48.0;
+        let color = if count == 0 { 0xFF5555 } else { 0xFFFF55 };
+        render::set_hud(&[
+            Shape::Item(ItemShape { item: TOTEM.into(), at: Point { x: x - 11.0, y: y - 1.0 }, scale: 0.625 }),
+            Shape::Text(TextShape {
+                text: count.to_string(),
+                at: Point { x: x + 1.0, y },
+                color,
+                centered: false,
+                shadow: true,
+            }),
+        ]);
     }
 
     fn refill(&mut self) {
@@ -174,6 +226,7 @@ impl Mod for AutoTotem {
         if self.enabled {
             self.refill();
         }
+        self.draw();
     }
 
     fn ui_select(&mut self, id: u32, row: u32) {
@@ -186,8 +239,9 @@ impl Mod for AutoTotem {
                 HOTBAR => self.hotbar = !self.hotbar,
                 REPLACE => self.replace = !self.replace,
                 NOTIFY => self.notify = !self.notify,
+                COUNTER => self.counter = !self.counter,
                 RESET => {
-                    for id in [ENABLED, DELAY, HOTBAR, REPLACE, NOTIFY] {
+                    for id in [ENABLED, DELAY, HOTBAR, REPLACE, NOTIFY, COUNTER] {
                         self.reset(id);
                     }
                 }

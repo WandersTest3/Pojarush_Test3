@@ -235,6 +235,11 @@ fn play(path: &Path, report: &mut Report) -> Result<(), String> {
         players: vec![steve.clone()],
         // The GUI of a 1280 x 720 window at scale 3.
         gui_size: (427.0, 240.0),
+        // A sword in hand, a totem in the inventory and the off hand empty.
+        inventory: std::sync::Arc::from(vec![
+            (0, "minecraft:iron_sword".to_owned(), 1),
+            (12, "minecraft:totem_of_undying".to_owned(), 1),
+        ]),
         ..Snapshot::default()
     };
     mods.set_snapshot(snapshot(0));

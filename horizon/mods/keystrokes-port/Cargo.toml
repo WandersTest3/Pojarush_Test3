@@ -1,0 +1,20 @@
+[package]
+name = "keystrokes_port"
+version = "3.0.1"
+edition = "2024"
+license-file = "LICENSE.txt"
+publish = false
+description = "Keystrokes (PR Port): movement keys, mouse buttons and space bar in a corner, lit while held, with clicks per second."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+horizon-mod-sdk = { path = "../../crates/horizon-mod-sdk" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+
+[workspace]

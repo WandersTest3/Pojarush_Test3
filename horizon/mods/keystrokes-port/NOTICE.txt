@@ -1,0 +1,5 @@
+Keystrokes (PR Port) is a port of Horizon's official Keystrokes mod 3.0.1
+(https://github.com/horizon-rust/horizon-mods/tree/main/native/keystrokes),
+MIT License, Copyright (c) 2026 Ludovic Marie and the Horizon contributors,
+rewritten for the Pojarush mod API (.hmod, api 0.1). The layout, colours and
+settings follow the original; see LICENSE.txt.

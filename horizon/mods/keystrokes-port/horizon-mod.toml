@@ -1,0 +1,24 @@
+id = "keystrokes_port"
+name = "Keystrokes (PR Port)"
+version = "3.0.1"
+description = "Your movement keys, mouse buttons and space bar in a corner, lit while held, with clicks per second. A port of Horizon's official Keystrokes 3.0.1 (MIT) to the Pojarush mod API."
+
+authors = ["Horizon", "Wanders_Test3"]
+api = "0.1"
+side = "client"
+capabilities = ["render", "input", "ui", "storage"]
+experimental = ["render", "input", "ui"]
+minecraft = "26.3"
+license = "MIT"
+icon = "assets/keystrokes_port/icon.png"
+
+[contact]
+homepage = "https://github.com/horizon-rust/horizon-mods/tree/main/native/keystrokes"
+sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods/keystrokes-port"
+issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
+
+[translations.pt_br]
+description = "Suas teclas de movimento, botões do mouse e barra de espaço num canto, acesos enquanto pressionados, com cliques por segundo. Port do Keystrokes 3.0.1 oficial do Horizon (MIT) para a API de mods do Pojarush."
+
+[translations.pt_pt]
+description = "As tuas teclas de movimento, botões do rato e barra de espaços num canto, acesos enquanto premidos, com cliques por segundo. Port do Keystrokes 3.0.1 oficial do Horizon (MIT) para a API de mods do Pojarush."

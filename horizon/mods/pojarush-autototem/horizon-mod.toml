@@ -1,13 +1,13 @@
 id = "pojarush_autototem"
 name = "PR Auto Totem"
-version = "1.0.0"
-description = "When on, a Totem of Undying from your inventory goes to the off hand as soon as the one there is used. Settings for the delay, the hotbar and replacing another off-hand item."
+version = "1.0.1"
+description = "When on, a Totem of Undying from your inventory goes to the off hand as soon as the one there is used. A counter above the XP level shows how many totems you carry. Settings for the delay, the hotbar, replacing another off-hand item and the counter."
 
 authors = ["Wanders_Test3"]
 api = "0.1"
 side = "client"
-capabilities = ["chat", "input", "ui", "storage"]
-experimental = ["input", "ui"]
+capabilities = ["chat", "input", "render", "ui", "storage"]
+experimental = ["input", "render", "ui"]
 minecraft = "26.3"
 license = "Mod Test3 License V1.0"
 icon = "assets/pojarush_autototem/icon.png"
@@ -18,7 +18,7 @@ sources = "https://github.com/WandersTest3/Pojarush_Test3/tree/main/horizon/mods
 issues = "https://github.com/WandersTest3/Pojarush_Test3/issues"
 
 [translations.pt_br]
-description = "Ligado, um Totem da Imortalidade do inventário vai para a mão secundária assim que o que estava nela é usado. Ajustes de atraso, uso da hotbar e troca de outro item da mão secundária."
+description = "Ligado, um Totem da Imortalidade do inventário vai para a mão secundária assim que o que estava nela é usado. Um contador acima do nível de XP mostra quantos totens você tem. Ajustes de atraso, uso da hotbar, troca de outro item da mão secundária e do contador."
 
 [translations.pt_pt]
-description = "Ligado, um Totem da Imortalidade do inventário vai para a mão secundária assim que o que lá estava é usado. Definições de atraso, uso da barra rápida e troca de outro item da mão secundária."
+description = "Ligado, um Totem da Imortalidade do inventário vai para a mão secundária assim que o que lá estava é usado. Um contador acima do nível de XP mostra quantos totens tens. Definições de atraso, uso da barra rápida, troca de outro item da mão secundária e do contador."

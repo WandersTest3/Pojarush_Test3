@@ -83,14 +83,21 @@ impl Game<'_> {
     /// Skipped while another container is open or the cursor holds a stack.
     pub(super) fn mod_swap_offhand(&mut self, slot: usize) {
         if slot >= 36 || slot >= self.inventory.len() || self.carried.is_some() || self.player.is_none() {
+            log::debug!("input.swap-offhand: slot {slot} skipped (no player, or a stack on the cursor)");
             return;
         }
         let (a, b) = (self.inventory[slot].clone(), self.offhand.clone());
         if a.is_none() && b.is_none() {
             return;
         }
-        if self.remote.is_some() {
+        if self.remote.is_some() && self.creative {
+            // Creative: the client's slots are the truth, sent as `SetCreativeModeSlot`.
+            self.inventory[slot] = b;
+            self.offhand = a;
+            self.send_creative_slots();
+        } else if self.remote.is_some() {
             if self.remote_menu().0 != 0 {
+                log::debug!("input.swap-offhand: skipped, a container is open");
                 return;
             }
             // InventoryMenu: the hotbar is slots 36 to 44, the rest 9 to 35, the off hand 45.

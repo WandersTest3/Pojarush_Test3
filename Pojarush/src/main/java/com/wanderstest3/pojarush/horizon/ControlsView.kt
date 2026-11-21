@@ -453,12 +453,21 @@ class ControlsView(
         val keep = if (editMode) emptyList() else toggled.indices.filter { i ->
             toggled[i] && i < layout.buttons.size && layout.buttons[i].toggle.any(::isShift)
         }
+        val holding = if (editMode) emptyMap() else roles.filter { (_, role) ->
+            role is Role.Btn && role.index < layout.buttons.size && !layout.buttons[role.index].spam &&
+                layout.buttons[role.index].press.any { it is Action.Key }
+        }.mapValues { it.value as Role.Btn }
         releaseAll()
         keep.forEach { i ->
             toggled[i] = true
             layout.buttons[i].toggle.filter(::isShift).forEach(::down)
         }
-        if (keep.isNotEmpty()) invalidate()
+        holding.forEach { (id, role) ->
+            roles[id] = role
+            pressed[role.index]++
+            layout.buttons[role.index].press.filter { it is Action.Key }.forEach(::down)
+        }
+        if (keep.isNotEmpty() || holding.isNotEmpty()) invalidate()
     }
 
     private fun isShift(a: Action) =
