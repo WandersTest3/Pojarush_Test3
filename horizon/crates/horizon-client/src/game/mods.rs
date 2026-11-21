@@ -534,6 +534,7 @@ impl Game<'_> {
             clock,
             gui_size: self.gui_size(),
             held: self.mod_held(),
+            inventory: self.mod_inventory(),
             frame: self.frame_reading(),
             mappings,
             cps,
@@ -1017,6 +1018,10 @@ impl Game<'_> {
                     components,
                 } => {
                     self.mod_give(&item, count, &components);
+                    continue;
+                }
+                Output::SwapOffhand { slot } => {
+                    self.mod_swap_offhand(slot as usize);
                     continue;
                 }
                 Output::CloseScreen { owner } => {

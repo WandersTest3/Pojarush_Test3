@@ -289,6 +289,8 @@ pub struct Snapshot {
     pub gui_size: (f32, f32),
     /// The main hand's stack (capability `input`'s `held`).
     pub held: Option<HeldItem>,
+    /// The player's stacks: slot, item id, count (`input.inventory`).
+    pub inventory: Arc<[(u32, String, u32)]>,
     /// The game's frame counter: fps, min, 1% low (`render.frame-stats`).
     pub frame: (u32, u32, u32),
     /// The movement and click mappings `input.mapping` answers for:
@@ -400,6 +402,8 @@ pub enum Output {
         count: u32,
         components: String,
     },
+    /// `input.swap-offhand`: inventory slot 0 to 35 with the off hand.
+    SwapOffhand { slot: u32 },
 }
 
 /// The game's world as capability `world` reads it during a call: the
@@ -2059,6 +2063,28 @@ impl input::Host for State {
     }
     fn claim_wheel(&mut self, on: bool) {
         self.input.wheel = on;
+    }
+    fn inventory(&mut self) -> Vec<input::InventoryStack> {
+        self.snapshot
+            .inventory
+            .iter()
+            .map(|(slot, id, count)| input::InventoryStack {
+                slot: *slot,
+                id: id.clone(),
+                count: *count,
+            })
+            .collect()
+    }
+    fn swap_offhand(&mut self, slot: u32) -> Result<(), String> {
+        if slot > 35 {
+            return Err(format!("slot {slot} is not 0 to 35"));
+        }
+        let queued = self.out.iter().filter(|o| matches!(o, Output::SwapOffhand { .. })).count();
+        if queued >= 4 {
+            return Err("at most 4 swaps a call".into());
+        }
+        self.out.push(Output::SwapOffhand { slot });
+        Ok(())
     }
 }
 

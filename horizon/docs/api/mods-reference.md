@@ -432,6 +432,16 @@ A mapping as the player has bound it.
 | `label` | `string` | The bound key's name as Controls shows it: `W`, `Space`, `LMB`. |
 | `down` | `bool` | Held down now (as of this frame for a mod with a `frame` hook, else this tick). |
 
+### record `inventory-stack`
+
+A stack of the player's inventory.
+
+| Field | Type | |
+| --- | --- | --- |
+| `slot` | `u32` | 0 to 8 the hotbar, 9 to 35 the rest, 36 to 39 the armour (feet, legs, chest, head), 40 the off hand. |
+| `id` | `string` | `minecraft:totem_of_undying`. |
+| `count` | `u32` |  |
+
 | Function | Signature | What it does |
 | --- | --- | --- |
 | `claim-items` | `func(ids: list<string>)` | The items whose use the mod handles instead of the game, by id (at most 64). Replaces the previous list. |
@@ -441,6 +451,8 @@ A mapping as the player has bound it.
 | `claim-wheel` | `func(on: bool)` | Takes the mouse wheel while playing (true) or gives it back: while taken, its steps are the mod's `wheel` events and the hotbar doesn't move. The game gives it back when the mod stops. |
 | `mapping` | `func(name: string) -> option<mapping-state>` | A movement or click mapping as the player has bound it: `key.forward`, `key.left`, `key.back`, `key.right`, `key.jump`, `key.sneak`, `key.sprint`, `key.attack` or `key.use`. None for another name. |
 | `clicks-per-second` | `func() -> tuple<u32, u32>` | Clicks of the attack and use buttons in the last second. |
+| `inventory` | `func() -> list<inventory-stack>` | The player's stacks as of this tick; empty slots are left out. |
+| `swap-offhand` | `func(slot: u32) -> result<_, string>` | Swaps inventory slot `slot` (0 to 35) with the off hand at the end of the tick, as F over it in the inventory screen does (`ServerboundContainerClickPacket`, SWAP with button 40, on the player's own menu). The game skips it while another container is open or the cursor holds a stack. At most 4 a call. |
 
 ## `render`
 

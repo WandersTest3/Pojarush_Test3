@@ -275,6 +275,10 @@ capa da pasta `models/` do mod; clicar num `entity` chama `ui_select(id, 0)`. `"
 costas, e um `entity` `"column"` divide a tela como o Mod Menu: os widgets antes dele ficam fixos numa coluna à esquerda
 e os depois dele rolam na coluna da direita.
 
+Nível 14: `input::inventory()` lista os itens do jogador (0–8 hotbar, 9–35 inventário, 36–39 armadura, 40 mão
+secundária) e `input::swap_offhand(slot)` troca um slot de 0 a 35 com a mão secundária, como a tecla F no inventário
+(o PR Auto Totem usa isso).
+
 Céu personalizado: o motor lê `assets/minecraft/optifine/sky/world0/skyN.properties` (e `mcpatcher/sky`, e `world1`
 para o End) e os céus `square-textured` do FabricSkyboxes em `assets/fabricskyboxes/sky/*.json`, com fade por horário,
 rotação com o sol, clima e os modos de mistura do OptiFine. Shader packs que desenham o próprio céu têm prioridade.
@@ -312,6 +316,7 @@ partes dos modelos dos mobs e as animam com expressões (`cem_animation.txt`: fu
 Exemplos completos neste repositório:
 
 - `horizon/mods/pojarush-zoom`: tecla própria, roda do mouse, zoom, página de ajustes e ajustes salvos.
+- `horizon/mods/pojarush-autototem`: lê o inventário e põe um totem na mão secundária quando o anterior é usado.
 - `horizon/mods/pojarush-fps`: texto na fonte do Minecraft no HUD, ampliado com `render::set_hud_scale` (função do Horizon do Pojarush), tamanho e posição ajustáveis e ajustes salvos. Com ele instalado, o launcher desliga a sobreposição do próprio Horizon.
 - `horizon/mods/pojarush-modmenu`: Mod Menu como o do Fabric (tecla M ou o mini ícone na tela inicial e no menu de pausa): lista com ícone, nome e descrição à esquerda, detalhes, links e configurações do mod escolhido à direita.
 - `horizon/mods/pojarush-shaders`: atalhos do Iris para shaders (O abre os pacotes, K liga e desliga, R recarrega) e o botão "Pacotes de shaders..." em Gráficos, que abre a tela de pacotes no estilo do Iris.
@@ -454,6 +459,7 @@ OAuth do Azure em `.oauth_client_id.txt` ou `OAUTH_CLIENT_ID`; sem ele o app jog
 | `runtimes/jre-25/` | Java 25 para arm64 e arm de 32 bits (do Zalith Launcher 2), baixado pelo app no primeiro preparo |
 | `horizon/` | Código do Horizon com o port para Android (`crates/horizon-android`, `horizon-client/src/android.rs`) |
 | `horizon/mods/pojarush-zoom/` | Mod de zoom do Pojarush |
+| `horizon/mods/pojarush-autototem/` | Mod Auto Totem do Pojarush |
 | `horizon/mods/pojarush-fps/` | Mod de FPS do Pojarush |
 | `horizon/mods/pojarush-modmenu/` | Mod Menu do Pojarush |
 | `horizon/mods/pojarush-shaders/` | Mod de shaders do Pojarush (atalhos do Iris) |

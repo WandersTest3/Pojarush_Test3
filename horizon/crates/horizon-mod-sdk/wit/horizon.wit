@@ -457,6 +457,23 @@ interface input {
     mapping: func(name: string) -> option<mapping-state>;
     /// Clicks of the attack and use buttons in the last second.
     clicks-per-second: func() -> tuple<u32, u32>;
+    /// A stack of the player's inventory.
+    record inventory-stack {
+        /// 0 to 8 the hotbar, 9 to 35 the rest, 36 to 39 the armour (feet,
+        /// legs, chest, head), 40 the off hand.
+        slot: u32,
+        /// `minecraft:totem_of_undying`.
+        id: string,
+        count: u32,
+    }
+    /// The player's stacks as of this tick; empty slots are left out.
+    inventory: func() -> list<inventory-stack>;
+    /// Swaps inventory slot `slot` (0 to 35) with the off hand at the end of
+    /// the tick, as F over it in the inventory screen does
+    /// (`ServerboundContainerClickPacket`, SWAP with button 40, on the
+    /// player's own menu). The game skips it while another container is
+    /// open or the cursor holds a stack. At most 4 a call.
+    swap-offhand: func(slot: u32) -> result<_, string>;
 }
 
 /// Capability `render` (experimental: the manifest needs

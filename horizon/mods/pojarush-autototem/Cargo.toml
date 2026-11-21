@@ -1,0 +1,20 @@
+[package]
+name = "pojarush_autototem"
+version = "1.0.0"
+edition = "2024"
+license-file = "LICENSE.txt"
+publish = false
+description = "Pojarush Auto Totem: a totem from the inventory goes to the off hand as soon as the last one is used."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+horizon-mod-sdk = { path = "../../crates/horizon-mod-sdk" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+
+[workspace]

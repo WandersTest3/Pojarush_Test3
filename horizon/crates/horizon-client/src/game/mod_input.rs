@@ -68,6 +68,44 @@ pub(super) struct ModFarTerrain {
 #[cfg(feature = "mods")]
 impl Game<'_> {
     /// The main hand's stack as `input` shows it; none when it is empty.
+    /// The player's stacks for `input.inventory`: slot, item, count.
+    pub(super) fn mod_inventory(&self) -> std::sync::Arc<[(u32, String, u32)]> {
+        let stacks = self.inventory.iter().take(36).enumerate().map(|(i, s)| (i as u32, s.as_ref()));
+        let armor = self.armor.iter().enumerate().map(|(i, s)| (36 + i as u32, s.as_ref()));
+        stacks
+            .chain(armor)
+            .chain(std::iter::once((40, self.offhand.as_ref())))
+            .filter_map(|(i, s)| s.map(|s| (i, s.item.to_string(), s.count)))
+            .collect()
+    }
+    /// `input.swap-offhand`: inventory slot `slot` (0 to 35) with the off hand, as F over the
+    /// slot in the inventory screen (a SWAP click with button 40 on the player's own menu).
+    /// Skipped while another container is open or the cursor holds a stack.
+    pub(super) fn mod_swap_offhand(&mut self, slot: usize) {
+        if slot >= 36 || slot >= self.inventory.len() || self.carried.is_some() || self.player.is_none() {
+            return;
+        }
+        let (a, b) = (self.inventory[slot].clone(), self.offhand.clone());
+        if a.is_none() && b.is_none() {
+            return;
+        }
+        if self.remote.is_some() {
+            if self.remote_menu().0 != 0 {
+                return;
+            }
+            // InventoryMenu: the hotbar is slots 36 to 44, the rest 9 to 35, the off hand 45.
+            let menu_slot = if slot < 9 { 36 + slot } else { slot } as i16;
+            self.inventory[slot] = b.clone();
+            self.offhand = a.clone();
+            self.send_clicks(
+                0,
+                vec![(menu_slot, 40, horizon_client::menu::Input::Swap, vec![(menu_slot, b), (45, a)], None)],
+            );
+        } else {
+            self.inventory[slot] = b;
+            self.offhand = a;
+        }
+    }
     pub(super) fn mod_held(&self) -> Option<HeldItem> {
         let stack = self.inventory.get(self.selected)?.as_ref()?;
         Some(HeldItem {

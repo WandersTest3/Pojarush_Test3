@@ -6976,7 +6976,7 @@ impl Game<'_> {
         });
         self.send_clicks(container, sent);
     }
-    fn send_clicks(&mut self, container: i32, clicks: Vec<Predicted>) {
+    pub(super) fn send_clicks(&mut self, container: i32, clicks: Vec<Predicted>) {
         let state = self.remote.as_ref().map_or(0, |r| r.state_id);
         let hashed = |g: &Self, s: &Option<ItemStack>| g.to_network(s).map(|s| Hashed::of(&s));
         for (slot, button, input, changed, carried) in clicks {
@@ -7574,7 +7574,7 @@ fn remote_player_head_turn(m: &mut Mob) {
 
 /// A click sent to a server: its slot, button and input, the slots it
 /// changed and the carried stack after it.
-type Predicted = (
+pub(super) type Predicted = (
     i16,
     i32,
     Input,
