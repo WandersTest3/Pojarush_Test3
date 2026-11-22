@@ -12,7 +12,7 @@ use mod_api::{
     Corners, DrawContext, Host, KeyMapping, SettingKind, SettingSpec, SettingValue, Text,
     TextFormError,
 };
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,13 +47,70 @@ pub struct View {
     pub language: String,
     /// The game's text for a translation key.
     pub translate: Option<fn(&str) -> Option<String>>,
+    /// What the crosshair is on.
+    pub crosshair: Option<Crosshair>,
+    /// The entities mods may read (the crosshair's and the local player).
+    pub entities: Vec<EntityView>,
+    /// The local player's entity id among `entities`.
+    pub local_player: Option<u32>,
+    /// Keys pressed since the last tick, as `options.txt` names them (`key.keyboard.k`).
+    pub pressed: Vec<String>,
+    /// The game is paused.
+    pub paused: bool,
 }
 
-/// What a `render_gui_post` hook drew, in GUI pixels, for the game to draw in order.
+/// What the game's registries hold, handed over once when the mods start, so mods can name
+/// blocks, items and entity types (`BlockKey`, `ItemKey`, `EntityTypeKey`).
+#[derive(Clone, Default)]
+pub struct Registries {
+    /// Every block in the game's state order.
+    pub blocks: Vec<BlockDef>,
+    /// Every item id.
+    pub items: Vec<String>,
+    /// Every entity type id.
+    pub entity_types: Vec<String>,
+}
+
+/// One block: its states' properties in the game's order, the default among them.
+#[derive(Clone, Default)]
+pub struct BlockDef {
+    pub name: String,
+    pub states: Vec<BTreeMap<String, String>>,
+    pub default: u16,
+    /// Per state: whether it drops nothing without the right tool.
+    pub requires_tool: Vec<bool>,
+    pub has_block_entity: bool,
+}
+
+/// What the crosshair is on this frame.
+#[derive(Clone, Debug)]
+pub enum Crosshair {
+    Block { pos: [i32; 3], block: String, ordinal: u16, face: [i32; 3], point: [f64; 3] },
+    Entity { id: u32, point: [f64; 3] },
+}
+
+/// An entity mods may read: the one under the crosshair and the local player.
+#[derive(Clone, Debug, Default)]
+pub struct EntityView {
+    pub id: u32,
+    pub kind: String,
+    pub name: String,
+    pub position: [f64; 3],
+    pub eye: [f64; 3],
+    pub uuid: u128,
+    /// Health and maximum health, for a living entity.
+    pub health: Option<(f32, f32)>,
+    /// The main hand's item id and count.
+    pub main_hand: Option<(String, u32)>,
+}
+
+/// What a HUD hook drew, in GUI pixels, for the game to draw in order.
 #[derive(Clone, Debug, PartialEq)]
 pub enum DrawCmd {
     Fill { rect: [f32; 4], argb: u32 },
-    Text { text: String, at: [f32; 2], argb: u32, shadow: bool },
+    Gradient { rect: [f32; 4], top: u32, bottom: u32 },
+    Text { text: String, at: [f32; 2], argb: u32, shadow: bool, scale: f32 },
+    Item { id: String, at: [f32; 2], size: f32 },
 }
 
 /// One wasm package found in the mods folder, for the Mods page.
@@ -95,9 +152,15 @@ const STARTING: &str = "Starting…";
 impl WasmMods {
     /// Lists the `.hmod` files in `mods_dir` that carry a `[wasm]` table and starts the guest
     /// thread that compiles and installs the ones not in `off` (compiled modules are kept in
-    /// `game_dir/.horizon-wasm-cache`, so later starts are quick). Hooks do nothing until it is
-    /// done. Once per process.
-    pub fn start(mods_dir: &Path, game_dir: &Path, off: &[String]) -> Self {
+    /// `cache_dir`, a folder only this app may write, so later starts are quick). Hooks do
+    /// nothing until it is done. Once per process.
+    pub fn start(
+        mods_dir: &Path,
+        game_dir: &Path,
+        cache_dir: &Path,
+        off: &[String],
+        registries: Registries,
+    ) -> Self {
         let mut entries = Vec::new();
         let mut paths: Vec<PathBuf> = std::fs::read_dir(mods_dir)
             .into_iter()
@@ -138,11 +201,12 @@ impl WasmMods {
         }
         let (tx, rx) = mpsc::channel::<Job>();
         let game_dir = game_dir.to_owned();
+        let cache_dir = cache_dir.to_owned();
         let (shared2, ready2) = (shared.clone(), ready.clone());
         let spawned = horizon_guest_stack::builder()
             .name("wasm-mods".into())
             .spawn(move || {
-                let mut inner = Inner::load(entries, &game_dir);
+                let mut inner = Inner::load(entries, &game_dir, &cache_dir, registries);
                 if let Ok(mut s) = shared2.lock() {
                     *s = inner.entries.clone();
                 }
@@ -205,6 +269,16 @@ impl WasmMods {
             .unwrap_or((Vec::new(), used))
     }
 
+    /// The GUI layers mods registered (`register_gui_layers`), drawn after the HUD.
+    pub fn render_gui_layers(&self, view: View, size: (f32, f32)) -> Vec<DrawCmd> {
+        self.call(move |inner| inner.render_gui_layers(&view, size)).unwrap_or_default()
+    }
+
+    /// Once a client tick, before it runs.
+    pub fn client_tick(&self, view: View) {
+        self.call(move |inner| inner.client_tick(&view));
+    }
+
     /// Every frame, before the world draws.
     pub fn render_frame_pre(&self, view: View, elapsed: Duration, partial_tick: f32) {
         self.call(move |inner| inner.render_frame_pre(&view, elapsed, partial_tick));
@@ -240,6 +314,10 @@ impl WasmMods {
 struct Inner {
     entries: Vec<Entry>,
     running: bool,
+    /// The GUI layers mods registered, in order.
+    layers: Vec<String>,
+    /// Clicks of each mod key mapping (`mod id`, `key id`) not consumed yet.
+    clicks: HashMap<(String, String), u32>,
     /// Translations from the packages' `assets/<ns>/lang/<code>.json`, by language.
     lang: HashMap<String, HashMap<String, String>>,
 }
@@ -247,7 +325,7 @@ struct Inner {
 static FILES_ROOT: OnceLock<PathBuf> = OnceLock::new();
 
 impl Inner {
-    fn load(mut entries: Vec<Entry>, game_dir: &Path) -> Self {
+    fn load(mut entries: Vec<Entry>, game_dir: &Path, cache_dir: &Path, registries: Registries) -> Self {
         let _ = FILES_ROOT.set(game_dir.join("horizon-mod-data"));
         let mut lang: HashMap<String, HashMap<String, String>> = HashMap::new();
         let mut packages = Vec::new();
@@ -255,7 +333,7 @@ impl Inner {
             for e in entries.iter_mut().filter(|e| e.problem.as_deref() == Some(STARTING)) {
                 e.problem = Some(why.to_owned());
             }
-            return Self { entries, running: false, lang };
+            return Self { entries, running: false, layers: Vec::new(), clicks: HashMap::new(), lang };
         }
         for entry in entries.iter_mut().filter(|e| e.problem.as_deref() == Some(STARTING)) {
             read_lang(&entry.path, &mut lang);
@@ -271,12 +349,13 @@ impl Inner {
             }
         }
         let mut running = false;
+        let mut layers = Vec::new();
         if !packages.is_empty() {
             let started = std::time::Instant::now();
             let loaded = horizon_mod_wasm::load_cached(
                 STD_MEMBER,
                 packages,
-                &game_dir.join(".horizon-wasm-cache"),
+                cache_dir,
             );
             let mut refused: Vec<(String, String)> =
                 loaded.refused.iter().map(|(id, why)| (id.clone(), why.to_string())).collect();
@@ -292,7 +371,15 @@ impl Inner {
             running = !loaded.mods.is_empty();
             if running {
                 mod_api::__private::install(loaded.mods.into());
-                running = start_phases(&mut entries);
+                running = start_phases(&mut entries, &registries);
+                if running {
+                    let context = <mod_api::RegistrationContext as mod_api::__private::game::RegistrationContextNew>::new();
+                    let mut found = Vec::new();
+                    guarded("register_gui_layers", || {
+                        mod_api::dispatch_register_gui_layers(&context, &mut found)
+                    });
+                    layers = found.into_iter().map(|l| l.id).collect();
+                }
             }
             log::info!(
                 "wasm mods: {} running, {} refused, in {:?}",
@@ -301,21 +388,49 @@ impl Inner {
                 started.elapsed()
             );
         }
-        Self { entries, running, lang }
+        Self { entries, running, layers, clicks: HashMap::new(), lang }
     }
 
     fn host<'a>(&'a self, view: &'a View) -> PojarushHost<'a> {
-        PojarushHost { view, lang: &self.lang }
+        if let Some(t) = view.translate {
+            let _ = TRANSLATE.set(t);
+        }
+        PojarushHost { view, lang: &self.lang, clicks: std::cell::RefCell::new(HashMap::new()) }
     }
 
     fn render_gui_post(&self, view: &View, size: (f32, f32), used: [f32; 4]) -> (Vec<DrawCmd>, [f32; 4]) {
         let mut corners = Corners::from_parts(size.0, size.1, used);
-        let mut out = Recorder { cmds: Vec::new(), widths: view.widths.clone() };
+        let mut out = Recorder::new(view.widths.clone(), size);
         let host = self.host(view);
         guarded("render_gui_post", || {
             mod_api::dispatch_render_gui_post(&host, &mut out, &mut corners)
         });
         (out.cmds, corners.parts().2)
+    }
+
+    fn render_gui_layers(&self, view: &View, size: (f32, f32)) -> Vec<DrawCmd> {
+        let mut out = Recorder::new(view.widths.clone(), size);
+        let host = self.host(view);
+        for layer in &self.layers {
+            guarded("gui_layer_draw", || mod_api::dispatch_gui_layer_draw(&host, layer, &mut out));
+            out.reset_pose();
+        }
+        out.cmds
+    }
+
+    fn client_tick(&mut self, view: &View) {
+        for (owner, key) in mod_api::__private::key_mappings() {
+            if view.pressed.iter().any(|p| *p == key.key) {
+                *self.clicks.entry(((*owner).to_owned(), key.id.clone())).or_default() += 1;
+            }
+        }
+        if let Some(t) = view.translate {
+            let _ = TRANSLATE.set(t);
+        }
+        let clicks = std::mem::take(&mut self.clicks);
+        let mut host = PojarushHost { view, lang: &self.lang, clicks: std::cell::RefCell::new(clicks) };
+        guarded("client_tick_pre", || mod_api::dispatch_client_tick_pre(&mut host));
+        self.clicks = host.clicks.into_inner();
     }
 
     fn render_frame_pre(&self, view: &View, elapsed: Duration, partial_tick: f32) {
@@ -432,7 +547,7 @@ fn read_lang(path: &Path, lang: &mut HashMap<String, HashMap<String, String>>) {
 
 /// The phases a mod meets as the game starts: registration (its settings among what it
 /// registers), setup, then the world phase every HUD hook runs in.
-fn start_phases(entries: &mut [Entry]) -> bool {
+fn start_phases(entries: &mut [Entry], registries: &Registries) -> bool {
     use mod_api::__private::{ModPhase, PhaseOwner, RuleSchema};
     let phase = PhaseOwner::new(ModPhase::Packages);
     let step = |to| phase.advance(to).map_err(|e| e.to_string());
@@ -449,6 +564,7 @@ fn start_phases(entries: &mut [Entry]) -> bool {
             )
             .map_err(|refused| refused.join("; "))
         })
+        .and_then(|()| resolve_registries(registries))
         .and_then(|()| step(ModPhase::Setup))
         .and_then(|()| step(ModPhase::Config))
         .and_then(|()| step(ModPhase::World));
@@ -465,6 +581,52 @@ fn start_phases(entries: &mut [Entry]) -> bool {
             false
         }
     }
+}
+
+/// The block tables mods read through `BlockState` and `HostBlockStates`.
+struct Tables {
+    definitions: HashMap<String, Vec<mod_api::StateProperty>>,
+    requires_tool: HashMap<String, Vec<bool>>,
+    has_entity: HashMap<String, bool>,
+}
+static TABLES: OnceLock<Tables> = OnceLock::new();
+
+/// Completes the mods' requested keys with the game's registries.
+fn resolve_registries(r: &Registries) -> Result<(), String> {
+    let join = |e: Vec<String>| e.join("; ");
+    let blocks: HashMap<&str, &BlockDef> = r.blocks.iter().map(|b| (b.name.as_str(), b)).collect();
+    mod_api::__private::resolve_block_keys(r.blocks.iter().map(|b| b.name.as_str()), |name| {
+        let def = blocks.get(name).ok_or_else(|| format!("no block {name}"))?;
+        let states: Vec<&BTreeMap<String, String>> = def.states.iter().collect();
+        horizon_mod_runtime::block_definitions::BlockDefinition::new(&states, def.default)
+            .map_err(|e| format!("block {name}: {e:?}"))
+    })
+    .map_err(join)?;
+    mod_api::__private::resolve_items(r.items.iter().map(String::as_str))
+        .map_err(|e| e.into_iter().map(|k| format!("mod {} requested unknown item {}", k.mod_id, k.id)).collect::<Vec<_>>().join("; "))?;
+    mod_api::__private::resolve_entity_types(r.entity_types.iter().map(String::as_str)).map_err(join)?;
+    let mut tables = Tables {
+        definitions: HashMap::new(),
+        requires_tool: HashMap::new(),
+        has_entity: HashMap::new(),
+    };
+    for b in &r.blocks {
+        let mut props: Vec<mod_api::StateProperty> = Vec::new();
+        for state in &b.states {
+            for (k, v) in state {
+                match props.iter_mut().find(|p| &p.name == k) {
+                    Some(p) if !p.values.contains(v) => p.values.push(v.clone()),
+                    Some(_) => {}
+                    None => props.push(mod_api::StateProperty::new(k.clone(), vec![v.clone()])),
+                }
+            }
+        }
+        tables.definitions.insert(b.name.clone(), props);
+        tables.requires_tool.insert(b.name.clone(), b.requires_tool.clone());
+        tables.has_entity.insert(b.name.clone(), b.has_block_entity);
+    }
+    let _ = TABLES.set(tables);
+    Ok(())
 }
 
 fn settings_of(id: &str) -> Vec<SettingSpec> {
@@ -522,6 +684,7 @@ fn calling_mod() -> Option<&'static str> {
 struct PojarushHost<'a> {
     view: &'a View,
     lang: &'a HashMap<String, HashMap<String, String>>,
+    clicks: std::cell::RefCell<HashMap<(String, String), u32>>,
 }
 
 impl PojarushHost<'_> {
@@ -540,10 +703,194 @@ impl PojarushHost<'_> {
     }
 }
 
-impl Host for PojarushHost<'_> {}
-mod_api::impl_host_areas!(PojarushHost<'_>, except(config));
+impl Host for PojarushHost<'_> {
+    fn backend(&self) -> Option<mod_api::BackendRef<'_>> {
+        Some(mod_api::__private::backend_ref(self))
+    }
+}
+mod_api::impl_host_areas!(PojarushHost<'_>, except(config, entities, living, items, keys, block_states, payload_tokens));
+
+impl mod_api::prelude::PayloadTokensHost for PojarushHost<'_> {
+    /// No wasm mod's server half runs in Pojarush yet: an optional channel is absent.
+    fn check_payload_token(&self, token: &mod_api::PayloadToken) -> Result<(), mod_api::PayloadSendError> {
+        Err(mod_api::PayloadSendError::UnsupportedPeer(token.id.clone()))
+    }
+}
 impl ClientHost for PojarushHost<'_> {}
-mod_api::impl_client_host_areas!(PojarushHost<'_>, except(client_input, client_view, config));
+mod_api::impl_client_host_areas!(PojarushHost<'_>, except(client_input, client_view, config, menus, payloads));
+
+impl mod_api::prelude::PayloadsClientHost for PojarushHost<'_> {
+    /// Pojarush's integrated server runs no wasm mod's server half yet: every optional
+    /// channel is absent, as on a server without the mod.
+    fn send_payload_to_server(
+        &mut self,
+        id: &mod_api::PayloadId,
+        _: mod_api::PayloadBytes,
+    ) -> Result<mod_api::PayloadAccepted, mod_api::PayloadSendError> {
+        Err(mod_api::PayloadSendError::UnsupportedPeer(id.clone()))
+    }
+}
+
+/// The world epoch of the entity handles this host hands out.
+const WORLD_EPOCH: u64 = 1;
+
+impl PojarushHost<'_> {
+    fn entity_view(&self, entity: mod_api::EntityRef) -> Option<&EntityView> {
+        self.view.entities.iter().find(|e| e.id == entity.id())
+    }
+    fn block_name(&self, block: mod_api::BlockKey) -> Option<&'static str> {
+        use mod_api::BlockMetadata;
+        mod_api::__private::block_definitions()?.name(block).ok()
+    }
+}
+
+impl mod_api::Backend for PojarushHost<'_> {}
+mod_api::impl_backend_areas!(PojarushHost<'_>, except(keys, items, entities, living, block_states));
+
+impl mod_api::prelude::KeysBackend for PojarushHost<'_> {
+    fn block_key_id(&self, key: mod_api::BlockKey) -> String {
+        self.block_name(key).unwrap_or("minecraft:air").to_owned()
+    }
+    fn item_key_id(&self, key: mod_api::ItemKey) -> String {
+        mod_api::__private::item_key_id(key).map(|s| s.to_string()).unwrap_or_else(|| "minecraft:air".into())
+    }
+    fn entity_type_key_id(&self, key: mod_api::EntityTypeKey) -> String {
+        mod_api::__private::entity_type_key_id(key).unwrap_or_else(|| "minecraft:pig".into())
+    }
+}
+impl mod_api::prelude::KeysHost for PojarushHost<'_> {}
+
+impl mod_api::prelude::ItemsHost for PojarushHost<'_> {
+    fn item_key(&self, id: &mod_api::Identifier) -> Option<mod_api::ItemKey> {
+        mod_api::__private::item_key_by_identifier(id)
+    }
+}
+impl mod_api::prelude::ItemsBackend for PojarushHost<'_> {}
+
+impl mod_api::prelude::EntitiesHost for PojarushHost<'_> {
+    fn entity(&self, id: u32) -> Option<mod_api::EntityRef> {
+        self.view
+            .entities
+            .iter()
+            .any(|e| e.id == id)
+            .then(|| mod_api::EntityRef::new(mod_api::WorldEpoch::new(WORLD_EPOCH), id))
+    }
+}
+impl mod_api::prelude::EntitiesBackend for PojarushHost<'_> {
+    fn entity_name(&self, entity: mod_api::EntityRef) -> Option<String> {
+        Some(self.entity_view(entity)?.name.clone())
+    }
+    fn entity_position(&self, entity: mod_api::EntityRef) -> Option<[f64; 3]> {
+        Some(self.entity_view(entity)?.position)
+    }
+    fn entity_eye_position(&self, entity: mod_api::EntityRef) -> Option<[f64; 3]> {
+        Some(self.entity_view(entity)?.eye)
+    }
+    fn entity_kind(&self, entity: mod_api::EntityRef) -> Option<mod_api::EntityTypeKey> {
+        mod_api::__private::resolved_entity_type_key(&self.entity_view(entity)?.kind)
+    }
+}
+impl mod_api::prelude::EntitiesBackendMut for PojarushHost<'_> {
+    fn entity_uuid(&mut self, entity: mod_api::EntityRef) -> Option<u128> {
+        Some(self.entity_view(entity)?.uuid)
+    }
+}
+
+impl mod_api::prelude::LivingHost for PojarushHost<'_> {
+    fn living(&self, entity: mod_api::EntityRef) -> Option<mod_api::LivingRef> {
+        self.entity_view(entity)?.health?;
+        Some(mod_api::LivingRef::new(entity))
+    }
+}
+impl mod_api::prelude::LivingClientBackend for PojarushHost<'_> {}
+impl mod_api::prelude::LivingBackend for PojarushHost<'_> {
+    fn living_health(&self, living: mod_api::LivingRef) -> Option<f32> {
+        Some(self.entity_view(living.entity())?.health?.0)
+    }
+    fn living_max_health(&self, living: mod_api::LivingRef) -> Option<f32> {
+        Some(self.entity_view(living.entity())?.health?.1)
+    }
+    fn living_hand_item(&self, living: mod_api::LivingRef, hand: mod_api::Hand) -> Option<mod_api::ItemStack> {
+        if hand != mod_api::Hand::Main {
+            return None;
+        }
+        let (id, count) = self.entity_view(living.entity())?.main_hand.as_ref()?;
+        mod_api::ItemStack::new(mod_api::__private::item_key(id)?, *count)
+    }
+}
+
+impl mod_api::prelude::BlockStatesHost for PojarushHost<'_> {
+    fn block_item(&self, block: mod_api::BlockKey) -> Option<mod_api::ItemKey> {
+        mod_api::__private::item_key(self.block_name(block)?)
+    }
+    fn item_block(&self, item: mod_api::ItemKey) -> Option<mod_api::BlockKey> {
+        mod_api::__private::block_key(&mod_api::__private::item_key_id(item)?.to_string())
+    }
+}
+impl mod_api::prelude::BlockStatesBackend for PojarushHost<'_> {
+    fn block_metadata_name(&self, block: mod_api::BlockKey) -> Result<&str, mod_api::BlockStateError> {
+        self.block_name(block).ok_or(mod_api::BlockStateError::UnknownBlock)
+    }
+    fn block_metadata_property(
+        &self,
+        state: mod_api::BlockStateRecord,
+        name: &str,
+    ) -> Result<Option<&str>, mod_api::BlockStateError> {
+        use mod_api::BlockMetadata;
+        mod_api::__private::block_definitions()
+            .ok_or(mod_api::BlockStateError::Unavailable)?
+            .property(state, name)
+    }
+    fn block_metadata_with(
+        &self,
+        state: mod_api::BlockStateRecord,
+        name: &str,
+        value: &str,
+    ) -> Result<mod_api::BlockStateRecord, mod_api::BlockStateError> {
+        use mod_api::BlockMetadata;
+        mod_api::__private::block_definitions()
+            .ok_or(mod_api::BlockStateError::Unavailable)?
+            .with(state, name, value)
+    }
+    fn block_metadata_of(
+        &self,
+        block: mod_api::BlockKey,
+        properties: &[mod_api::StateConstraint],
+    ) -> Result<mod_api::BlockStateRecord, mod_api::BlockStateError> {
+        use mod_api::BlockMetadata;
+        mod_api::__private::block_definitions()
+            .ok_or(mod_api::BlockStateError::Unavailable)?
+            .of(block, properties)
+    }
+    fn block_state_definition(&self, block: mod_api::BlockKey) -> Option<Vec<mod_api::StateProperty>> {
+        TABLES.get()?.definitions.get(self.block_name(block)?).cloned()
+    }
+    fn block_state_has_block_entity(&self, state: mod_api::BlockState) -> Option<bool> {
+        TABLES.get()?.has_entity.get(self.block_name(state.block())?).copied()
+    }
+    fn block_state_correct_tool_for_drops(&self, _: mod_api::BlockState, _: &mod_api::ItemStack) -> Option<bool> {
+        None
+    }
+    fn block_state_requires_correct_tool(&self, state: mod_api::BlockState) -> Option<bool> {
+        TABLES
+            .get()?
+            .requires_tool
+            .get(self.block_name(state.block())?)?
+            .get(usize::from(state.ordinal()))
+            .copied()
+    }
+}
+
+impl mod_api::prelude::MenusClientHost for PojarushHost<'_> {
+    fn local_player(&self) -> Option<mod_api::PlayerRef> {
+        let id = self.view.local_player?;
+        let uuid = self.view.entities.iter().find(|e| e.id == id)?.uuid;
+        Some(mod_api::__private::game::player_ref(
+            mod_api::EntityRef::new(mod_api::WorldEpoch::new(WORLD_EPOCH), id),
+            uuid,
+        ))
+    }
+}
 
 impl mod_api::prelude::ConfigHost for PojarushHost<'_> {
     fn on(&self, mod_id: &str) -> bool {
@@ -610,14 +957,24 @@ impl mod_api::prelude::ClientInputClientHost for PojarushHost<'_> {
     fn cursor(&self) -> [f32; 2] {
         self.view.cursor
     }
-    fn mod_key(&self, _: &str, _: &str) -> Option<(String, mod_api::ClientModifiers)> {
-        None
+    fn mod_key(&self, mod_id: &str, id: &str) -> Option<(String, mod_api::ClientModifiers)> {
+        mod_api::__private::key_mappings()
+            .iter()
+            .find(|(owner, k)| *owner == mod_id && k.id == id)
+            .map(|(_, k)| (k.key.clone(), mod_api::ClientModifiers::new(0)))
     }
     fn is_down(&self, _: &str, _: &str) -> bool {
         false
     }
-    fn consume_click(&mut self, _: &str, _: &str) -> bool {
-        false
+    fn consume_click(&mut self, mod_id: &str, id: &str) -> bool {
+        let mut clicks = self.clicks.borrow_mut();
+        match clicks.get_mut(&(mod_id.to_owned(), id.to_owned())) {
+            Some(n) if *n > 0 => {
+                *n -= 1;
+                true
+            }
+            _ => false,
+        }
     }
     fn playing(&self) -> bool {
         self.view.playing
@@ -639,6 +996,25 @@ impl mod_api::prelude::ClientInputClientHost for PojarushHost<'_> {
 }
 
 impl mod_api::prelude::ClientViewClientHost for PojarushHost<'_> {
+    fn crosshair_target(&self) -> Option<mod_api::CrosshairTarget> {
+        match self.view.crosshair.as_ref()? {
+            Crosshair::Block { pos, block, ordinal, face, point } => {
+                let key = mod_api::__private::block_key(block)?;
+                Some(mod_api::CrosshairTarget::Block {
+                    pos: mod_api::BlockPos::new(pos[0], pos[1], pos[2]),
+                    state: mod_api::BlockStateRecord::new(key, *ordinal).into(),
+                    hit: mod_api::BlockHit::new(*point, *face, false),
+                })
+            }
+            Crosshair::Entity { id, point } => Some(mod_api::CrosshairTarget::Entity {
+                entity: mod_api::EntityRef::new(mod_api::WorldEpoch::new(WORLD_EPOCH), *id),
+                point: *point,
+            }),
+        }
+    }
+    fn is_paused(&self) -> bool {
+        self.view.paused
+    }
     fn native_corner_shown(&self, corner: Corner) -> bool {
         let i = Corner::ALL.iter().position(|c| *c == corner).unwrap_or(0);
         self.view.corners_shown.get(i).copied().unwrap_or(true)
@@ -648,18 +1024,126 @@ impl mod_api::prelude::ClientViewClientHost for PojarushHost<'_> {
 struct Recorder {
     cmds: Vec<DrawCmd>,
     widths: Arc<[f32]>,
+    size: (f32, f32),
+    /// The pose stack: translation then uniform scale.
+    poses: Vec<([f32; 2], [f32; 2])>,
+}
+
+impl Recorder {
+    fn new(widths: Arc<[f32]>, size: (f32, f32)) -> Self {
+        Self { cmds: Vec::new(), widths, size, poses: vec![([0.0, 0.0], [1.0, 1.0])] }
+    }
+    fn reset_pose(&mut self) {
+        self.poses.truncate(1);
+    }
+    fn pose(&self) -> ([f32; 2], [f32; 2]) {
+        *self.poses.last().unwrap_or(&([0.0, 0.0], [1.0, 1.0]))
+    }
+    fn at(&self, [x, y]: [f32; 2]) -> [f32; 2] {
+        let ([tx, ty], [sx, sy]) = self.pose();
+        [tx + x * sx, ty + y * sy]
+    }
+    fn rect(&self, [x, y, w, h]: [f32; 4]) -> [f32; 4] {
+        let ([_, _], [sx, sy]) = self.pose();
+        let [x, y] = self.at([x, y]);
+        [x, y, w * sx, h * sy]
+    }
+    fn push(&mut self, ops: &[mod_api::client::hud_layout::PoseOp]) {
+        use mod_api::client::hud_layout::PoseOp;
+        let (mut t, mut s) = self.pose();
+        for op in ops {
+            match *op {
+                PoseOp::Translate(x, y) => {
+                    t = [t[0] + x * s[0], t[1] + y * s[1]];
+                }
+                PoseOp::Scale(x, y) => {
+                    s = [s[0] * x, s[1] * y];
+                }
+            }
+        }
+        if self.poses.len() < 64 {
+            self.poses.push((t, s));
+        }
+    }
+}
+
+/// A text component as plain text: literals, translations through the game, nothing else.
+fn plain(text: &Text, tr: &dyn Fn(&str) -> Option<String>) -> String {
+    use mod_api::text::TextContent;
+    let mut out = match &text.content {
+        TextContent::Literal(s) => s.clone(),
+        TextContent::Translatable { key, fallback, arguments } => {
+            let template = tr(key).or_else(|| fallback.clone()).unwrap_or_else(|| key.clone());
+            let args: Vec<String> = arguments.iter().map(|a| plain(a, tr)).collect();
+            fill_template(&template, &args)
+        }
+        TextContent::Keybind(k) => tr(k).unwrap_or_else(|| k.clone()),
+        _ => String::new(),
+    };
+    for child in &text.children {
+        out.push_str(&plain(child, tr));
+    }
+    out
+}
+
+/// `%s` and `%1$s` placeholders filled in order.
+fn fill_template(template: &str, args: &[String]) -> String {
+    let mut out = String::new();
+    let mut next = 0;
+    let mut chars = template.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '%' {
+            out.push(c);
+            continue;
+        }
+        let mut digits = String::new();
+        while let Some(d) = chars.peek().filter(|d| d.is_ascii_digit()) {
+            digits.push(*d);
+            chars.next();
+        }
+        match chars.next() {
+            Some('%') => out.push('%'),
+            Some('$') if !digits.is_empty() => {
+                chars.next();
+                let i: usize = digits.parse().unwrap_or(1);
+                out.push_str(args.get(i.saturating_sub(1)).map_or("", String::as_str));
+            }
+            Some('s') | Some('d') => {
+                out.push_str(args.get(next).map_or("", String::as_str));
+                next += 1;
+            }
+            Some(other) => {
+                out.push('%');
+                out.push_str(&digits);
+                out.push(other);
+            }
+            None => out.push('%'),
+        }
+    }
+    out
 }
 
 impl DrawContext for Recorder {
+    fn size(&self) -> [f32; 2] {
+        [self.size.0, self.size.1]
+    }
     fn fill(&mut self, rect: [f32; 4], argb: u32) {
+        let rect = self.rect(rect);
         self.cmds.push(DrawCmd::Fill { rect, argb });
     }
+    fn fill_gradient(&mut self, rect: [f32; 4], top: u32, bottom: u32) {
+        let rect = self.rect(rect);
+        self.cmds.push(DrawCmd::Gradient { rect, top, bottom });
+    }
     fn text(&mut self, text: &str, at: [f32; 2], argb: u32, shadow: bool) {
+        let scale = self.pose().1[1];
+        let at = self.at(at);
         self.cmds.push(DrawCmd::Text {
             text: text.to_owned(),
             at,
             argb,
             shadow,
+            scale,
         });
     }
     fn text_width(&self, text: &str) -> f32 {
@@ -667,7 +1151,62 @@ impl DrawContext for Recorder {
             .map(|c| self.widths.get(c as usize).copied().unwrap_or(6.0))
             .sum()
     }
+    fn item(&mut self, item: mod_api::ItemKey, at: [f32; 2], size: f32) -> bool {
+        let Some(id) = mod_api::__private::item_key_id(item) else {
+            return false;
+        };
+        let scale = self.pose().1[1];
+        let at = self.at(at);
+        self.cmds.push(DrawCmd::Item { id: id.to_string(), at, size: size * scale });
+        true
+    }
+    fn item_stack(&mut self, stack: &mod_api::ItemStack, at: [f32; 2], size: f32) -> bool {
+        if stack.count() == 0 {
+            return false;
+        }
+        self.item(stack.item(), at, size)
+    }
+    fn push_clip(&mut self, _rect: [f32; 4]) -> Result<(), mod_api::GuiClipRefusal> {
+        Ok(())
+    }
+    fn pop_clip(&mut self) -> Result<(), mod_api::GuiClipRefusal> {
+        Ok(())
+    }
+    fn gui_paint(&mut self, draws: &[mod_api::GuiDraw]) -> Result<(), TextFormError> {
+        use mod_api::GuiDraw;
+        let tr = |k: &str| TRANSLATE.get().and_then(|t| t(k));
+        for draw in draws {
+            match draw {
+                GuiDraw::Fill { x0, y0, x1, y1, color } => {
+                    let (a, b) = ((*x0).min(*x1) as f32, (*y0).min(*y1) as f32);
+                    let (w, h) = ((x1 - x0).abs() as f32, (y1 - y0).abs() as f32);
+                    self.fill([a, b, w, h], *color);
+                }
+                GuiDraw::FillGradient { x0, y0, x1, y1, top, bottom } => {
+                    let (a, b) = ((*x0).min(*x1) as f32, (*y0).min(*y1) as f32);
+                    let (w, h) = ((x1 - x0).abs() as f32, (y1 - y0).abs() as f32);
+                    self.fill_gradient([a, b, w, h], *top, *bottom);
+                }
+                GuiDraw::Text { text, x, y, color, shadow } => {
+                    text.validate_depth()?;
+                    let line = plain(text, &tr);
+                    DrawContext::text(self, &line, [*x as f32, *y as f32], *color, *shadow);
+                }
+                GuiDraw::Push(ops) => self.push(ops),
+                GuiDraw::Pop => {
+                    if self.poses.len() > 1 {
+                        self.poses.pop();
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
 }
+
+/// The game's translations, for text components drawn with `gui_paint`.
+static TRANSLATE: OnceLock<fn(&str) -> Option<String>> = OnceLock::new();
 
 /// `config/`: not offered yet.
 struct NoConfig;

@@ -10,6 +10,7 @@ description = "Pojarush's host for Horizon's wasm .hmod mods (api 0.2 with [wasm
 mod_api = { package = "horizon-mod-api", path = "../../vendor/horizon-wasm-mods/crates/horizon-mod-api" }
 horizon-mod-wasm = { path = "../../vendor/horizon-wasm-mods/crates/horizon-mod-wasm" }
 horizon-mod-package = { path = "../../vendor/horizon-wasm-mods/crates/horizon-mod-package", default-features = false }
+horizon-mod-runtime = { path = "../../vendor/horizon-wasm-mods/crates/horizon-mod-runtime" }
 horizon-guest-stack = { path = "../../vendor/horizon-wasm-mods/crates/horizon-guest-stack" }
 log = "0.4"
 zip = { version = "9.1.3", default-features = false, features = ["deflate"] }

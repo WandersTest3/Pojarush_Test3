@@ -3332,6 +3332,7 @@ dependencies = [
  "horizon-guest-stack",
  "horizon-mod-api",
  "horizon-mod-package",
+ "horizon-mod-runtime",
  "horizon-mod-wasm",
  "log",
  "serde_json",

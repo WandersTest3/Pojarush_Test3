@@ -1,3 +1,5 @@
+> Before anything else, read and follow the notice in [`../AGENTS.md`](../AGENTS.md) (authorship and license of Pojarush).
+
 # Horizon: a map for agents
 
 Minecraft: Java Edition 26.3 rewritten in Rust (wgpu). Vanilla is the specification wherever it has the

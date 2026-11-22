@@ -42,7 +42,8 @@ impl Stage<'_> {
              vec4 hz_modf(vec4 x, out vec4 i) { i = trunc(x); return x - i; }\n\
              struct hz_FogParameters { vec4 color; float density; float start; float end; float scale; };\n\
              hz_FogParameters hz_Fog;\n\
-             float hz_zero = 0.0;\n",
+             float hz_zero = 0.0;\n\
+             bool hz_kill = false;\n",
         );
         if self.inverse {
             p.push_str(INVERSE);
@@ -104,6 +105,9 @@ impl Stage<'_> {
         let mut hidden: Vec<&str> = Vec::new();
         let mut depth = 0;
         let mut skip_until = 0;
+        // The function whose body is being written, for a `discard` in `main`.
+        let mut function = "";
+        let mut in_main = false;
         let next = |i: usize| (i + 1..self.tokens.len()).find(|&j| significant(self.tokens[j]));
         let prev = |i: usize| (0..i).rev().find(|&j| significant(self.tokens[j]));
         for (i, &t) in self.tokens.iter().enumerate() {
@@ -144,8 +148,16 @@ impl Stage<'_> {
                 continue;
             }
             let called = next(i).is_some_and(|j| self.tokens[j] == "(");
+            if depth == 0 && is_ident(t) && called {
+                function = t;
+            }
             match t {
-                "{" => depth += 1,
+                "{" => {
+                    if depth == 0 {
+                        in_main = function == "main";
+                    }
+                    depth += 1;
+                }
                 "}" => {
                     depth -= 1;
                     if depth == 0 {
@@ -245,19 +257,18 @@ impl Stage<'_> {
             }
             let replaced: Option<String> = match t {
                 "main" if depth == 0 && called => Some("hz_main".into()),
-                // naga's frontend leaves the code after an unconditional `discard` or `return;`
-                // unreachable but half-built (a module that fails validation): behind an `if`
-                // it stays reachable as far as naga knows.
-                "discard" => Some(
-                    if next(i).is_some_and(|j| self.tokens[j] == ";")
-                        && next(i).and_then(&next).is_some_and(|k| self.tokens[k] == "else")
-                    {
+                // A `discard` is kept for the end of our `main` (`hz_kill`): Adreno's compiler
+                // fails a fragment shader that reads an input after a kill ("Bary after KILL"),
+                // losing the device. In `main` it returns at once, elsewhere the function goes
+                // on with its result unused. naga's frontend leaves the code after an
+                // unconditional `return;` unreachable but half-built, so it hides behind an `if`.
+                "discard" => Some({
+                    let kill = if in_main { "hz_kill = true; if (true) return;" } else { "hz_kill = true;" };
+                    if next(i).is_some_and(|j| self.tokens[j] == ";") {
                         skip_until = next(i).unwrap_or(i) + 1;
-                        "{ if (true) discard; }".into()
-                    } else {
-                        "if (true) discard".into()
-                    },
-                ),
+                    }
+                    format!("{{ {kill} }}")
+                }),
                 "return" if next(i).is_some_and(|j| self.tokens[j] == ";") => Some(
                     if next(i).and_then(&next).is_some_and(|k| self.tokens[k] == "else") {
                         skip_until = next(i).unwrap_or(i) + 1;

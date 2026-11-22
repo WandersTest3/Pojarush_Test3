@@ -45,6 +45,23 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.31",
+            listOf(
+                "Content .hmod mods with Horizon's current block schema load (collision_shapes, tuple shapes, state_light, own state properties), such as Simply Light.",
+                "Horizon wasm .hmod mods: GUI layers, client tick, crosshair target, block states, items, entities and the local player, such as Jade's overlay.",
+                "Compiled wasm mods are cached in the app's private folder, so only the first start compiles them.",
+                "Fresh Animations: sheep wool and the witch's hat and robe follow the animated model.",
+                "Shader packs: a discard is deferred to the end of the fragment shader, avoiding the Adreno driver crash (Solas' water).",
+            ),
+            listOf(
+                "Mods .hmod de conteúdo com o schema atual de blocos do Horizon carregam (collision_shapes, shapes por tupla, state_light, propriedades próprias), como o Simply Light.",
+                "Mods .hmod wasm do Horizon: camadas de GUI, tick do cliente, alvo da mira, estados de bloco, itens, entidades e o jogador local, como o overlay do Jade.",
+                "Os mods wasm compilados ficam em cache na pasta privada do app, então só a primeira abertura compila.",
+                "Fresh Animations: a lã da ovelha e o chapéu e a roupa da bruxa seguem o modelo animado.",
+                "Shaders: o discard é adiado para o fim do fragment shader, evitando o crash do driver Adreno (água do Solas).",
+            ),
+        ),
+        Entry(
             "1.11.30",
             listOf(
                 "Fresh Animations: layers drawn on a custom body, such as the iron golem's cracks, now animate with it.",

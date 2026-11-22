@@ -1505,10 +1505,18 @@ fn render_visible(
         let same_model = custom_body
             && layer.model.strip_suffix("#main").unwrap_or(&layer.model)
                 == model_key.strip_suffix("#main").unwrap_or(&model_key);
+        let vanilla_part = if same_model { None } else { m.kind.layer(&layer.model).cloned() };
+        // A layer with a jem of its own (Fresh Animations' `sheep_wool`): its model and
+        // animations, so it moves with the body's custom model.
+        let layer_cem = vanilla_part.as_ref().and_then(|p| {
+            super::cem::layer_id(&layer.model).and_then(|id| super::cem::get(&id, p))
+        });
         let Some(part) = (if same_model {
             Some(model.clone())
+        } else if let Some((custom, _)) = &layer_cem {
+            Some(custom.clone())
         } else {
-            m.kind.layer(&layer.model).cloned()
+            vanilla_part
         }) else {
             continue;
         };
@@ -1518,6 +1526,9 @@ fn render_visible(
         if !same_model {
             layer_poses.reset(&part);
             anim::setup(m, &s, &mut layer_poses, &data.animations);
+            if let Some((_, cem)) = &layer_cem {
+                cem.animate(&cem_inputs(m, &s), &mut layer_poses);
+            }
         }
         if !same_model
             && matches!(m.species(), Species::Villager | Species::ZombieVillager)

@@ -484,6 +484,9 @@ fn translate(
         writeln!(fragment_main, "    {name} = hz_init_{name}();").unwrap();
     }
     fragment_main.push_str("    hz_main();\n");
+    if f.tokens.iter().any(|t| *t == "discard") {
+        fragment_main.push_str("    if (hz_kill) { discard; }\n");
+    }
     for copy in &f.out_copies {
         writeln!(fragment_main, "    {copy}").unwrap();
     }

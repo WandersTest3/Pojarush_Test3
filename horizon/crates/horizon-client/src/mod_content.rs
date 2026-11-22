@@ -321,6 +321,13 @@ struct NewBlock<'a> {
     /// The template's item, if it has one.
     item: Option<String>,
     shapes: Option<Vec<VoxelShape>>,
+    /// Collision boxes per state, when they are not the outline's.
+    collision: Option<Vec<VoxelShape>>,
+    /// Emission per state (`state_light`).
+    light: Option<Vec<u8>>,
+    /// The block's own state properties, each at its default value: every
+    /// state carries them (the template's behaviour never changes them).
+    own: Vec<(String, String)>,
     default: u32,
 }
 /// An item being added (declared, or a block's).
@@ -411,31 +418,51 @@ impl<'a> Plan<'a> {
                 let states = range(&decl.template).ok_or_else(|| {
                     format!("{}: template {} is not a block", decl.id, decl.template)
                 })?;
-                let shapes = if let Some(spec) = &decl.shapes {
-                    let Some(J::Arr(rows)) = facts.get("states") else {
-                        unreachable!()
+                let Some(J::Arr(state_rows)) = facts.get("states") else {
+                    unreachable!()
+                };
+                let own: Vec<(String, String)> = decl
+                    .state_properties
+                    .iter()
+                    .map(|(name, prop)| {
+                        let value = decl
+                            .default_state
+                            .get(name)
+                            .cloned()
+                            .unwrap_or_else(|| prop.values()[0].to_owned());
+                        (name.clone(), value)
+                    })
+                    .collect();
+                for (name, value) in &own {
+                    if !decl.state_properties[name].values().contains(&value.as_str()) {
+                        return Err(format!("{}: {name}={value} is not a value it declares", decl.id).into());
+                    }
+                }
+                let lookup = |id: u32, name: &str| -> Option<String> {
+                    if let Some((_, v)) = own.iter().find(|(n, _)| n == name) {
+                        return Some(v.clone());
+                    }
+                    let J::Arr(row) = &state_rows[id as usize] else {
+                        return None;
                     };
-                    let mut used = BTreeSet::new();
+                    match row.get(4)?.get("properties")?.get(name)? {
+                        J::Str(v) => Some(v.clone()),
+                        _ => None,
+                    }
+                };
+                let per_state = |spec: &horizon_mods::content::BlockShapes, label: &str| -> Result<Vec<VoxelShape>> {
                     let mut out = Vec::new();
                     for id in states.clone() {
-                        let J::Arr(row) = &rows[id as usize] else {
-                            unreachable!()
-                        };
-                        let Some(J::Str(value)) = row
-                            .get(4)
-                            .and_then(|x| x.get("properties"))
-                            .and_then(|x| x.get(&spec.property))
-                        else {
-                            return Err(format!(
-                                "{}: template state lacks property {}",
-                                decl.id, spec.property
-                            )
-                            .into());
-                        };
-                        let boxes = spec.values.get(value).ok_or_else(|| {
-                            format!("{}: no shape for {}={value}", decl.id, spec.property)
-                        })?;
-                        used.insert(value.as_str());
+                        let values: Vec<(String, Option<String>)> = spec
+                            .property_names()
+                            .iter()
+                            .map(|n| ((*n).to_owned(), lookup(id, n)))
+                            .collect();
+                        let boxes = spec
+                            .select(|n| values.iter().find(|(k, _)| k == n).and_then(|(_, v)| v.as_deref()))
+                            .ok_or_else(|| {
+                                format!("{}: no {label} for state {:?} and no default", decl.id, values)
+                            })?;
                         let mut shape = VoxelShape::empty();
                         for b in boxes {
                             let part = VoxelShape::from_box(Aabb::new(
@@ -446,24 +473,47 @@ impl<'a> Plan<'a> {
                         }
                         out.push(shape);
                     }
-                    if used.len() != spec.values.len() {
-                        return Err(format!(
-                            "{}: shape values include an unknown {} value",
-                            decl.id, spec.property
-                        )
-                        .into());
-                    }
-                    Some(out)
-                } else {
-                    None
+                    Ok(out)
                 };
+                let shapes = decl.shapes.as_ref().map(|spec| per_state(spec, "shapes")).transpose()?;
+                let collision = decl
+                    .collision_shapes
+                    .as_ref()
+                    .map(|spec| per_state(spec, "collision_shapes"))
+                    .transpose()?;
+                let light = decl
+                    .state_light
+                    .as_ref()
+                    .map(|spec| {
+                        states
+                            .clone()
+                            .map(|id| {
+                                let values: Vec<(String, Option<String>)> = spec
+                                    .property_names()
+                                    .iter()
+                                    .map(|n| ((*n).to_owned(), lookup(id, n)))
+                                    .collect();
+                                spec.select(|n| values.iter().find(|(k, _)| k == n).and_then(|(_, v)| v.as_deref()))
+                                    .copied()
+                                    .or(decl.properties.light)
+                                    .unwrap_or(0)
+                            })
+                            .collect::<Vec<u8>>()
+                    });
+                if !decl.unapplied.is_empty() {
+                    log::warn!(
+                        "{}: {} not applied yet in Pojarush; the block loads without them",
+                        decl.id,
+                        decl.unapplied.join(", ")
+                    );
+                }
                 let mut default = *defaults.get(&decl.template).ok_or_else(|| {
                     format!(
                         "{}: template {} has no default state",
                         decl.id, decl.template
                     )
                 })?;
-                if !decl.default_state.is_empty() {
+                if decl.default_state.keys().any(|k| !decl.state_properties.contains_key(k)) {
                     let Some(J::Arr(rows)) = facts.get("states") else {
                         unreachable!()
                     };
@@ -477,6 +527,9 @@ impl<'a> Plan<'a> {
                         format!("{}: template default has no state properties", decl.id)
                     })?;
                     for (key, value) in &decl.default_state {
+                        if decl.state_properties.contains_key(key) {
+                            continue;
+                        }
                         if wanted.get(key).is_none() {
                             return Err(format!(
                                 "{}: unknown state property {key} on {}",
@@ -524,6 +577,9 @@ impl<'a> Plan<'a> {
                     rename,
                     item: None,
                     shapes,
+                    collision,
+                    light,
+                    own,
                     default,
                 });
             }
@@ -627,12 +683,29 @@ impl<'a> Plan<'a> {
                 for r in &renames {
                     row.rename(r, ids);
                 }
+                if !b.own.is_empty()
+                    && let J::Arr(cells) = &mut row
+                    && let Some(J::Obj(props)) = cells.get_mut(4).and_then(|c| c.get_mut("properties"))
+                {
+                    for (name, value) in &b.own {
+                        props.push((name.clone(), J::Str(value.clone())));
+                    }
+                }
                 if gameplay {
                     row.set("id", J::Num((b.rename.first + i as u32).into()));
                     if !b.decl.item {
                         row.set("item", J::Str("minecraft:air".into()));
                     }
                     self.override_gameplay(b, &mut row);
+                    if let Some(light) = &b.light {
+                        row.set("emission", J::Num(light[i].into()));
+                    }
+                    if let Some(collision) = &b.collision {
+                        row.set(
+                            "full_collision",
+                            J::Bool(!collision[i].join_is_not_empty(&VoxelShape::block(), ShapeOp::XOR)?),
+                        );
+                    }
                     if let Some(shapes) = &b.shapes {
                         let shape = &shapes[i];
                         let boxes = shape
@@ -656,10 +729,12 @@ impl<'a> Plan<'a> {
                             .collect();
                         row.set("outline", J::Arr(boxes));
                         row.set("outline_edges", J::Arr(shape_edges(shape)));
-                        row.set(
-                            "full_collision",
-                            J::Bool(!shape.join_is_not_empty(&VoxelShape::block(), ShapeOp::XOR)?),
-                        );
+                        if b.collision.is_none() {
+                            row.set(
+                                "full_collision",
+                                J::Bool(!shape.join_is_not_empty(&VoxelShape::block(), ShapeOp::XOR)?),
+                            );
+                        }
                     }
                 }
                 list.push(row);
@@ -874,7 +949,7 @@ impl<'a> Plan<'a> {
             return Err("collision table has no shapes".into());
         };
         for block in &self.blocks {
-            if let Some(shapes) = &block.shapes {
+            if let Some(shapes) = block.collision.as_ref().or(block.shapes.as_ref()) {
                 for (i, shape) in shapes.iter().enumerate() {
                     let id = entries.len() as i32;
                     entries.push(encode_shape(shape));

@@ -5944,6 +5944,7 @@ impl Game<'_> {
         self.update_totem_ready();
         self.tick_command_extras();
         self.tick_mods();
+        self.wasm_tick();
         self.native_tick();
         self.tick_server_mods();
         let camera_eye = self.camera_eye_height();

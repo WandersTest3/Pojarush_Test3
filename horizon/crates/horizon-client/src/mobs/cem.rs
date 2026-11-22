@@ -85,10 +85,19 @@ pub fn apply_type(root: &Path, id: &str, t: &super::MobType) -> usize {
     n
 }
 
-/// The jem name of a model layer (`cow_baby#main` is `minecraft:cow_baby`).
+/// The jem name of a model layer: `cow_baby#main` is `minecraft:cow_baby`, and another layer
+/// is its model and layer joined, as OptiFine names them (`sheep#wool` is `sheep_wool`,
+/// `sheep_baby#wool` is `sheep_baby_wool`).
 pub fn layer_id(key: &str) -> Option<String> {
-    let name = key.strip_suffix("#main")?;
-    (!name.is_empty() && !name.contains('#')).then(|| format!("minecraft:{name}"))
+    let (name, layer) = key.split_once('#')?;
+    if name.is_empty() || layer.is_empty() || layer.contains('#') {
+        return None;
+    }
+    Some(if layer == "main" {
+        format!("minecraft:{name}")
+    } else {
+        format!("minecraft:{name}_{layer}")
+    })
 }
 
 fn floats<const N: usize>(v: &Value, default: [f32; N]) -> [f32; N] {
@@ -105,6 +114,8 @@ fn floats<const N: usize>(v: &Value, default: [f32; N]) -> [f32; N] {
 fn vanilla_name(part: &str) -> &str {
     match part {
         "headwear" => "hat",
+        "headwear2" => "hat_rim",
+        "bodywear" => "jacket",
         "leg1" => "right_hind_leg",
         "leg2" => "left_hind_leg",
         "leg3" => "right_front_leg",

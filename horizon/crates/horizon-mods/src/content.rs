@@ -89,12 +89,91 @@ pub struct BlockProperties {
     pub sounds: Option<String>,
 }
 
-/// Per-state outline and collision boxes, selected by one state property.
+/// Values selected by one state property (`property`) or an ordered tuple of them
+/// (`properties`, keys `"a,b"`), with `default` for the states no key names.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct BlockShapes {
+pub struct StateValues<T> {
+    #[serde(default)]
     pub property: String,
-    pub values: BTreeMap<String, Vec<[f64; 6]>>,
+    #[serde(default)]
+    pub properties: Vec<String>,
+    #[serde(default = "BTreeMap::new")]
+    pub values: BTreeMap<String, T>,
+    #[serde(default = "Option::default")]
+    pub default: Option<T>,
+}
+
+impl<T> StateValues<T> {
+    /// The properties a key names, in key order.
+    pub fn property_names(&self) -> Vec<&str> {
+        if self.property.is_empty() {
+            self.properties.iter().map(String::as_str).collect()
+        } else {
+            vec![self.property.as_str()]
+        }
+    }
+
+    /// The value for a state, `value(name)` giving its property values.
+    pub fn select<'a>(&self, value: impl Fn(&str) -> Option<&'a str>) -> Option<&T> {
+        let names = self.property_names();
+        if !names.is_empty() {
+            let key: Option<Vec<&str>> = names.iter().map(|n| value(n)).collect();
+            if let Some(found) = key.and_then(|k| self.values.get(&k.join(","))) {
+                return Some(found);
+            }
+        }
+        self.default.as_ref()
+    }
+
+    fn check_selection(&self, label: &str) -> Result<(), String> {
+        let names = self.property_names();
+        if (!self.property.is_empty() && !self.properties.is_empty())
+            || names.iter().any(|name| !state_name(name))
+            || names.iter().collect::<BTreeSet<_>>().len() != names.len()
+            || (names.is_empty() && !self.values.is_empty())
+            || (self.values.is_empty() && self.default.is_none())
+        {
+            return Err(format!("{label} needs distinct properties and values, or a default"));
+        }
+        for key in self.values.keys() {
+            let values: Vec<_> = key.split(',').collect();
+            if values.len() != names.len() || values.iter().any(|value| !state_name(value)) {
+                return Err(format!("invalid {label} key {key:?}: one value per property"));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Per-state boxes in block pixels / 16, selected by state properties.
+pub type BlockShapes = StateValues<Vec<[f64; 6]>>;
+
+/// Light emitted by a state, 0 to 15.
+pub type StateLight = StateValues<u8>;
+
+/// The entity kinds a context shape applies to (`CollisionContext`).
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
+pub enum ShapeEntityKind {
+    Item,
+    Player,
+    Living,
+    Other,
+}
+
+fn check_shapes(shapes: &BlockShapes, label: &str) -> Result<(), String> {
+    shapes.check_selection(label)?;
+    for boxes in shapes.values.values().chain(shapes.default.iter()) {
+        if boxes.len() > 16
+            || boxes
+                .iter()
+                .any(|b| b.iter().any(|n| !n.is_finite()) || (0..3).any(|i| b[i] > b[i + 3]))
+        {
+            return Err(format!("{label}: at most 16 finite boxes with ordered bounds"));
+        }
+    }
+    Ok(())
 }
 
 /// A state property a block declares on its own, beside its template's.
@@ -135,6 +214,13 @@ struct BlockFile {
     #[serde(default)]
     properties: BlockProperties,
     shapes: Option<BlockShapes>,
+    collision_shapes: Option<BlockShapes>,
+    #[serde(default)]
+    outline_context_shapes: BTreeMap<ShapeEntityKind, BlockShapes>,
+    #[serde(default)]
+    collision_context_shapes: BTreeMap<ShapeEntityKind, BlockShapes>,
+    interaction_shapes: Option<BlockShapes>,
+    state_light: Option<StateLight>,
     #[serde(default)]
     state_properties: BTreeMap<String, StateProperty>,
     #[serde(default)]
@@ -143,8 +229,25 @@ struct BlockFile {
     connects_to: Option<String>,
     #[serde(default)]
     thickness: Option<f32>,
+    #[serde(default)]
+    wood_type: Option<String>,
+    #[serde(default)]
+    wall_block: Option<String>,
+    #[serde(default)]
+    sign_text_color: Option<String>,
+    #[serde(default)]
+    sign_text_glow: Option<bool>,
+    #[serde(default)]
+    base_block: Option<String>,
     #[serde(default = "yes")]
     item: bool,
+    #[serde(default)]
+    open_sound: Option<String>,
+    #[serde(default)]
+    close_sound: Option<String>,
+    block_item: Option<String>,
+    #[serde(default)]
+    pick_item: Option<String>,
     #[serde(default)]
     components: BTreeMap<String, serde_json::Value>,
 }
@@ -162,6 +265,13 @@ pub struct Block {
     pub template: String,
     pub properties: BlockProperties,
     pub shapes: Option<BlockShapes>,
+    /// Collision boxes when they differ from `shapes` (an edge light's are none).
+    pub collision_shapes: Option<BlockShapes>,
+    /// Per-state emission; takes precedence over `properties.light`.
+    pub state_light: Option<StateLight>,
+    /// Fields of Horizon's current schema this engine reads but does not apply
+    /// yet, by name: the block still loads.
+    pub unapplied: Vec<&'static str>,
     /// State properties of its own, which its template does not have.
     pub state_properties: BTreeMap<String, StateProperty>,
     /// State properties overlaid on the template default.
@@ -524,7 +634,26 @@ impl Content {
                 id: block,
                 template: file.template,
                 properties: file.properties,
+                unapplied: [
+                    ("outline_context_shapes", !file.outline_context_shapes.is_empty()),
+                    ("collision_context_shapes", !file.collision_context_shapes.is_empty()),
+                    ("interaction_shapes", file.interaction_shapes.is_some()),
+                    ("wood_type", file.wood_type.is_some()),
+                    ("wall_block", file.wall_block.is_some()),
+                    ("sign_text_color", file.sign_text_color.is_some()),
+                    ("sign_text_glow", file.sign_text_glow.is_some()),
+                    ("base_block", file.base_block.is_some()),
+                    ("open_sound", file.open_sound.is_some()),
+                    ("close_sound", file.close_sound.is_some()),
+                    ("block_item", file.block_item.is_some()),
+                    ("pick_item", file.pick_item.is_some()),
+                ]
+                .into_iter()
+                .filter_map(|(name, set)| set.then_some(name))
+                .collect(),
                 shapes: file.shapes,
+                collision_shapes: file.collision_shapes,
+                state_light: file.state_light,
                 state_properties: file.state_properties,
                 default_state: file.default_state,
                 item: file.item,
@@ -693,18 +822,25 @@ fn check_block(file: &BlockFile) -> Result<(), String> {
         ));
     }
     if let Some(shapes) = &file.shapes {
-        if shapes.property.is_empty() || shapes.values.is_empty() {
-            return Err("shapes needs a property and values".into());
+        check_shapes(shapes, "shapes")?;
+    }
+    if let Some(shapes) = &file.collision_shapes {
+        check_shapes(shapes, "collision_shapes")?;
+    }
+    for (kind, shapes) in file.outline_context_shapes.iter().chain(&file.collision_context_shapes) {
+        check_shapes(shapes, &format!("context shapes ({kind:?})"))?;
+    }
+    if let Some(shapes) = &file.interaction_shapes {
+        check_shapes(shapes, "interaction_shapes")?;
+    }
+    if let Some(light) = &file.state_light {
+        light.check_selection("state_light")?;
+        if light.values.values().chain(light.default.iter()).any(|v| *v > 15) {
+            return Err("state_light values are integers 0 to 15".into());
         }
-        for boxes in shapes.values.values() {
-            if boxes.len() > 16
-                || boxes
-                    .iter()
-                    .any(|b| b.iter().any(|n| !n.is_finite()) || (0..3).any(|i| b[i] > b[i + 3]))
-            {
-                return Err("shape needs at most 16 finite boxes with ordered bounds".into());
-            }
-        }
+    }
+    if file.block_item.is_some() && file.item {
+        return Err("block_item needs item false".into());
     }
     for (name, property) in &file.state_properties {
         if !state_name(name) {
@@ -884,6 +1020,9 @@ capabilities = ["registries"]
                 id: "ruby:ruby_block".into(),
                 template: "minecraft:iron_block".into(),
                 shapes: None,
+                collision_shapes: None,
+                state_light: None,
+                unapplied: Vec::new(),
                 state_properties: BTreeMap::new(),
                 default_state: BTreeMap::new(),
                 properties: BlockProperties {
