@@ -212,6 +212,7 @@ private fun PojarushScreen() {
     }
 
     var menuOpen by rememberSaveable { mutableStateOf(true) }
+    com.wanderstest3.pojarush.ui.UpdateDialogs()
     Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

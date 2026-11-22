@@ -374,4 +374,16 @@
     <string name="menu_music_choose">Choose music (MP3)</string>
     <string name="menu_music_volume">Music volume</string>
     <string name="overlay_close_game_confirm">Close the game? Unsaved progress in this session may be lost.</string>
+    <string name="changelog_title">What\'s new in %1$s</string>
+    <string name="changelog_ok">Got it</string>
+    <string name="update_title">Version %1$s available</string>
+    <string name="update_message">You have %1$s. Version %2$s is on GitHub. Update now?</string>
+    <string name="update_now">Update</string>
+    <string name="update_later">Later</string>
+    <string name="nav_music">Music</string>
+    <string name="game_music_enable">Play the launcher music in the game</string>
+    <string name="game_music_volume">Music volume in game</string>
+    <string name="game_music_pause">Pause music</string>
+    <string name="game_music_play">Resume music</string>
+    <string name="game_music_none">No launcher music chosen. Pick one in the launcher\'s wallpaper settings.</string>
 </resources>

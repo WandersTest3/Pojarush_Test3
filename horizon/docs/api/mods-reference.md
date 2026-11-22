@@ -465,6 +465,8 @@ What the game shows: playing, the player's own inventory screen, or another scre
 | `swap-offhand` | `func(slot: u32) -> result<_, string>` | Swaps inventory slot `slot` (0 to 35) with the off hand at the end of the tick, as F over it in the inventory screen does (`ServerboundContainerClickPacket`, SWAP with button 40, on the player's own menu). The game skips it while another container is open or the cursor holds a stack. At most 4 a call. |
 | `current-screen` | `func() -> screen-kind` | The screen as of this tick (or frame, for a mod with a `frame` hook). |
 | `open-inventory` | `func()` | Opens the player's inventory screen at the end of the tick, as the inventory key does (vanilla opens it without a packet). The game skips it while another screen is open, in creative or without a player. |
+| `select-hotbar` | `func(slot: u32) -> result<_, string>` | Selects hotbar slot `slot` (0 to 8) at the end of the tick, as the number keys do (the server learns of it with the next `ServerboundSetCarriedItemPacket`). The game skips it while a screen is open, for a spectator or without a player. The last call of a tick wins. |
+| `swap-hands` | `func()` | Swaps the main hand with the off hand at the end of the tick, as the swap-hands key (F) does: on a server it sends `ServerboundPlayerActionPacket` SWAP_ITEM_WITH_OFFHAND and the server answers with both slots. The game skips it while a screen is open or for a spectator. At most one a tick. |
 | `close-inventory` | `func()` | Closes the player's inventory screen at the end of the tick, as Esc does (`ServerboundContainerClosePacket` for the player's menu). The game skips it while another screen is open. |
 
 ## `render`

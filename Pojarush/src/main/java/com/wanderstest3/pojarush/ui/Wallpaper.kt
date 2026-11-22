@@ -707,5 +707,13 @@ private fun MenuMusicSettings(settings: ControlSettings) {
             settings.menuMusicVolume = it
             WallpaperState.version++
         }
+        var inGame by remember { mutableStateOf(settings.gameMusic) }
+        androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(stringResource(R.string.game_music_enable), modifier = androidx.compose.ui.Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+            androidx.compose.material3.Switch(checked = inGame, onCheckedChange = {
+                inGame = it
+                settings.gameMusic = it
+            })
+        }
     }
 }

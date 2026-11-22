@@ -217,7 +217,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(R.string.nav_controls, R.string.nav_mouse, R.string.nav_graphics).forEachIndexed { i, label ->
+                    listOf(R.string.nav_controls, R.string.nav_mouse, R.string.nav_graphics, R.string.nav_music).forEachIndexed { i, label ->
                         FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(stringResource(label)) })
                     }
                     Box(modifier = Modifier.weight(1f))
@@ -264,11 +264,42 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                             ControlsSettings(settings, ::apply)
                         }
                         1 -> MouseSettings(settings, ::apply)
+                        3 -> MusicSettings()
                         else -> {
                             ResolutionSettings(settings, ::apply)
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @Composable
+    private fun MusicSettings() {
+        val music = activity.music
+        var enabled by remember { mutableStateOf(settings.gameMusic) }
+        var paused by remember { mutableStateOf(music.paused) }
+        if (!music.available) {
+            Text(stringResource(R.string.game_music_none), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.game_music_enable), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            androidx.compose.material3.Switch(checked = enabled, onCheckedChange = {
+                enabled = it
+                settings.gameMusic = it
+                music.refresh()
+            })
+        }
+        if (enabled && music.available) {
+            com.wanderstest3.pojarush.ui.SettingSlider(
+                stringResource(R.string.game_music_volume), settings.gameMusicVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.4f
+            ) {
+                settings.gameMusicVolume = it
+                music.refresh()
+            }
+            QuickChip(stringResource(if (paused) R.string.game_music_play else R.string.game_music_pause), paused) {
+                paused = !paused
+                music.setPaused(paused)
             }
         }
     }

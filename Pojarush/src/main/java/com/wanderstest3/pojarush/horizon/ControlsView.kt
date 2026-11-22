@@ -455,7 +455,7 @@ class ControlsView(
         }
         val holding = if (editMode) emptyMap() else roles.filter { (_, role) ->
             role is Role.Btn && role.index < layout.buttons.size && !layout.buttons[role.index].spam &&
-                layout.buttons[role.index].press.any { it is Action.Key }
+                layout.buttons[role.index].press.any { it is Action.Key && it.code != KeyEvent.KEYCODE_ESCAPE }
         }.mapValues { it.value as Role.Btn }
         releaseAll()
         keep.forEach { i ->
@@ -465,7 +465,7 @@ class ControlsView(
         holding.forEach { (id, role) ->
             roles[id] = role
             pressed[role.index]++
-            layout.buttons[role.index].press.filter { it is Action.Key }.forEach(::down)
+            layout.buttons[role.index].press.filter { it is Action.Key && it.code != KeyEvent.KEYCODE_ESCAPE }.forEach(::down)
         }
         if (keep.isNotEmpty() || holding.isNotEmpty()) invalidate()
     }
@@ -1065,7 +1065,7 @@ class ControlsView(
                 vibrate()
                 mouse(0, true)
             }
-        }.also { uiHandler.postDelayed(it, settings.longPressMs.toLong() + 100) }
+        }.also { uiHandler.postDelayed(it, (settings.longPressMs.toLong() + 100).coerceAtLeast(350L)) }
         roles[id] = m
         return true
     }

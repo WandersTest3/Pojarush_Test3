@@ -480,6 +480,9 @@ impl Game<'_> {
             .entries()
             .iter()
             .filter(|e| e.status != Status::Off)
+            .filter(|e| {
+                !matches!(&e.status, Status::Failed(r) if r.contains(horizon_mods::manifest::UPSTREAM_WASM))
+            })
             .filter_map(|e| Some(e.manifest.as_ref()?.id.as_str()))
             .collect();
         let wanted: Vec<&str> = self
@@ -488,7 +491,7 @@ impl Game<'_> {
             .installed
             .iter()
             .enumerate()
-            .filter(|&(i, _)| self.settings.mods.is_on(i))
+            .filter(|&(i, m)| m.native.is_none() && !m.id.is_empty() && self.settings.mods.is_on(i))
             .map(|(_, m)| m.id.as_str())
             .collect();
         if running != wanted {
@@ -1046,6 +1049,14 @@ impl Game<'_> {
                     self.mod_close_inventory();
                     continue;
                 }
+                Output::SelectHotbar { slot } => {
+                    self.mod_select_hotbar(slot as usize);
+                    continue;
+                }
+                Output::SwapHands => {
+                    self.mod_swap_hands();
+                    continue;
+                }
                 Output::CloseScreen { owner } => {
                     if self.mods.screen.as_ref().is_some_and(|s| s.owner == owner) {
                         self.close_mod_screen(false);
@@ -1210,28 +1221,30 @@ impl Game<'_> {
             .collect::<Vec<_>>();
         let mut out = Vec::with_capacity(widgets.len());
         let top = MOD_UI_TOP + keys as f32 * MOD_UI_KEY_ROW;
-        let (y, right) = match Self::mod_ui_split(widgets) {
+        let view_end = h - MOD_UI_BOTTOM;
+        let (y, right, left_max) = match Self::mod_ui_split(widgets) {
             Some(at) => {
                 let left = -MOD_UI_SPLIT_LEFT - MOD_UI_GAP / 2.0 + MOD_UI_SPLIT_SHIFT;
-                Self::mod_ui_column(&widgets[..at], left, MOD_UI_SPLIT_LEFT, top, &mut out);
+                let left_end = Self::mod_ui_column(&widgets[..at], left, MOD_UI_SPLIT_LEFT, top, &mut out);
                 out.push((0.0, top, 0.0, 0.0));
                 let start = out.len();
                 let x = MOD_UI_GAP / 2.0 + MOD_UI_SPLIT_SHIFT;
                 let y = Self::mod_ui_column(&widgets[at + 1..], x, MOD_UI_SPLIT_RIGHT, top, &mut out);
-                (y, start)
+                (y, start, (left_end - 6.0 - view_end).max(0.0))
             }
             None => {
                 let y = Self::mod_ui_column(widgets, -MOD_UI_WIDE / 2.0, MOD_UI_WIDE, top, &mut out);
-                (y, 0)
+                (y, 0, 0.0)
             }
         };
-        let max = (y - 6.0 - (h - MOD_UI_BOTTOM)).max(0.0);
+        let max = (y - 6.0 - view_end).max(0.0).max(left_max);
         let page = page.clamp(0.0, max);
+        let left_page = page.min(left_max);
         (
             key_rows.into_iter().map(|y| y - page).collect(),
             out.into_iter()
                 .enumerate()
-                .map(|(i, (x, y, ww, wh))| (x, if i >= right { y - page } else { y }, ww, wh))
+                .map(|(i, (x, y, ww, wh))| (x, if i >= right { y - page } else { y - left_page }, ww, wh))
                 .collect(),
             max,
         )
@@ -1462,7 +1475,7 @@ impl Game<'_> {
         let mut list_i = 0usize;
         for (w, &(dx, wy, col, wh)) in widgets.iter().zip(&layout) {
             let x = cx + dx;
-            let whole_only = matches!(w, UiWidget::Entity(_) | UiWidget::Item(_));
+            let whole_only = matches!(w, UiWidget::Item(_));
             if !Self::mod_ui_shown(view_h, wy, wh) || (whole_only && !Self::mod_ui_whole(view_h, wy, wh)) {
                 if matches!(w, UiWidget::List(_)) {
                     ms.scrolls.resize_with(list_i + 1, ui::Scroll::default);
@@ -1617,7 +1630,9 @@ impl Game<'_> {
             .as_ref()
             .and_then(|ms| self.mods.mods.entries().get(ms.owner))
             .map(|e| e.path.clone());
+        let (view_top, view_bottom) = (MOD_UI_TOP, view_h - MOD_UI_BOTTOM);
         for ([x0, y0, x1, y1], entity, follow) in entities {
+            let start = batch.vertices.len();
             if let Some(file) = entity.strip_prefix("cape:") {
                 let uv = owner_path
                     .as_ref()
@@ -1626,9 +1641,21 @@ impl Game<'_> {
                 if let Some(uv) = uv {
                     self.draw_cape_box(batch, [x0, y0, x1, y1], uv);
                 }
-                continue;
+            } else {
+                self.draw_entity_box(batch, x0, y0, x1, y1, &entity, follow);
             }
-            self.draw_entity_box(batch, x0, y0, x1, y1, &entity, follow);
+            if y0 < view_top || y1 > view_bottom {
+                let scale = batch.scale;
+                let (top, bottom) = ((view_top * scale) as u32, (view_bottom * scale) as u32);
+                if let Some((range, horizon_client::hud::Blend::Depth(r))) = batch.blends.last_mut()
+                    && range.start as usize >= start
+                {
+                    let end = (r[1] + r[3]).min(bottom);
+                    r[1] = r[1].max(top);
+                    r[3] = end.saturating_sub(r[1]);
+                }
+                batch.clip_since(start, 0.0, view_top, batch.width, view_bottom);
+            }
         }
         for (id, ix, iy) in items {
             let stack = ItemStack::new(id.as_str(), 1);

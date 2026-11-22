@@ -178,6 +178,12 @@ class ControlSettings(context: Context) {
     var menuMusicVolume: Float
         get() = prefs.getFloat("menu_music_volume", 0.6f).coerceIn(0f, 1f)
         set(v) = prefs.edit().putFloat("menu_music_volume", v.coerceIn(0f, 1f)).apply()
+    var gameMusic: Boolean
+        get() = prefs.getBoolean("game_music", false)
+        set(v) = prefs.edit().putBoolean("game_music", v).apply()
+    var gameMusicVolume: Float
+        get() = prefs.getFloat("game_music_volume", 0.4f).coerceIn(0f, 1f)
+        set(v) = prefs.edit().putFloat("game_music_volume", v.coerceIn(0f, 1f)).apply()
     var keepAlive: Boolean
         get() = prefs.getBoolean("keep_alive", true)
         set(v) = prefs.edit().putBoolean("keep_alive", v).apply()

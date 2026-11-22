@@ -487,6 +487,18 @@ interface input {
     /// inventory key does (vanilla opens it without a packet). The game skips
     /// it while another screen is open, in creative or without a player.
     open-inventory: func();
+    /// Selects hotbar slot `slot` (0 to 8) at the end of the tick, as the
+    /// number keys do (the server learns of it with the next
+    /// `ServerboundSetCarriedItemPacket`). The game skips it while a screen
+    /// is open, for a spectator or without a player. The last call of a tick
+    /// wins.
+    select-hotbar: func(slot: u32) -> result<_, string>;
+    /// Swaps the main hand with the off hand at the end of the tick, as the
+    /// swap-hands key (F) does: on a server it sends
+    /// `ServerboundPlayerActionPacket` SWAP_ITEM_WITH_OFFHAND and the server
+    /// answers with both slots. The game skips it while a screen is open or
+    /// for a spectator. At most one a tick.
+    swap-hands: func();
     /// Closes the player's inventory screen at the end of the tick, as Esc
     /// does (`ServerboundContainerClosePacket` for the player's menu). The
     /// game skips it while another screen is open.

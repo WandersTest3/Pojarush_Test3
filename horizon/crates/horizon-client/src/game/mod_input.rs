@@ -135,6 +135,24 @@ impl Game<'_> {
             log::warn!("input.open-inventory: {e}");
         }
     }
+    /// `input.select-hotbar`: the number key's path, while playing and not a spectator.
+    pub(super) fn mod_select_hotbar(&mut self, slot: usize) {
+        if slot >= 9 || self.player.is_none() || self.spectator() || self.mod_screen_kind() != 0 || self.screen != Screen::Playing {
+            log::debug!("input.select-hotbar: slot {slot} skipped");
+            return;
+        }
+        self.selected = slot;
+    }
+    /// `input.swap-hands`: the swap-hands key's path, while playing and not a spectator.
+    pub(super) fn mod_swap_hands(&mut self) {
+        if self.player.is_none() || self.spectator() || self.mod_screen_kind() != 0 || self.screen != Screen::Playing {
+            log::debug!("input.swap-hands: skipped");
+            return;
+        }
+        if let Err(e) = self.key_pressed(KeyCode::KeyF) {
+            log::warn!("input.swap-hands: {e}");
+        }
+    }
     /// `input.close-inventory`: closes the player's own inventory as Esc does.
     pub(super) fn mod_close_inventory(&mut self) {
         if self.mod_screen_kind() != 1 {

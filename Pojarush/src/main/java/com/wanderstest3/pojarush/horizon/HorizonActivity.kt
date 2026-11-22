@@ -144,9 +144,17 @@ class HorizonActivity : GameActivity() {
     private var backDown = false
     private var prewarmed = false
 
+    val music by lazy { GameMusic(this) }
+
     override fun onResume() {
         super.onResume()
         revealIfAsked()
+        music.onResume()
+    }
+
+    override fun onPause() {
+        music.onPause()
+        super.onPause()
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
@@ -247,6 +255,7 @@ class HorizonActivity : GameActivity() {
 
     override fun onDestroy() {
         KeepAliveService.stop(this, GameKeepAliveService::class.java)
+        music.release()
         super.onDestroy()
         if (isFinishing && !prewarmed) HorizonManager.archiveLog(ControlSettings(this).cleanLogs)
         Process.killProcess(Process.myPid())

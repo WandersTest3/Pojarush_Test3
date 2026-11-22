@@ -289,6 +289,8 @@ fn play(path: &Path, report: &mut Report) -> Result<(), String> {
             Output::SwapOffhand { slot } => format!("swapped slot {slot} with the off hand"),
             Output::OpenInventory => "opened the inventory".to_owned(),
             Output::CloseInventory => "closed the inventory".to_owned(),
+            Output::SelectHotbar { slot } => format!("selected hotbar slot {slot}"),
+            Output::SwapHands => "swapped the hands".to_owned(),
             Output::Shake { strength, seconds } => {
                 format!("shook the camera: {strength:.2} for {seconds:.1} s")
             }

@@ -6515,6 +6515,7 @@ impl Game<'_> {
                     | Screen::ConfirmLink
                     | Screen::DialogWarning
                     | Screen::CommandBlock
+                    | Screen::Mod
             ) || self.book.is_some()
                 || self.win_screen_pauses())
     }

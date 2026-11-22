@@ -411,6 +411,10 @@ pub enum Output {
     OpenInventory,
     /// `input.close-inventory`: closes the player's inventory screen.
     CloseInventory,
+    /// `input.select-hotbar`: hotbar slot 0 to 8.
+    SelectHotbar { slot: u32 },
+    /// `input.swap-hands`: the swap-hands key (F).
+    SwapHands,
 }
 
 /// The game's world as capability `world` reads it during a call: the
@@ -2108,6 +2112,19 @@ impl input::Host for State {
     fn close_inventory(&mut self) {
         if !self.out.iter().any(|o| matches!(o, Output::CloseInventory)) {
             self.out.push(Output::CloseInventory);
+        }
+    }
+    fn select_hotbar(&mut self, slot: u32) -> Result<(), String> {
+        if slot > 8 {
+            return Err(format!("slot {slot} is not 0 to 8"));
+        }
+        self.out.retain(|o| !matches!(o, Output::SelectHotbar { .. }));
+        self.out.push(Output::SelectHotbar { slot });
+        Ok(())
+    }
+    fn swap_hands(&mut self) {
+        if !self.out.iter().any(|o| matches!(o, Output::SwapHands)) {
+            self.out.push(Output::SwapHands);
         }
     }
 }
