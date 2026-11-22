@@ -285,6 +285,12 @@ mod running {
 
         /// Once a frame.
         pub(in crate::game) fn wasm_frame(&mut self, elapsed: Duration) {
+            let status: Vec<Option<String>> =
+                self.mods.wasm.entries().into_iter().map(|e| e.problem).collect();
+            if status != self.mods.wasm_status {
+                self.mods.wasm_status = status;
+                self.list_native_mods();
+            }
             if self.mods.wasm.is_running() {
                 let view = self.wasm_view();
                 self.mods.wasm.render_frame_pre(view, elapsed, 0.0);

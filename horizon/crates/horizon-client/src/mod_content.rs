@@ -783,6 +783,39 @@ impl<'a> Plan<'a> {
         }
     }
 
+    /// The model schema of a block with state properties of its own: each
+    /// property in the schema and, on every state, at its default, as in the
+    /// registry rows.
+    fn own_model_states(&self, doc: &mut J) {
+        for b in self.blocks.iter().filter(|b| !b.own.is_empty()) {
+            let Some(entry) = doc.get_mut(&b.decl.id) else {
+                continue;
+            };
+            if let Some(J::Obj(schema)) = entry.get_mut("schema") {
+                for (name, _) in &b.own {
+                    let values = b.decl.state_properties[name]
+                        .values()
+                        .into_iter()
+                        .map(|v| J::Str(v.to_owned()))
+                        .collect();
+                    schema.push((
+                        name.clone(),
+                        J::Obj(vec![("named".to_owned(), J::Arr(values))]),
+                    ));
+                }
+            }
+            if let Some(J::Arr(states)) = entry.get_mut("states") {
+                for state in states {
+                    if let J::Obj(props) = state {
+                        for (name, value) in &b.own {
+                            props.push((name.clone(), J::Str(value.clone())));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Adds each new item's copy of its template's entry to a map by name;
     /// `components` applies the overrides (items.json).
     fn items(&self, map: &mut J, components: bool) -> Result<()> {
@@ -869,9 +902,13 @@ impl<'a> Plan<'a> {
                     }
                 }
             }
-            "model-states.json"
-            | "landing-definitions.json"
-            | "worldgen/blocks/survival-rules.json" => self.names(doc, false),
+            "model-states.json" => {
+                self.names(doc, false);
+                self.own_model_states(doc);
+            }
+            "landing-definitions.json" | "worldgen/blocks/survival-rules.json" => {
+                self.names(doc, false)
+            }
             "render-definitions.json" => self.names(doc, true),
             "worldgen/blocks/survival-extra-definitions.json" => {
                 if let Some(map) = doc.at("ignition_odds") {
@@ -980,6 +1017,21 @@ impl<'a> Plan<'a> {
                             let mut state = list[id as usize].clone();
                             if let Some(slot) = state.get_mut("id") {
                                 *slot = Tag::String(b.decl.id.as_str().into());
+                            }
+                            if !b.own.is_empty()
+                                && let Tag::Compound(fields) = &mut state
+                            {
+                                let props = fields
+                                    .entry(JavaString::from("properties"))
+                                    .or_insert_with(|| Tag::Compound(Default::default()));
+                                if let Tag::Compound(props) = props {
+                                    for (name, value) in &b.own {
+                                        props.insert(
+                                            JavaString::from(name.as_str()),
+                                            Tag::String(value.as_str().into()),
+                                        );
+                                    }
+                                }
                             }
                             list.push(state);
                         }

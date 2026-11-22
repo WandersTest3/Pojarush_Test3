@@ -1279,6 +1279,9 @@ fn bindings(
                     ));
                     (src, sample_type) = (Source::Dummy, float);
                 }
+                if blank && !matches!(src, Source::Dummy | Source::Shadow) || blank && geometry.is_some() {
+                    notes.push(format!("{name}: `{} {}` reads a blank texture here", s.ty, s.name));
+                }
                 if blank && sample_type == wgpu::TextureSampleType::Depth {
                     src = Source::Shadow;
                 } else if blank {

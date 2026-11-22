@@ -45,6 +45,23 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.32",
+            listOf(
+                "Fixed the resource reload errors (\"model state definitions disagree\" and \"table registry size mismatch\") with content mods that add blocks with state properties, such as Simply Light.",
+                "Mod Menu: icons are matched to their mod by id, wasm mods read icon.png, and mods without an icon get a default one.",
+                "The red \"Stopped: Starting...\" line of wasm mods goes away once they are running.",
+                "Fresh Animations and other OptiFine models: part names are matched in general (OptiFine's names, case and word order), not one mob at a time.",
+                "Shader packs: the log now lists the textures a pass reads blank, to help with shadow and reflection bugs.",
+            ),
+            listOf(
+                "Corrigidos os erros ao recarregar resource packs (\"model state definitions disagree\" e \"table registry size mismatch\") com mods de conteúdo que adicionam blocos com propriedades de estado, como o Simply Light.",
+                "Mod Menu: os ícones são ligados ao mod pelo id, mods wasm leem o icon.png e mods sem ícone ganham um padrão.",
+                "A linha vermelha \"Stopped: Starting...\" dos mods wasm some quando eles estão rodando.",
+                "Fresh Animations e outros modelos OptiFine: os nomes das partes casam de forma geral (nomes do OptiFine, maiúsculas e ordem das palavras), não mob por mob.",
+                "Shaders: o log agora lista as texturas que uma passada lê em branco, para ajudar nos bugs de sombra e reflexo.",
+            ),
+        ),
+        Entry(
             "1.11.31",
             listOf(
                 "Content .hmod mods with Horizon's current block schema load (collision_shapes, tuple shapes, state_light, own state properties), such as Simply Light.",

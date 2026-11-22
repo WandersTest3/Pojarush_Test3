@@ -112,6 +112,9 @@ pub(super) struct ModsState {
     pub(super) wasm: pojarush_wasm_mods::WasmMods,
     #[cfg(feature = "mods")]
     pub(super) wasm_started: bool,
+    /// The wasm mods' status when the Mods page rows were last made.
+    #[cfg(feature = "mods")]
+    pub(super) wasm_status: Vec<Option<String>>,
 }
 
 /// The mappings `input.mapping` answers for, with the default key their
@@ -830,15 +833,44 @@ impl Game<'_> {
             self.ui.options.video_button = video;
         }
         if self.ui.options.page() == horizon_client::options_ui::Page::ModMenu {
-            let icons: Vec<(PathBuf, String)> = self
+            let native: Vec<(String, PathBuf, String)> = self
                 .mods
                 .mods
                 .entries()
                 .iter()
-                .map(|e| (e.path.clone(), e.manifest.as_ref().map(|m| m.icon.clone()).unwrap_or_default()))
+                .filter_map(|e| {
+                    let m = e.manifest.as_ref()?;
+                    let icon = if m.icon.is_empty() { "icon.png".to_owned() } else { m.icon.clone() };
+                    Some((m.id.clone(), e.path.clone(), icon))
+                })
                 .collect();
-            for (i, (path, icon)) in icons.iter().enumerate() {
-                let rect = self.mod_icon(i, path, icon);
+            let wasm: Vec<(String, PathBuf)> = self
+                .mods
+                .wasm
+                .entries()
+                .into_iter()
+                .map(|e| (e.id, e.path))
+                .collect();
+            let ids: Vec<String> = self
+                .settings
+                .mods
+                .installed
+                .iter()
+                .map(|row| row.id.clone())
+                .collect();
+            for (i, id) in ids.iter().enumerate() {
+                let source = native
+                    .iter()
+                    .find(|(n, ..)| n == id)
+                    .map(|(_, p, f)| (p.clone(), f.clone()))
+                    .or_else(|| {
+                        wasm.iter()
+                            .find(|(n, _)| n == id)
+                            .map(|(_, p)| (p.clone(), "icon.png".to_owned()))
+                    });
+                let rect = source
+                    .and_then(|(path, file)| self.mod_icon(i, &path, &file))
+                    .or_else(|| self.mod_default_icon(i));
                 if let Some(row) = self.settings.mods.installed.get_mut(i) {
                     row.details.icon = rect;
                 }

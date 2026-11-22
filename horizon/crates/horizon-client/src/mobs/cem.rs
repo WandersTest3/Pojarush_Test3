@@ -127,6 +127,47 @@ fn vanilla_name(part: &str) -> &str {
     }
 }
 
+fn names(part: &Part, out: &mut Vec<String>) {
+    if !part.name.starts_with("cem#") {
+        out.push(part.name.clone());
+    }
+    for c in &part.children {
+        names(c, out);
+    }
+}
+
+/// A part's name as a bag of words, so `left_hind_leg` and `hind_left_leg` compare equal.
+fn bag(name: &str) -> String {
+    let mut words: Vec<String> = name
+        .to_ascii_lowercase()
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_owned)
+        .collect();
+    words.sort();
+    words.concat()
+}
+
+/// The vanilla part a jem part names: OptiFine's name for it, its own name, or one with the
+/// same words in another order or case. Resource packs name parts after OptiFine's table for
+/// each mob, which Mojang's names rarely match exactly.
+fn resolve(model: &Part, part: &str) -> Option<String> {
+    let vanilla = vanilla_name(part);
+    if find(model, vanilla) {
+        return Some(vanilla.to_owned());
+    }
+    if find(model, part) {
+        return Some(part.to_owned());
+    }
+    let (want, alias) = (bag(part), bag(vanilla));
+    let mut all = Vec::new();
+    names(model, &mut all);
+    all.into_iter().find(|n| {
+        let b = bag(n);
+        b == want || b == alias
+    })
+}
+
 fn find_mut<'a>(part: &'a mut Part, name: &str) -> Option<&'a mut Part> {
     if part.name == name {
         return Some(part);
@@ -336,8 +377,11 @@ fn build(root: &Path, dir: &Path, jem: &Value, model: &mut Part) -> (Cem, bool) 
     let mut blocks: Vec<(String, String, Value)> = Vec::new();
     for entry in jem["models"].as_array().into_iter().flatten() {
         let Some(part) = entry["part"].as_str() else { continue };
-        let vanilla = vanilla_name(part);
-        let target = if find(model, vanilla) { vanilla } else if find(model, part) { part } else { continue };
+        let Some(target) = resolve(model, part) else {
+            log::debug!("Horizon: CEM part `{part}` matches no part of the model");
+            continue;
+        };
+        let target = target.as_str();
         let attach = entry["attach"].as_bool().unwrap_or(false);
         let custom = b.part(entry, b.tex);
         let custom_name = custom.name.clone();
@@ -386,14 +430,10 @@ impl Scope<'_> {
         let mut name = match first {
             "this" => self.this.to_owned(),
             "part" => self.part.to_owned(),
-            other => {
-                let v = vanilla_name(other);
-                if find(self.model, v) {
-                    v.to_owned()
-                } else {
-                    self.ids.iter().find(|(id, _)| id == other)?.1.clone()
-                }
-            }
+            other => match resolve(self.model, other) {
+                Some(v) => v,
+                None => self.ids.iter().find(|(id, _)| id == other)?.1.clone(),
+            },
         };
         for seg in segs {
             let base = sub(self.model, &name)?;
@@ -931,6 +971,23 @@ fn eval(e: &Expr, inp: &Inputs, poses: &mut Poses, vars: &[f32]) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn part(name: &str, children: Vec<Part>) -> Part {
+        Part { name: name.into(), pose: [0.0; 9], polygons: Vec::new(), children }
+    }
+
+    #[test]
+    fn parts_resolve_by_alias_case_and_word_order() {
+        let model = part(
+            "root",
+            vec![part("head", Vec::new()), part("left_hind_leg", Vec::new()), part("hat", Vec::new())],
+        );
+        assert_eq!(resolve(&model, "head").as_deref(), Some("head"));
+        assert_eq!(resolve(&model, "headwear").as_deref(), Some("hat"));
+        assert_eq!(resolve(&model, "hind_left_leg").as_deref(), Some("left_hind_leg"));
+        assert_eq!(resolve(&model, "Left_Hind_Leg").as_deref(), Some("left_hind_leg"));
+        assert_eq!(resolve(&model, "tail"), None);
+    }
 
     /// Parses every jem of a real pack (`HORIZON_CEM_PACK=<pack root>`) and prints what fails.
     #[test]

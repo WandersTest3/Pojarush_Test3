@@ -318,6 +318,50 @@ impl Game<'_> {
         self.mod_models.icons[slot] = Some((key, rect));
         Some(rect)
     }
+    /// The icon of a mod that ships none: a purple block, as Mod Menu draws its
+    /// placeholder.
+    pub(super) fn mod_default_icon(&mut self, slot: usize) -> Option<[f32; 4]> {
+        if slot >= horizon_client::hud::MOD_ICON_SLOTS {
+            return None;
+        }
+        let key = (PathBuf::new(), "<default>".to_owned());
+        if self.mod_models.icons.len() < horizon_client::hud::MOD_ICON_SLOTS {
+            self.mod_models.icons.resize(horizon_client::hud::MOD_ICON_SLOTS, None);
+        }
+        if let Some((k, r)) = &self.mod_models.icons[slot]
+            && *k == key
+        {
+            return Some(*r);
+        }
+        let mut rgba = vec![0u8; 32 * 32 * 4];
+        for y in 0..32usize {
+            for x in 0..32usize {
+                let edge = x < 2 || y < 2 || x >= 30 || y >= 30;
+                let top = (4..16).contains(&y) && x >= 4 + (16 - y) / 2 && x < 28 - (16 - y) / 2;
+                let (r, g, b) = if edge {
+                    (0xa0, 0x5c, 0xd0)
+                } else if top {
+                    (0x8a, 0x44, 0xb8)
+                } else {
+                    (0x57, 0x19, 0x7f)
+                };
+                let at = (y * 32 + x) * 4;
+                rgba[at..at + 4].copy_from_slice(&[r, g, b, 255]);
+            }
+        }
+        let r = self.gui.atlas.sprites.get(&format!("horizon/modicon{slot}")).copied()?;
+        let (w, h) = (self.gui.atlas.width as f32, self.gui.atlas.height as f32);
+        self.map_patches.push(horizon_client::font::Patch {
+            x: (r.u0 * w).round() as u32,
+            y: (r.v0 * h).round() as u32,
+            width: 32,
+            height: 32,
+            rgba,
+        });
+        let rect = [r.u0, r.v0, r.u1, r.v1];
+        self.mod_models.icons[slot] = Some((key, rect));
+        Some(rect)
+    }
     /// The atlas rectangle of a PNG in a mod (`models/x.png`, its icon), uploading it to a
     /// model slot (the one drawn longest ago) the first time.
     pub(super) fn model_texture(&mut self, path: &Path, file: &str) -> Option<[f32; 4]> {
