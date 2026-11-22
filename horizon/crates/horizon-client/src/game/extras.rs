@@ -37,6 +37,7 @@ impl Game<'_> {
     /// Mouse buttons while playing, for mods' clicks.
     pub(super) fn extras_mouse(&mut self, button: MouseButton, pressed: bool) {
         self.native_mouse_event(button, pressed);
+        self.wasm_mouse(button, pressed);
         let i = match button {
             MouseButton::Left => 0,
             MouseButton::Right => 1,
@@ -62,6 +63,7 @@ impl Game<'_> {
         let now = self.extras_now();
         self.extras.fps.record(now, elapsed.as_secs_f32() * 1000.0);
         self.native_frame(elapsed);
+        self.wasm_frame(elapsed);
     }
     /// The frame counter for mods: fps, min, 1% low.
     pub(super) fn frame_reading(&self) -> (u32, u32, u32) {
@@ -263,6 +265,7 @@ impl Game<'_> {
             self.draw_mod_panels(batch, &mut corners);
         }
         self.native_hud(batch, &mut corners);
+        self.wasm_hud(batch, &mut corners);
     }
     /// The height the status effect icons take at the top right
     /// (`Hud.extractEffects`: beneficial at y 1, harmful at y 26).

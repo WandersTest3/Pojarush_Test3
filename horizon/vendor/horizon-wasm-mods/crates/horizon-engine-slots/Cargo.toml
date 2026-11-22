@@ -1,0 +1,18 @@
+[package]
+build = "build.rs"
+name = "horizon-engine-slots"
+version = "0.1.0"
+edition = "2024"
+license = "LGPL-3.0-or-later"
+publish = false
+
+[dependencies]
+mod_vocab = { package = "horizon-mod-vocab", path = "../horizon-mod-vocab" }
+
+
+[features]
+listener-fixture = []
+wasm-guest = []
+
+[build-dependencies]
+flate2 = "1"

@@ -1475,6 +1475,7 @@ impl Game<'_> {
                 details: Default::default(),
             });
         }
+        self.wasm_mod_rows();
     }
     /// A click on button `button` of native mod `i`'s page (its index in
     /// Options > Mods), and the page's labels after it.
@@ -1482,7 +1483,9 @@ impl Game<'_> {
         let Some(id) = self.settings.mods.installed.get(i).map(|m| m.id.clone()) else {
             return;
         };
-        self.native_settings_click(&id, button);
+        if !self.wasm_settings_click(&id, button) {
+            self.native_settings_click(&id, button);
+        }
         self.native_settings_refresh(i);
     }
     /// Native mod `i`'s page opened: its labels asked again, so that they
@@ -1491,8 +1494,14 @@ impl Game<'_> {
         let Some(id) = self.settings.mods.installed.get(i).map(|m| m.id.clone()) else {
             return;
         };
-        let mut buttons = Vec::new();
-        self.native_settings(&id, &mut buttons);
+        let buttons = match self.wasm_settings_buttons(&id) {
+            Some(buttons) => buttons,
+            None => {
+                let mut buttons = Vec::new();
+                self.native_settings(&id, &mut buttons);
+                buttons
+            }
+        };
         let row = self.settings.mods.installed.get_mut(i);
         if let Some(page) = row.and_then(|m| m.native.as_mut()) {
             page.buttons = buttons;

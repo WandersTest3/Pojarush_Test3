@@ -474,6 +474,9 @@ impl Package {
         if wasm.as_ref().is_some_and(|w| w.len() as u64 > MAX_WASM) {
             return Err(format!("{WASM} is over {} MiB", MAX_WASM >> 20));
         }
+        if is_upstream_wasm(&toml) {
+            return Err(UPSTREAM_WASM.to_owned());
+        }
         let manifest = Manifest::parse(&toml)?;
         if wasm.is_none() && !manifest.capabilities.contains(&Capability::Registries) {
             return Err(format!(
@@ -512,6 +515,17 @@ impl Package {
         }
         Ok(zip.finish().map_err(err)?.into_inner())
     }
+}
+
+/// Why this runtime leaves a package alone: Horizon's newer wasm mods (api "0.2" with a
+/// `[wasm]` table) run in the game's other mod runtime.
+pub const UPSTREAM_WASM: &str = "a Horizon wasm mod, run by the wasm mod runtime";
+
+/// Whether a manifest carries a `[wasm]` table (Horizon's newer wasm mods).
+pub fn is_upstream_wasm(manifest_text: &str) -> bool {
+    manifest_text
+        .parse::<toml::Table>()
+        .is_ok_and(|t| t.get("wasm").is_some_and(toml::Value::is_table))
 }
 
 /// The `.hmod` files and mod folders in `dir`, by name.

@@ -1,0 +1,14 @@
+[package]
+name = "horizon-mod-runtime"
+version = "0.1.0"
+edition = "2024"
+license = "LGPL-3.0-or-later"
+publish = false
+description = "Engine-independent mod storage, attachment indexes and registry slot tables"
+
+[dependencies]
+horizon-core = { package = "horizon-up-core", path = "../horizon-core" }
+
+
+[features]
+test-work-count = []

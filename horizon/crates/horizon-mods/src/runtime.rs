@@ -322,6 +322,9 @@ pub struct Snapshot {
     pub placing: bool,
     /// The player is in creative mode (`recipes.give`).
     pub creative: bool,
+    /// What the game shows (`input.current-screen`): 0 playing, 1 the player's
+    /// inventory, 2 another screen.
+    pub screen: u8,
 }
 
 /// Capability `recipes`'s tables: `items` in the registry's order, which
@@ -404,6 +407,10 @@ pub enum Output {
     },
     /// `input.swap-offhand`: inventory slot 0 to 35 with the off hand.
     SwapOffhand { slot: u32 },
+    /// `input.open-inventory`: the player's inventory screen.
+    OpenInventory,
+    /// `input.close-inventory`: closes the player's inventory screen.
+    CloseInventory,
 }
 
 /// The game's world as capability `world` reads it during a call: the
@@ -2085,6 +2092,23 @@ impl input::Host for State {
         }
         self.out.push(Output::SwapOffhand { slot });
         Ok(())
+    }
+    fn current_screen(&mut self) -> input::ScreenKind {
+        match self.snapshot.screen {
+            0 => input::ScreenKind::Playing,
+            1 => input::ScreenKind::Inventory,
+            _ => input::ScreenKind::Other,
+        }
+    }
+    fn open_inventory(&mut self) {
+        if !self.out.iter().any(|o| matches!(o, Output::OpenInventory)) {
+            self.out.push(Output::OpenInventory);
+        }
+    }
+    fn close_inventory(&mut self) {
+        if !self.out.iter().any(|o| matches!(o, Output::CloseInventory)) {
+            self.out.push(Output::CloseInventory);
+        }
     }
 }
 

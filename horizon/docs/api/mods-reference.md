@@ -442,6 +442,16 @@ A stack of the player's inventory.
 | `id` | `string` | `minecraft:totem_of_undying`. |
 | `count` | `u32` |  |
 
+### enum `screen-kind`
+
+What the game shows: playing, the player's own inventory screen, or another screen (chat, a container, the pause menu...).
+
+| Case | |
+| --- | --- |
+| `playing` |  |
+| `inventory` |  |
+| `other` |  |
+
 | Function | Signature | What it does |
 | --- | --- | --- |
 | `claim-items` | `func(ids: list<string>)` | The items whose use the mod handles instead of the game, by id (at most 64). Replaces the previous list. |
@@ -453,6 +463,9 @@ A stack of the player's inventory.
 | `clicks-per-second` | `func() -> tuple<u32, u32>` | Clicks of the attack and use buttons in the last second. |
 | `inventory` | `func() -> list<inventory-stack>` | The player's stacks as of this tick; empty slots are left out. |
 | `swap-offhand` | `func(slot: u32) -> result<_, string>` | Swaps inventory slot `slot` (0 to 35) with the off hand at the end of the tick, as F over it in the inventory screen does (`ServerboundContainerClickPacket`, SWAP with button 40, on the player's own menu). The game skips it while another container is open or the cursor holds a stack. At most 4 a call. |
+| `current-screen` | `func() -> screen-kind` | The screen as of this tick (or frame, for a mod with a `frame` hook). |
+| `open-inventory` | `func()` | Opens the player's inventory screen at the end of the tick, as the inventory key does (vanilla opens it without a packet). The game skips it while another screen is open, in creative or without a player. |
+| `close-inventory` | `func()` | Closes the player's inventory screen at the end of the tick, as Esc does (`ServerboundContainerClosePacket` for the player's menu). The game skips it while another screen is open. |
 
 ## `render`
 

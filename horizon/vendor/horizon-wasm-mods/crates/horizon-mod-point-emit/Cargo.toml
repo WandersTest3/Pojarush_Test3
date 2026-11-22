@@ -1,0 +1,12 @@
+[package]
+name = "horizon-mod-point-emit"
+version = "0.1.0"
+edition = "2024"
+license = "LGPL-3.0-or-later"
+publish = false
+description = "Shared API injection listener constructor emission for native and wasm mods"
+
+[dependencies]
+horizon-mod-package = { path = "../horizon-mod-package", default-features = false }
+serde = { version = "1", features = ["derive"] }
+

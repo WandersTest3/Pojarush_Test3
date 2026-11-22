@@ -308,6 +308,7 @@ impl Game<'_> {
         horizon_client::ui::load_metadata(&root);
         lang::set(lang::Language::load(&[&root], &lang::code()));
         self.refresh_remote_language();
+        self.wasm_resources_reloaded();
         self.audio.reload(&root);
         self.clear_lod();
         self.streaming.reload_resources(&mut self.world, context);

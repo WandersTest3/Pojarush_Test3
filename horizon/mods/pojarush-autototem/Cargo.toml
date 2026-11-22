@@ -1,6 +1,6 @@
 [package]
 name = "pojarush_autototem"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 license-file = "LICENSE.txt"
 publish = false

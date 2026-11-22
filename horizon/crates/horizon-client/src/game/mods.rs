@@ -97,7 +97,7 @@ pub(super) struct ModsState {
     title_click: Option<usize>,
     /// The HUD font's advances for `render.text-width`, made once.
     #[cfg(feature = "mods")]
-    font_widths: std::sync::Arc<[f32]>,
+    pub(super) font_widths: std::sync::Arc<[f32]>,
     /// Capability `recipes`'s tables, made once a mod reads them.
     #[cfg(feature = "mods")]
     pub(super) recipes: Option<std::sync::Arc<horizon_mods::Recipes>>,
@@ -107,6 +107,11 @@ pub(super) struct ModsState {
     /// Playing at the last frame, for `mod_input_frame`.
     #[cfg(feature = "mods")]
     pub(super) playing: bool,
+    /// Horizon's wasm mods (`game/wasm_mods.rs`).
+    #[cfg(feature = "mods")]
+    pub(super) wasm: pojarush_wasm_mods::WasmMods,
+    #[cfg(feature = "mods")]
+    pub(super) wasm_started: bool,
 }
 
 /// The mappings `input.mapping` answers for, with the default key their
@@ -322,6 +327,7 @@ const BUILD_INFO: &str = "native-mods.json";
 impl Game<'_> {
     /// Reads `horizon-mods/` and the dev mods, and starts the ones turned on.
     pub(super) fn start_mods(&mut self) {
+        self.start_wasm_mods();
         let dir = Self::options_path().with_file_name(mod_list::DIR);
         let dev = &self.mods.dev;
         let mut paths = horizon_mods::find(&dir);
@@ -353,6 +359,10 @@ impl Game<'_> {
         self.sync_mod_commands();
         self.show_mod_output();
     }
+    /// A mod's screen or settings page is up.
+    pub(super) fn mod_screen_open(&self) -> bool {
+        self.mods.screen.is_some()
+    }
     /// Which mods this game runs: a server the server mods, the window
     /// client mods, and both when it simulates the world itself (in-frame).
     fn mod_runs(&self) -> Runs {
@@ -373,6 +383,9 @@ impl Game<'_> {
             .entries()
             .iter()
             .enumerate()
+            .filter(|(_, e)| {
+                !matches!(&e.status, Status::Failed(r) if r.contains(horizon_mods::manifest::UPSTREAM_WASM))
+            })
             .map(|(i, e)| {
                 let keys: Vec<[String; 3]> = self
                     .mods
@@ -547,6 +560,7 @@ impl Game<'_> {
             known_recipes,
             placing: self.mod_recipe_screen(),
             creative: self.creative,
+            screen: self.mod_screen_kind(),
         }
     }
     /// The entities around the player as this frame draws them
@@ -1022,6 +1036,14 @@ impl Game<'_> {
                 }
                 Output::SwapOffhand { slot } => {
                     self.mod_swap_offhand(slot as usize);
+                    continue;
+                }
+                Output::OpenInventory => {
+                    self.mod_open_inventory();
+                    continue;
+                }
+                Output::CloseInventory => {
+                    self.mod_close_inventory();
                     continue;
                 }
                 Output::CloseScreen { owner } => {

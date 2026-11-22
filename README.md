@@ -15,6 +15,9 @@ natively on the phone (no JVM while playing).
 - Horizon: https://github.com/horizon-rust/horizon (MIT), code in `horizon/`
 - Mods for Pojarush: **https://github.com/WandersTest3/Pojarush_Test3-Mods** (the Pojarush Mods site:
   https://wanderstest3.github.io/Pojarush_Test3-Mods/). Learn more about the mods there.
+- Horizon's newer wasm `.hmod` mods (api `"0.2"` with a `[wasm]` table, such as the official
+  Keystrokes) run on 64-bit phones through Horizon's own wasm mod runtime, vendored in
+  `horizon/vendor/horizon-wasm-mods` under the LGPL-3.0-or-later (see its README for what changed).
 - Not an official Minecraft product, and no Mojang file ships with the app. You need to own Minecraft: Java Edition.
 
 ## Download

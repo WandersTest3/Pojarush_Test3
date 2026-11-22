@@ -160,6 +160,7 @@ mod mod_panel;
 mod mod_models;
 mod mod_render;
 mod mods;
+mod wasm_mods;
 mod mount_menu;
 mod moved_extras;
 mod mounts;

@@ -474,6 +474,23 @@ interface input {
     /// player's own menu). The game skips it while another container is
     /// open or the cursor holds a stack. At most 4 a call.
     swap-offhand: func(slot: u32) -> result<_, string>;
+    /// What the game shows: playing, the player's own inventory screen, or
+    /// another screen (chat, a container, the pause menu...).
+    enum screen-kind {
+        playing,
+        inventory,
+        other,
+    }
+    /// The screen as of this tick (or frame, for a mod with a `frame` hook).
+    current-screen: func() -> screen-kind;
+    /// Opens the player's inventory screen at the end of the tick, as the
+    /// inventory key does (vanilla opens it without a packet). The game skips
+    /// it while another screen is open, in creative or without a player.
+    open-inventory: func();
+    /// Closes the player's inventory screen at the end of the tick, as Esc
+    /// does (`ServerboundContainerClosePacket` for the player's menu). The
+    /// game skips it while another screen is open.
+    close-inventory: func();
 }
 
 /// Capability `render` (experimental: the manifest needs

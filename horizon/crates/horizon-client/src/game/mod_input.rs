@@ -113,6 +113,38 @@ impl Game<'_> {
             self.offhand = a;
         }
     }
+    /// `input.current-screen`: 0 playing, 1 the player's own inventory, 2 another screen.
+    pub(super) fn mod_screen_kind(&self) -> u8 {
+        if self.title.is_some() || self.mod_screen_open() {
+            2
+        } else if self.screen == Screen::Playing {
+            0
+        } else if self.screen == Screen::Inventory && self.station.is_none() && self.container.is_none() && self.remote_menu_id() == 0 {
+            1
+        } else {
+            2
+        }
+    }
+    /// `input.open-inventory`: the inventory key's path, while playing in survival or adventure.
+    pub(super) fn mod_open_inventory(&mut self) {
+        if self.player.is_none() || self.creative || self.spectator() || self.mod_screen_kind() != 0 || self.riding_mount_with_menu() {
+            log::debug!("input.open-inventory: skipped");
+            return;
+        }
+        if let Err(e) = self.key_pressed(KeyCode::KeyE) {
+            log::warn!("input.open-inventory: {e}");
+        }
+    }
+    /// `input.close-inventory`: closes the player's own inventory as Esc does.
+    pub(super) fn mod_close_inventory(&mut self) {
+        if self.mod_screen_kind() != 1 {
+            log::debug!("input.close-inventory: skipped");
+            return;
+        }
+        if let Err(e) = self.key_pressed(KeyCode::Escape) {
+            log::warn!("input.close-inventory: {e}");
+        }
+    }
     pub(super) fn mod_held(&self) -> Option<HeldItem> {
         let stack = self.inventory.get(self.selected)?.as_ref()?;
         Some(HeldItem {

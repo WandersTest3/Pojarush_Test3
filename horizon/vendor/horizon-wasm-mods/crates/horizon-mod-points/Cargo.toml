@@ -1,0 +1,23 @@
+[package]
+build = "build.rs"
+name = "horizon-mod-points"
+version = "0.1.0"
+edition = "2024"
+license = "LGPL-3.0-or-later"
+publish = false
+description = "The game's injection points for mods that listen at them: typed function records and listener slots"
+
+[lib]
+name = "mod_points"
+
+[dependencies]
+horizon-mod-api = { path = "../horizon-mod-api" }
+horizon-engine-slots = { path = "../horizon-engine-slots" }
+
+
+[features]
+listener-fixture = []
+wasm-guest = []
+
+[build-dependencies]
+flate2 = "1"

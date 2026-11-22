@@ -1,6 +1,6 @@
 use horizon_mod_sdk::{
     Mod, Registration, chat,
-    input::{self, Event},
+    input::{self, Event, ScreenKind},
     render::{self, ItemShape, Point, Shape, TextShape},
     storage,
     ui::{self, ButtonWidget, SliderWidget, TextWidget, WidgetV2 as Widget},
@@ -17,15 +17,31 @@ const HOTBAR: u32 = 2;
 const REPLACE: u32 = 3;
 const NOTIFY: u32 = 4;
 const COUNTER: u32 = 5;
+const OPEN: u32 = 6;
+const CLOSE: u32 = 7;
 const RESET: u32 = 9;
 const INFO: u32 = 10;
-const DELAY_MAX: u32 = 20;
+const STEP_MS: u32 = 25;
+const DELAY_MAX: u32 = 1000;
+const CLOSE_MAX: u32 = 1000;
+const OPEN_TIMEOUT_MS: f32 = 1000.0;
+const COOLDOWN_MS: f32 = 300.0;
 
-const TEXT: [[&str; 13]; 3] = [
-    ["Auto Totem", "Delay", "ticks", "Use hotbar totems", "Replace off-hand item", "Totem count in chat", "Reset to defaults", "On", "Off", "Totems left", "No totems left!", "Toggle Auto Totem", "Totem counter above XP"],
-    ["Auto Totem", "Atraso", "ticks", "Usar totens da hotbar", "Trocar item da mão secundária", "Contagem de totens no chat", "Restaurar padrões", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem", "Contador de totens acima do XP"],
-    ["Auto Totem", "Atraso", "ticks", "Usar totens da barra rápida", "Trocar item da mão secundária", "Contagem de totens no chat", "Repor predefinições", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem", "Contador de totens acima do XP"],
+const TEXT: [[&str; 15]; 3] = [
+    ["Auto Totem", "Next totem delay", "ms", "Use hotbar totems", "Replace off-hand item", "Totem count in chat", "Reset to defaults", "On", "Off", "Totems left", "No totems left!", "Toggle Auto Totem", "Totem counter above XP", "Open inventory to swap", "Close inventory after"],
+    ["Auto Totem", "Atraso do próximo totem", "ms", "Usar totens da hotbar", "Trocar item da mão secundária", "Contagem de totens no chat", "Restaurar padrões", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem", "Contador de totens acima do XP", "Abrir o inventário para trocar", "Fechar o inventário após"],
+    ["Auto Totem", "Atraso do próximo totem", "ms", "Usar totens da barra rápida", "Trocar item da mão secundária", "Contagem de totens no chat", "Repor predefinições", "Ligado", "Desligado", "Totens restantes", "Acabaram os totens!", "Ligar/desligar Auto Totem", "Contador de totens acima do XP", "Abrir o inventário para trocar", "Fechar o inventário após"],
 ];
+
+enum Step {
+    Idle,
+    Waiting(f32),
+    Opening(f32),
+    Closing(f32),
+    Cooldown(f32),
+}
+
+const SETTINGS: [u32; 8] = [ENABLED, DELAY, HOTBAR, REPLACE, NOTIFY, COUNTER, OPEN, CLOSE];
 
 fn lang() -> usize {
     match ui::language().as_str() {
@@ -42,7 +58,9 @@ struct AutoTotem {
     replace: bool,
     notify: bool,
     counter: bool,
-    wait: u32,
+    open: bool,
+    close: u32,
+    step: Step,
     had_totem: bool,
     shown: Option<(u32, (f32, f32))>,
 }
@@ -56,7 +74,9 @@ impl AutoTotem {
             replace: false,
             notify: true,
             counter: true,
-            wait: 0,
+            open: false,
+            close: 100,
+            step: Step::Idle,
             had_totem: false,
             shown: None,
         }
@@ -65,12 +85,19 @@ impl AutoTotem {
     fn load() -> Self {
         let mut s = Self::defaults();
         if let Some(text) = storage::get(FILE).and_then(|v| String::from_utf8(v).ok()) {
+            let mut ms = None;
             for line in text.lines() {
                 let Some((k, v)) = line.split_once('=') else { continue };
                 let n: u32 = v.trim().parse().unwrap_or(0);
                 match k.trim() {
                     "enabled" => s.enabled = n == 1,
-                    "delay" => s.delay = n.min(DELAY_MAX),
+                    "delay" if ms.is_none() => s.delay = (n * 50).min(DELAY_MAX),
+                    "delay_ms" => {
+                        ms = Some(());
+                        s.delay = n.min(DELAY_MAX) / STEP_MS * STEP_MS;
+                    }
+                    "open_inventory" => s.open = n == 1,
+                    "close_ms" => s.close = n.min(CLOSE_MAX) / STEP_MS * STEP_MS,
                     "hotbar" => s.hotbar = n == 1,
                     "replace" => s.replace = n == 1,
                     "notify" => s.notify = n == 1,
@@ -84,9 +111,11 @@ impl AutoTotem {
 
     fn save(&self) {
         let text = format!(
-            "enabled={}\ndelay={}\nhotbar={}\nreplace={}\nnotify={}\ncounter={}\n",
+            "enabled={}\ndelay_ms={}\nopen_inventory={}\nclose_ms={}\nhotbar={}\nreplace={}\nnotify={}\ncounter={}\n",
             u32::from(self.enabled),
             self.delay,
+            u32::from(self.open),
+            self.close,
             u32::from(self.hotbar),
             u32::from(self.replace),
             u32::from(self.notify),
@@ -103,8 +132,15 @@ impl AutoTotem {
             Widget::Slider(SliderWidget {
                 id: DELAY,
                 label: format!("{}: {} {}", t[1], self.delay, t[2]),
-                steps: DELAY_MAX,
-                position: self.delay,
+                steps: DELAY_MAX / STEP_MS,
+                position: self.delay / STEP_MS,
+            }),
+            Widget::Button(ButtonWidget { id: OPEN, label: format!("{}: {}", t[13], on_off(self.open)) }),
+            Widget::Slider(SliderWidget {
+                id: CLOSE,
+                label: format!("{}: {} {}", t[14], self.close, t[2]),
+                steps: CLOSE_MAX / STEP_MS,
+                position: self.close / STEP_MS,
             }),
             Widget::Button(ButtonWidget { id: HOTBAR, label: format!("{}: {}", t[3], on_off(self.hotbar)) }),
             Widget::Button(ButtonWidget { id: REPLACE, label: format!("{}: {}", t[4], on_off(self.replace)) }),
@@ -114,7 +150,7 @@ impl AutoTotem {
             Widget::Text(TextWidget { id: INFO, text: format!("{}: {}", t[9], self.count()), color: 0xB98CF2 }),
         ];
         ui::set_settings_v2(&widgets);
-        ui::set_resets(&[ENABLED, DELAY, HOTBAR, REPLACE, NOTIFY, COUNTER]);
+        ui::set_resets(&SETTINGS);
     }
 
     fn count(&self) -> u32 {
@@ -130,6 +166,8 @@ impl AutoTotem {
             REPLACE => self.replace = d.replace,
             NOTIFY => self.notify = d.notify,
             COUNTER => self.counter = d.counter,
+            OPEN => self.open = d.open,
+            CLOSE => self.close = d.close,
             _ => {}
         }
     }
@@ -164,42 +202,96 @@ impl AutoTotem {
         ]);
     }
 
-    fn refill(&mut self) {
+    /// The inventory slot a totem comes from, or none when the off hand needs nothing.
+    fn source(&mut self) -> Option<u32> {
         let stacks = input::inventory();
         let offhand = stacks.iter().find(|s| s.slot == OFFHAND);
-        let holding = offhand.is_some_and(|s| s.id == TOTEM);
-        if holding {
+        if offhand.is_some_and(|s| s.id == TOTEM) {
             self.had_totem = true;
-            self.wait = 0;
-            return;
+            return None;
         }
         if offhand.is_some() && !self.replace {
-            self.wait = 0;
-            return;
+            return None;
         }
         let source = stacks
             .iter()
             .filter(|s| s.id == TOTEM && s.slot < 36 && (self.hotbar || s.slot >= 9))
             .min_by_key(|s| if s.slot >= 9 { s.slot } else { 100 + s.slot });
-        let Some(source) = source else {
+        if source.is_none() {
             if self.had_totem && self.notify {
                 chat::show(TEXT[lang()][10]);
             }
             self.had_totem = false;
-            return;
-        };
-        if self.wait < self.delay {
-            self.wait += 1;
-            return;
         }
-        self.wait = 0;
-        if input::swap_offhand(source.slot).is_ok() {
-            if self.had_totem && self.notify {
-                let left: u32 = stacks.iter().filter(|s| s.id == TOTEM && s.slot < 36).map(|s| s.count).sum();
-                chat::show(&format!("{}: {left}", TEXT[lang()][9]));
+        source.map(|s| s.slot)
+    }
+
+    fn swap(&mut self, slot: u32) -> bool {
+        if input::swap_offhand(slot).is_err() {
+            return false;
+        }
+        if self.had_totem && self.notify {
+            let left: u32 = input::inventory()
+                .iter()
+                .filter(|s| s.id == TOTEM && s.slot < 36 && s.slot != slot)
+                .map(|s| s.count)
+                .sum();
+            chat::show(&format!("{}: {left}", TEXT[lang()][9]));
+        }
+        self.had_totem = true;
+        true
+    }
+
+    /// Once a frame: waits the delay, then swaps; with "open inventory" on it opens the
+    /// inventory first (unless it is open already), swaps and closes it after the close delay.
+    fn refill(&mut self, ms: f32) {
+        let screen = input::current_screen();
+        self.step = match std::mem::replace(&mut self.step, Step::Idle) {
+            Step::Idle => match self.source() {
+                Some(_) => Step::Waiting(0.0),
+                None => Step::Idle,
+            },
+            Step::Waiting(t) => {
+                let t = t + ms;
+                if t < self.delay as f32 {
+                    Step::Waiting(t)
+                } else {
+                    match (self.source(), screen) {
+                        (None, _) => Step::Idle,
+                        (Some(_), ScreenKind::Other) => Step::Waiting(t),
+                        (Some(_), ScreenKind::Playing) if self.open => {
+                            input::open_inventory();
+                            Step::Opening(0.0)
+                        }
+                        (Some(slot), _) => {
+                            self.swap(slot);
+                            Step::Cooldown(0.0)
+                        }
+                    }
+                }
             }
-            self.had_totem = true;
-        }
+            Step::Opening(t) => match screen {
+                ScreenKind::Inventory => match self.source() {
+                    Some(slot) if self.swap(slot) => Step::Closing(0.0),
+                    _ => Step::Closing(self.close as f32),
+                },
+                _ if t + ms >= OPEN_TIMEOUT_MS => Step::Idle,
+                _ => Step::Opening(t + ms),
+            },
+            Step::Closing(t) => {
+                let t = t + ms;
+                if !matches!(screen, ScreenKind::Inventory) {
+                    Step::Cooldown(0.0)
+                } else if t >= self.close as f32 {
+                    input::close_inventory();
+                    Step::Cooldown(0.0)
+                } else {
+                    Step::Closing(t)
+                }
+            }
+            Step::Cooldown(t) if t + ms < COOLDOWN_MS => Step::Cooldown(t + ms),
+            Step::Cooldown(_) => Step::Idle,
+        };
     }
 }
 
@@ -208,7 +300,7 @@ impl Mod for AutoTotem {
         let m = AutoTotem::load();
         let _ = input::register_key(KEY, TEXT[lang()][11], "key.keyboard.unknown");
         m.page();
-        Ok((m, Registration::new().on_tick()))
+        Ok((m, Registration::new().on_tick().on_frame()))
     }
 
     fn tick(&mut self, _tick: u64) {
@@ -223,10 +315,15 @@ impl Mod for AutoTotem {
                 self.page();
             }
         }
-        if self.enabled {
-            self.refill();
-        }
         self.draw();
+    }
+
+    fn frame(&mut self, seconds: f32) {
+        if self.enabled || matches!(self.step, Step::Closing(_)) {
+            self.refill(seconds * 1000.0);
+        } else {
+            self.step = Step::Idle;
+        }
     }
 
     fn ui_select(&mut self, id: u32, row: u32) {
@@ -235,13 +332,15 @@ impl Mod for AutoTotem {
         } else {
             match id {
                 ENABLED => self.enabled = !self.enabled,
-                DELAY => self.delay = row.min(DELAY_MAX),
+                DELAY => self.delay = (row * STEP_MS).min(DELAY_MAX),
+                OPEN => self.open = !self.open,
+                CLOSE => self.close = (row * STEP_MS).min(CLOSE_MAX),
                 HOTBAR => self.hotbar = !self.hotbar,
                 REPLACE => self.replace = !self.replace,
                 NOTIFY => self.notify = !self.notify,
                 COUNTER => self.counter = !self.counter,
                 RESET => {
-                    for id in [ENABLED, DELAY, HOTBAR, REPLACE, NOTIFY, COUNTER] {
+                    for id in SETTINGS {
                         self.reset(id);
                     }
                 }

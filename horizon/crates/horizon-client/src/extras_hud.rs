@@ -17,6 +17,19 @@ pub struct Corners {
     used: [f32; 4],
 }
 impl Corners {
+    /// The size and each corner's used height (per `Corner::ALL`), to carry the stack to
+    /// another host's corners.
+    pub fn parts(&self) -> (f32, f32, [f32; 4]) {
+        (self.width, self.height, self.used)
+    }
+    /// Corners resumed from [`Corners::parts`].
+    pub fn from_parts(width: f32, height: f32, used: [f32; 4]) -> Self {
+        Self {
+            width,
+            height,
+            used,
+        }
+    }
     /// `top_right` reserves the status effect icons' rows.
     pub fn new(width: f32, height: f32, top_right: f32) -> Self {
         Self {

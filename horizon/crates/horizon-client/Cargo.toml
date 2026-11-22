@@ -32,6 +32,7 @@ horizon-friends = { path = "../horizon-friends" }
 # Horizon mods: sandboxed WebAssembly components, off unless installed and turned on (docs/mods.md).
 # Their runtime is the `mods` feature.
 horizon-mods = { path = "../horizon-mods", default-features = false, features = ["index"] }
+pojarush-wasm-mods = { path = "../pojarush-wasm-mods", optional = true }
 wgpu = { version = "30.0.1", default-features = false, features = ["std", "parking_lot", "vulkan", "metal", "wgsl", "naga-ir"] }
 winit = "0.30.13"
 pollster = "0.4"
@@ -96,7 +97,7 @@ controllers = ["dep:gilrs", "dep:horizon-dualsense", "horizon-client-input/contr
 # Records the call sites of mob random draws (`mob_ai_probe` traces).
 rng-trace = ["horizon-core/rng-trace"]
 # Runs code mods (wasmtime and cranelift). Content mods load without it.
-mods = ["horizon-mods/runtime"]
+mods = ["horizon-mods/runtime", "dep:pojarush-wasm-mods"]
 
 # Its own name, not `probe`: Cargo copies every crate's examples into one target/<profile>/examples.
 [[example]]
