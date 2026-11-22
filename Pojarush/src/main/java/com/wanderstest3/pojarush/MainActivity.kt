@@ -112,6 +112,7 @@ private enum class Section(val label: Int, val glyph: String, val launcher: Bool
     Mods(R.string.nav_mods, "✚$TEXT_STYLE"),
     Graphics(R.string.nav_graphics, "▣$TEXT_STYLE"),
     Nbt(R.string.nav_nbt, "⌘$TEXT_STYLE"),
+    Music(R.string.nav_music, "♪$TEXT_STYLE", true),
     Interface(R.string.interface_title, "◐$TEXT_STYLE", true),
     Others(R.string.nav_others, "✦$TEXT_STYLE", true),
     Logs(R.string.nav_logs, "☰$TEXT_STYLE", true),
@@ -262,6 +263,7 @@ private fun PojarushScreen() {
                                 com.wanderstest3.pojarush.ui.MenuButtonSettings(settings) {}
                             }
                             Section.Mods -> ModsPage()
+                            Section.Music -> com.wanderstest3.pojarush.ui.MusicPage()
                             Section.Nbt -> com.wanderstest3.pojarush.ui.NbtPage()
                             Section.Mouse -> MouseSettings(remember { ControlSettings(context) }) {}
                             Section.Graphics -> {

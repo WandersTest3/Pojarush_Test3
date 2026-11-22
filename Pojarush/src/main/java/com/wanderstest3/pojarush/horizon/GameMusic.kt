@@ -1,24 +1,23 @@
 package com.wanderstest3.pojarush.horizon
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.net.Uri
+import com.wanderstest3.pojarush.MusicLibrary
+import com.wanderstest3.pojarush.PlaylistPlayer
 import com.wanderstest3.pojarush.controls.ControlSettings
-import java.io.File
 
 class GameMusic(private val context: Context) {
     private val settings = ControlSettings(context)
-    private var player: MediaPlayer? = null
-    private var path: String? = null
-    private var userPaused = false
+    private val player = PlaylistPlayer(context, { settings.gameMusicVolume }, { settings.musicShuffle })
     private var foreground = false
 
     val available: Boolean
-        get() = settings.menuMusic.isNotEmpty() && File(settings.menuMusic).isFile
+        get() = MusicLibrary.tracks(context).isNotEmpty()
 
-    val playing: Boolean
-        get() = runCatching { player?.isPlaying == true }.getOrDefault(false)
+    val paused: Boolean
+        get() = player.paused
+
+    val nowPlaying: String?
+        get() = player.nowPlaying
 
     fun onResume() {
         foreground = true
@@ -27,50 +26,26 @@ class GameMusic(private val context: Context) {
 
     fun onPause() {
         foreground = false
-        runCatching { if (player?.isPlaying == true) player?.pause() }
+        player.stop()
     }
 
     fun release() {
         foreground = false
-        runCatching { player?.stop() }
-        player?.release()
-        player = null
-        path = null
+        player.stop()
+        player.release()
     }
 
     fun refresh() {
         if (!settings.gameMusic || !available) {
-            release()
+            player.stop()
+            player.release()
             return
         }
-        val wanted = settings.menuMusic
-        if (player == null || path != wanted) {
-            runCatching { player?.release() }
-            player = runCatching {
-                MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_GAME)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .build()
-                    )
-                    setDataSource(context, Uri.fromFile(File(wanted)))
-                    isLooping = true
-                    prepare()
-                }
-            }.getOrNull()
-            path = wanted
-        }
-        val v = settings.gameMusicVolume
-        runCatching { player?.setVolume(v, v) }
-        if (foreground && !userPaused) runCatching { if (player?.isPlaying == false) player?.start() }
+        player.applyVolume()
+        if (foreground) player.start()
     }
 
-    fun setPaused(paused: Boolean) {
-        userPaused = paused
-        if (paused) runCatching { if (player?.isPlaying == true) player?.pause() } else refresh()
-    }
+    fun setPaused(value: Boolean) = player.setPaused(value)
 
-    val paused: Boolean
-        get() = userPaused
+    fun next() = player.next()
 }

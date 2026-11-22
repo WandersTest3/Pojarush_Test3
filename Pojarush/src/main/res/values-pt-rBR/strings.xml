@@ -385,4 +385,13 @@
     <string name="game_music_pause">Pausar música</string>
     <string name="game_music_play">Retomar música</string>
     <string name="game_music_none">Nenhuma música do launcher escolhida. Escolha uma nas configurações de papel de parede do launcher.</string>
+    <string name="music_title">Músicas do launcher</string>
+    <string name="music_hint">Adicione quantas músicas quiser. Elas tocam em sequência, aleatórias ou em ordem, no menu do launcher e no jogo.</string>
+    <string name="music_add">Adicionar músicas</string>
+    <string name="music_empty">Nenhuma música adicionada ainda.</string>
+    <string name="music_in_menu">Tocar música no menu do launcher</string>
+    <string name="music_shuffle">Aleatório</string>
+    <string name="music_next">Próxima faixa</string>
+    <string name="music_now_playing">Tocando: %1$s</string>
+    <string name="menu_music_failed">Não foi possível adicionar a música: %s</string>
 </resources>

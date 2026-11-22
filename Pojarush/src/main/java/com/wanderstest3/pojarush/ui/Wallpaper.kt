@@ -61,9 +61,9 @@ fun WallpaperBackground() {
     val version = WallpaperState.version
     val path = remember(version) { settings.wallpaper }
     val dim = remember(version) { settings.wallpaperDim }
-    val music = remember(version) { settings.menuMusic.takeIf { it.isNotEmpty() && File(it).isFile } }
-    val volume = remember(version) { if (music != null) 0f else settings.wallpaperVolume }
-    MenuMusic(music, remember(version) { settings.menuMusicVolume })
+    val music = remember(version) { settings.musicInMenu && com.wanderstest3.pojarush.MusicLibrary.tracks(context).isNotEmpty() }
+    val volume = remember(version) { if (music) 0f else settings.wallpaperVolume }
+    MenuMusic(music, version)
     val found = remember(path, version) { File(path).takeIf { path.isNotEmpty() && it.isFile } }
     val file = found ?: return
     val stamp = file.lastModified()
@@ -510,8 +510,7 @@ fun WallpaperSettings(settings: ControlSettings) {
                 WallpaperState.version++
             }
         }
-        MenuMusicSettings(settings)
-        if (path.isNotEmpty() && ControlLayouts.isVideo(File(path).name) && settings.menuMusic.isEmpty()) {
+        if (path.isNotEmpty() && ControlLayouts.isVideo(File(path).name) && !(settings.musicInMenu && com.wanderstest3.pojarush.MusicLibrary.tracks(context).isNotEmpty())) {
             SettingSlider(stringResource(R.string.wallpaper_volume), settings.wallpaperVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0f) {
                 settings.wallpaperVolume = it
                 WallpaperState.version++
@@ -626,94 +625,34 @@ fun OnboardingWallpaperStep(onFinished: () -> Unit) {
 
 
 @Composable
-private fun MenuMusic(path: String?, volume: Float) {
+private fun MenuMusic(enabled: Boolean, version: Int) {
     val context = LocalContext.current
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    val player = remember(path) {
-        path?.let { p ->
-            runCatching {
-                android.media.MediaPlayer().apply {
-                    setAudioAttributes(
-                        android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_GAME)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .build()
-                    )
-                    setDataSource(context, android.net.Uri.fromFile(File(p)))
-                    isLooping = true
-                    prepare()
-                }
-            }.getOrNull()
+    val settings = remember { ControlSettings(context) }
+    val player = remember { com.wanderstest3.pojarush.PlaylistPlayer(context, { settings.menuMusicVolume }, { settings.musicShuffle }) }
+    androidx.compose.runtime.LaunchedEffect(player, enabled, version) {
+        if (enabled) {
+            player.reload()
+            player.applyVolume()
+            if (owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) player.start()
+        } else {
+            player.stop()
         }
     }
-    androidx.compose.runtime.LaunchedEffect(player, volume) { player?.setVolume(volume, volume) }
-    androidx.compose.runtime.DisposableEffect(player, owner) {
-        val p = player
+    androidx.compose.runtime.DisposableEffect(player, owner, enabled) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
-                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> runCatching { p?.start() }
-                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> runCatching { if (p?.isPlaying == true) p.pause() }
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> if (enabled) player.start()
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> player.stop()
                 else -> {}
             }
         }
         owner.lifecycle.addObserver(observer)
-        if (owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) runCatching { p?.start() }
         onDispose {
             owner.lifecycle.removeObserver(observer)
-            runCatching { p?.stop() }
-            p?.release()
+            player.stop()
+            player.release()
         }
     }
 }
 
-@Composable
-private fun MenuMusicSettings(settings: ControlSettings) {
-    val context = LocalContext.current
-    var music by remember { mutableStateOf(settings.menuMusic) }
-    val failed = stringResource(R.string.controls_import_failed, "%s")
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        runCatching {
-            val dir = File(context.filesDir, "menu_music").apply { mkdirs() }
-            dir.listFiles()?.forEach { it.delete() }
-            val name = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
-                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-                ?.replace(Regex("[^A-Za-z0-9._ -]"), "_")?.takeIf { it.isNotBlank() } ?: "music.mp3"
-            val out = File(dir, name)
-            context.contentResolver.openInputStream(uri)?.use { input -> out.outputStream().use { input.copyTo(it) } }
-                ?: error("No access to the file")
-            out
-        }.onSuccess {
-            settings.menuMusic = it.absolutePath
-            music = it.absolutePath
-            WallpaperState.version++
-        }.onFailure { Toast.makeText(context, failed.replace("%s", it.message.orEmpty()), Toast.LENGTH_LONG).show() }
-    }
-    Text(stringResource(R.string.menu_music_title), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-    Hint(if (music.isEmpty()) stringResource(R.string.menu_music_none) else File(music).name)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = { picker.launch(arrayOf("audio/*")) }) { Text(stringResource(R.string.menu_music_choose)) }
-        if (music.isNotEmpty()) {
-            OutlinedButton(onClick = {
-                File(music).delete()
-                settings.menuMusic = ""
-                music = ""
-                WallpaperState.version++
-            }) { Text(stringResource(R.string.wallpaper_remove)) }
-        }
-    }
-    if (music.isNotEmpty()) {
-        SettingSlider(stringResource(R.string.menu_music_volume), settings.menuMusicVolume, 0f..1f, 0.05f, { "${Math.round(it * 100)}%" }, default = 0.6f) {
-            settings.menuMusicVolume = it
-            WallpaperState.version++
-        }
-        var inGame by remember { mutableStateOf(settings.gameMusic) }
-        androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text(stringResource(R.string.game_music_enable), modifier = androidx.compose.ui.Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-            androidx.compose.material3.Switch(checked = inGame, onCheckedChange = {
-                inGame = it
-                settings.gameMusic = it
-            })
-        }
-    }
-}

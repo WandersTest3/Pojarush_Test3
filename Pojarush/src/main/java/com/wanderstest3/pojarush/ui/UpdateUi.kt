@@ -45,6 +45,17 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.29",
+            listOf(
+                "New Music screen: add several songs and play them shuffled or in order in the launcher menu and in the game.",
+                "A single click with a physical mouse is no longer read as two clicks (the inventory double-click bug).",
+            ),
+            listOf(
+                "Nova tela de Músicas: adicione várias músicas e toque em ordem aleatória ou sequencial no menu do launcher e no jogo.",
+                "Um clique com mouse físico não é mais lido como dois cliques (bug do duplo clique no inventário).",
+            ),
+        ),
+        Entry(
             "1.11.28",
             listOf(
                 "Changelog screen after each update and a notice when a newer release exists on GitHub.",

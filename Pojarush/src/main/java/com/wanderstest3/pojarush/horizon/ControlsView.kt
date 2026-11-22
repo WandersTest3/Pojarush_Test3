@@ -881,7 +881,7 @@ class ControlsView(
                         return true
                     }
                 }
-                mouse(button, true)
+                if (!bridgeDown[button]) mouse(button, true)
             }
             MotionEvent.ACTION_MOVE -> if (mouseHudDrag) {
                 cursorX = e.x.coerceIn(0f, (width - 1).coerceAtLeast(0).toFloat())
@@ -898,7 +898,7 @@ class ControlsView(
                     }
                     return true
                 }
-                mouse(button, false)
+                if (bridgeDown[button]) mouse(button, false)
             }
         }
         return true

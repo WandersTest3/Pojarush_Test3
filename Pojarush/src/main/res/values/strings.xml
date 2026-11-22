@@ -386,4 +386,13 @@
     <string name="game_music_pause">Pause music</string>
     <string name="game_music_play">Resume music</string>
     <string name="game_music_none">No launcher music chosen. Pick one in the launcher\'s wallpaper settings.</string>
+    <string name="music_title">Launcher music</string>
+    <string name="music_hint">Add as many songs as you like. They play one after another, shuffled or in order, in the launcher menu and in the game.</string>
+    <string name="music_add">Add music</string>
+    <string name="music_empty">No music added yet.</string>
+    <string name="music_in_menu">Play music in the launcher menu</string>
+    <string name="music_shuffle">Shuffle</string>
+    <string name="music_next">Next track</string>
+    <string name="music_now_playing">Now playing: %1$s</string>
+    <string name="menu_music_failed">Could not add the music: %s</string>
 </resources>

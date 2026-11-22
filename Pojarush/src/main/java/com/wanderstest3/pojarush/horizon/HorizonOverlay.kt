@@ -279,6 +279,7 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
         val music = activity.music
         var enabled by remember { mutableStateOf(settings.gameMusic) }
         var paused by remember { mutableStateOf(music.paused) }
+        var shuffle by remember { mutableStateOf(settings.musicShuffle) }
         if (!music.available) {
             Text(stringResource(R.string.game_music_none), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -297,9 +298,19 @@ class HorizonOverlay(private val activity: HorizonActivity) : FrameLayout(activi
                 settings.gameMusicVolume = it
                 music.refresh()
             }
-            QuickChip(stringResource(if (paused) R.string.game_music_play else R.string.game_music_pause), paused) {
-                paused = !paused
-                music.setPaused(paused)
+            music.nowPlaying?.let {
+                Text(stringResource(R.string.music_now_playing, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                QuickChip(stringResource(if (paused) R.string.game_music_play else R.string.game_music_pause), paused) {
+                    paused = !paused
+                    music.setPaused(paused)
+                }
+                QuickChip(stringResource(R.string.music_next)) { music.next() }
+                QuickChip(stringResource(R.string.music_shuffle), shuffle) {
+                    shuffle = !shuffle
+                    settings.musicShuffle = shuffle
+                }
             }
         }
     }
