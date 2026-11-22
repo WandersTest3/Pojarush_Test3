@@ -55,7 +55,10 @@ mod running {
         /// Once, for the window's game: the wasm packages in `horizon-mods/`, started on their
         /// guest thread (the first start compiles them; later starts read the cache).
         pub(in crate::game) fn start_wasm_mods(&mut self) {
-            if self.mods.wasm_started || self.options.execution_role != ExecutionRole::Client {
+            if self.mods.wasm_started
+                || self.options.execution_role != ExecutionRole::Client
+                || self.rest_loader.is_some()
+            {
                 return;
             }
             self.mods.wasm_started = true;
@@ -285,6 +288,7 @@ mod running {
 
         /// Once a frame.
         pub(in crate::game) fn wasm_frame(&mut self, elapsed: Duration) {
+            self.start_wasm_mods();
             let status: Vec<Option<String>> =
                 self.mods.wasm.entries().into_iter().map(|e| e.problem).collect();
             if status != self.mods.wasm_status {

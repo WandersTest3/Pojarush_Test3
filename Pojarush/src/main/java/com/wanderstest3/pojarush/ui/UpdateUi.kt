@@ -45,6 +45,15 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.34",
+            listOf(
+                "Fixed the game closing right after opening (\"world resources joined before entry\"): wasm mods now start only after the world resources have loaded.",
+            ),
+            listOf(
+                "Corrigido o jogo fechando logo ao abrir (\"world resources joined before entry\"): os mods wasm agora só iniciam depois que os recursos do mundo carregam.",
+            ),
+        ),
+        Entry(
             "1.11.33",
             listOf(
                 "Shader packs without block.properties (Chocapic13 and other old packs) now get the default block IDs, so water, ice, leaves, plants and glowing blocks are recognised: water reflections, water out of the shadow map and waving plants.",
