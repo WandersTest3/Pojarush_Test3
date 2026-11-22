@@ -45,6 +45,15 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.30",
+            listOf(
+                "Fresh Animations: layers drawn on a custom body, such as the iron golem's cracks, now animate with it.",
+            ),
+            listOf(
+                "Fresh Animations: camadas desenhadas sobre um corpo customizado, como as rachaduras do golem de ferro, agora animam junto com ele.",
+            ),
+        ),
+        Entry(
             "1.11.29",
             listOf(
                 "New Music screen: add several songs and play them shuffled or in order in the launcher menu and in the game.",

@@ -1498,16 +1498,29 @@ fn render_visible(
     // One Poses refilled for every layer (armour draws up to seven): it keeps
     // its maps' capacity.
     let mut layer_poses = Poses::default();
+    // A layer drawn on the body's own model (the iron golem's cracks) follows a
+    // custom (CEM) body: same geometry and the same animated poses.
+    let custom_body = custom.is_some();
     for layer in all_layers {
-        let Some(part) = m.kind.layer(&layer.model).cloned() else {
+        let same_model = custom_body
+            && layer.model.strip_suffix("#main").unwrap_or(&layer.model)
+                == model_key.strip_suffix("#main").unwrap_or(&model_key);
+        let Some(part) = (if same_model {
+            Some(model.clone())
+        } else {
+            m.kind.layer(&layer.model).cloned()
+        }) else {
             continue;
         };
         let Some(uv) = atlas(&layer.texture) else {
             continue;
         };
-        layer_poses.reset(&part);
-        anim::setup(m, &s, &mut layer_poses, &data.animations);
-        if matches!(m.species(), Species::Villager | Species::ZombieVillager)
+        if !same_model {
+            layer_poses.reset(&part);
+            anim::setup(m, &s, &mut layer_poses, &data.animations);
+        }
+        if !same_model
+            && matches!(m.species(), Species::Villager | Species::ZombieVillager)
             && let Some((folder, variant)) = layer
                 .texture
                 .split_once("/type/")
@@ -1535,7 +1548,7 @@ fn render_visible(
         draw_scrolled(
             &part,
             base,
-            &layer_poses,
+            if same_model { &poses } else { &layer_poses },
             uv,
             layer.scroll,
             layer.color,
