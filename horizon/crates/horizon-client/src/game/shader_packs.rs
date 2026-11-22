@@ -243,7 +243,9 @@ fn compile_shader_pack_cpu(
     resolve_game_textures(&mut post.textures, resources);
     let biome_refs: Vec<&str> = biome_names.iter().map(String::as_str).collect();
     post.custom.set_biomes(&biome_refs);
-    let text = pack.read_text("block.properties").unwrap_or_default();
+    let text = pack
+        .read_text("block.properties")
+        .unwrap_or_else(horizon_shaders::legacy_block_properties);
     let ids = BlockIds::parse(&Properties::parse(&text, &macros));
     for note in &ids.notes {
         log::warn!("shader pack {name}: block.properties: {note}");

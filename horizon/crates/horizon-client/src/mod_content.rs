@@ -1784,7 +1784,10 @@ fn stamp(base: &Path, mods: &[ContentMod]) -> Result<String> {
             modified.as_nanos()
         ))
     };
-    let mut parts = vec!["horizon mod content 1".to_owned()];
+    let mut parts = vec!["horizon mod content 2".to_owned()];
+    // On Android the executable is the system's, the same in every build of the game, so the
+    // rewrite code itself is part of what the root is built from.
+    parts.push(format!("{:x}", Sha256::digest(include_bytes!("mod_content.rs"))));
     parts.push(meta(&std::env::current_exe()?)?);
     let base = std::path::absolute(base)?;
     parts.push(

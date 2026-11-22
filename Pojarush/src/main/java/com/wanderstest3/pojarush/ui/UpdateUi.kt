@@ -45,6 +45,17 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.33",
+            listOf(
+                "Shader packs without block.properties (Chocapic13 and other old packs) now get the default block IDs, so water, ice, leaves, plants and glowing blocks are recognised: water reflections, water out of the shadow map and waving plants.",
+                "Content mods' block data is rebuilt after every game update, which fixes the resource pack reload error that stayed after 1.11.32.",
+            ),
+            listOf(
+                "Shaders sem block.properties (Chocapic13 e outros antigos) agora recebem os IDs de bloco padrão, então água, gelo, folhas, plantas e blocos que brilham são reconhecidos: reflexos na água, água fora do mapa de sombras e plantas balançando.",
+                "Os dados de blocos dos mods de conteúdo são refeitos a cada atualização do jogo, o que corrige o erro de recarga de resource packs que continuou na 1.11.32.",
+            ),
+        ),
+        Entry(
             "1.11.32",
             listOf(
                 "Fixed the resource reload errors (\"model state definitions disagree\" and \"table registry size mismatch\") with content mods that add blocks with state properties, such as Simply Light.",

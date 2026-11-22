@@ -37,7 +37,7 @@ mod translate;
 
 pub use gles::for_gles;
 pub use biomes::{category as biome_category, precipitation as biome_precipitation};
-pub use block_ids::BlockIds;
+pub use block_ids::{BlockIds, legacy_block_properties};
 pub use condition::eval_condition;
 pub use config::{BUFFERS, Buffer, Config, Format, Kind, Shadow, buffer_index, draw_buffers};
 pub use core_shader::{BLOCKS, CoreProgram, Glue, SAMPLERS, translate_core};

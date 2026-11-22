@@ -103,6 +103,140 @@ impl BlockIds {
     }
 }
 
+const COLORS: [&str; 16] = [
+    "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray",
+    "cyan", "purple", "blue", "brown", "green", "red", "black",
+];
+const WOODS: [&str; 6] = ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak"];
+
+/// The `block.properties` every pack without its own gets, as OptiFine and Iris give it: the
+/// block ids of Minecraft 1.12, which the old packs test (`mc_Entity.x == 8.0` is water),
+/// under the blocks' current names.
+pub fn legacy_block_properties() -> String {
+    let mut lines: Vec<(u32, Vec<String>)> = Vec::new();
+    let mut add = |id: u32, names: &[&str]| lines.push((id, names.iter().map(|n| (*n).to_owned()).collect()));
+    add(1, &["stone", "granite", "diorite", "andesite", "polished_granite", "polished_diorite", "polished_andesite"]);
+    add(2, &["grass_block"]);
+    add(3, &["dirt", "coarse_dirt", "podzol", "rooted_dirt"]);
+    add(4, &["cobblestone"]);
+    add(7, &["bedrock"]);
+    add(8, &["water"]);
+    add(10, &["lava"]);
+    add(12, &["sand", "red_sand"]);
+    add(13, &["gravel"]);
+    add(14, &["gold_ore"]);
+    add(15, &["iron_ore"]);
+    add(16, &["coal_ore"]);
+    add(19, &["sponge", "wet_sponge"]);
+    add(20, &["glass"]);
+    add(21, &["lapis_ore"]);
+    add(22, &["lapis_block"]);
+    add(24, &["sandstone", "chiseled_sandstone", "cut_sandstone", "smooth_sandstone"]);
+    add(25, &["note_block"]);
+    add(30, &["cobweb"]);
+    add(31, &["short_grass", "grass", "fern"]);
+    add(32, &["dead_bush"]);
+    add(37, &["dandelion"]);
+    add(38, &["poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip", "oxeye_daisy", "cornflower", "lily_of_the_valley"]);
+    add(39, &["brown_mushroom"]);
+    add(40, &["red_mushroom"]);
+    add(41, &["gold_block"]);
+    add(42, &["iron_block"]);
+    add(45, &["bricks"]);
+    add(46, &["tnt"]);
+    add(47, &["bookshelf"]);
+    add(48, &["mossy_cobblestone"]);
+    add(49, &["obsidian"]);
+    add(50, &["torch", "wall_torch"]);
+    add(51, &["fire"]);
+    add(52, &["spawner"]);
+    add(54, &["chest", "trapped_chest"]);
+    add(56, &["diamond_ore"]);
+    add(57, &["diamond_block"]);
+    add(58, &["crafting_table"]);
+    add(59, &["wheat"]);
+    add(60, &["farmland"]);
+    add(61, &["furnace"]);
+    add(62, &["furnace:lit=true"]);
+    add(73, &["redstone_ore"]);
+    add(74, &["redstone_ore:lit=true"]);
+    add(76, &["redstone_torch", "redstone_wall_torch"]);
+    add(78, &["snow"]);
+    add(79, &["ice", "frosted_ice"]);
+    add(80, &["snow_block"]);
+    add(81, &["cactus"]);
+    add(82, &["clay"]);
+    add(83, &["sugar_cane"]);
+    add(84, &["jukebox"]);
+    add(86, &["pumpkin", "carved_pumpkin"]);
+    add(87, &["netherrack"]);
+    add(88, &["soul_sand"]);
+    add(89, &["glowstone"]);
+    add(90, &["nether_portal"]);
+    add(91, &["jack_o_lantern"]);
+    add(95, &[]);
+    add(98, &["stone_bricks", "mossy_stone_bricks", "cracked_stone_bricks", "chiseled_stone_bricks"]);
+    add(103, &["melon"]);
+    add(104, &["pumpkin_stem", "attached_pumpkin_stem"]);
+    add(105, &["melon_stem", "attached_melon_stem"]);
+    add(106, &["vine"]);
+    add(110, &["mycelium"]);
+    add(111, &["lily_pad"]);
+    add(112, &["nether_bricks"]);
+    add(115, &["nether_wart"]);
+    add(116, &["enchanting_table"]);
+    add(119, &["end_portal"]);
+    add(121, &["end_stone"]);
+    add(123, &["redstone_lamp"]);
+    add(124, &["redstone_lamp:lit=true"]);
+    add(129, &["emerald_ore"]);
+    add(133, &["emerald_block"]);
+    add(138, &["beacon"]);
+    add(141, &["carrots"]);
+    add(142, &["potatoes"]);
+    add(152, &["redstone_block"]);
+    add(153, &["nether_quartz_ore"]);
+    add(155, &["quartz_block", "chiseled_quartz_block", "quartz_pillar", "smooth_quartz"]);
+    add(165, &["slime_block"]);
+    add(169, &["sea_lantern"]);
+    add(170, &["hay_block"]);
+    add(173, &["coal_block"]);
+    add(174, &["packed_ice", "blue_ice"]);
+    add(175, &["sunflower", "lilac", "tall_grass", "large_fern", "rose_bush", "peony"]);
+    add(198, &["end_rod"]);
+    add(213, &["magma_block"]);
+    add(214, &["nether_wart_block"]);
+    add(215, &["red_nether_bricks"]);
+    add(216, &["bone_block"]);
+    let mut out = String::new();
+    for (id, names) in &lines {
+        if !names.is_empty() {
+            out.push_str(&format!("block.{id}={}\n", names.join(" ")));
+        }
+    }
+    let family = |id: u32, suffix: &str| -> String {
+        let names: Vec<String> = COLORS.iter().map(|c| format!("{c}_{suffix}")).collect();
+        format!("block.{id}={}\n", names.join(" "))
+    };
+    out.push_str(&family(35, "wool"));
+    out.push_str(&family(95, "stained_glass"));
+    out.push_str(&family(160, "stained_glass_pane"));
+    out.push_str(&family(159, "terracotta"));
+    out.push_str(&family(251, "concrete"));
+    let wood = |id: u32, kind: &str, of: &[&str]| -> String {
+        let names: Vec<String> = of.iter().map(|w| format!("{w}_{kind}")).collect();
+        format!("block.{id}={}\n", names.join(" "))
+    };
+    out.push_str(&wood(5, "planks", &WOODS));
+    out.push_str(&wood(6, "sapling", &WOODS));
+    out.push_str(&wood(17, "log", &WOODS[..4]));
+    out.push_str(&wood(18, "leaves", &WOODS[..4]));
+    out.push_str(&wood(161, "leaves", &WOODS[4..]));
+    out.push_str(&wood(162, "log", &WOODS[4..]));
+    out.push_str("block.102=glass_pane\n");
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +284,18 @@ mod tests {
         assert_eq!(plain["minecraft:husk"], 10);
         assert_eq!(plain["mod:thing"], 11);
         assert!(!plain.contains_key("minecraft:stone"));
+    }
+
+    #[test]
+    fn legacy_ids_give_water_and_leaves() {
+        let ids = BlockIds::parse(&Properties::parse(&legacy_block_properties(), &Macros::standard()));
+        let none = |_: &str| None;
+        assert_eq!(ids.id("minecraft:water", none), Some(8));
+        assert_eq!(ids.id("minecraft:ice", none), Some(79));
+        assert_eq!(ids.id("minecraft:oak_leaves", none), Some(18));
+        assert_eq!(ids.id("minecraft:acacia_leaves", none), Some(161));
+        assert_eq!(ids.id("minecraft:tall_grass", none), Some(175));
+        assert_eq!(ids.id("minecraft:glowstone", none), Some(89));
+        assert!(ids.notes.is_empty(), "{:?}", ids.notes);
     }
 }
