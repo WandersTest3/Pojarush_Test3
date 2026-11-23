@@ -45,6 +45,15 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.35",
+            listOf(
+                "Resource packs no longer fail to load as a whole when one block's model states disagree with the block registry (content-mod blocks): that block gets no model and the log names it, and every other pack model loads.",
+            ),
+            listOf(
+                "As resource packs não falham mais por inteiro quando os estados de modelo de um bloco divergem do registro de blocos (blocos de mods de conteúdo): esse bloco fica sem modelo e o log o nomeia, e todos os outros modelos do pack carregam.",
+            ),
+        ),
+        Entry(
             "1.11.34",
             listOf(
                 "Fixed the game closing right after opening (\"world resources joined before entry\"): wasm mods now start only after the world resources have loaded.",

@@ -174,15 +174,24 @@ impl StateModels {
                 .iter()
                 .map(|&id| (id, &registry.state(id).expect("indexed state").properties))
                 .collect();
-            if native_order.len() != possible.len()
-                || native_order
-                    .iter()
-                    .zip(&possible)
-                    .any(|((_, a), b)| *a != b)
-            {
-                return Err(
-                    "model state definitions disagree with the imported block registry".into(),
+            let first_difference = native_order
+                .iter()
+                .zip(&possible)
+                .position(|((_, a), b)| *a != b);
+            if native_order.len() != possible.len() || first_difference.is_some() {
+                let detail = match first_difference {
+                    Some(i) => format!(
+                        "state {i}: registry {:?}, model {:?}",
+                        native_order[i].1, possible[i]
+                    ),
+                    None => String::new(),
+                };
+                log::warn!(
+                    "Horizon: model states of {namespace}:{path} disagree with the block registry ({} registry states, {} model states) {detail}; the block gets no model",
+                    native_order.len(),
+                    possible.len(),
                 );
+                continue;
             }
             for ((id, _), selected) in native_order.into_iter().zip(bound) {
                 if let Some(selected) = selected {

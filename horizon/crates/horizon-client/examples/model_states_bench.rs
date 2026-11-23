@@ -244,10 +244,16 @@ mod tests {
             .as_array_mut()
             .unwrap()
             .reverse();
-        assert_eq!(
-            load_error(&facts)?,
-            "model state definitions disagree with the imported block registry"
-        );
+        fs::write(
+            fixture.root.join("model-states.json"),
+            serde_json::to_vec(&facts)?,
+        )?;
+        StateModels::load(
+            &fixture.root,
+            &fixture.registry,
+            &blocks,
+            &mut Sprites::default(),
+        )?;
         fs::remove_file(fixture.root.join("model-states.json"))?;
         // A parsed document remains usable without reopening its source file.
         StateModels::from_facts(
