@@ -45,6 +45,15 @@ object Updates {
 
     val CHANGELOG = listOf(
         Entry(
+            "1.11.36",
+            listOf(
+                "Fixed the game not starting with content mods installed (\"table state identities differ\"): blocks whose template has no state properties now get their own properties in the block registry.",
+            ),
+            listOf(
+                "Corrigido o jogo não iniciar com mods de conteúdo instalados (\"table state identities differ\"): blocos cujo modelo base não tem propriedades de estado agora recebem as próprias propriedades no registro de blocos.",
+            ),
+        ),
+        Entry(
             "1.11.35",
             listOf(
                 "Resource packs no longer fail to load as a whole when one block's model states disagree with the block registry (content-mod blocks): that block gets no model and the log names it, and every other pack model loads.",

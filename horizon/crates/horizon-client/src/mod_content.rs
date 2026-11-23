@@ -685,10 +685,18 @@ impl<'a> Plan<'a> {
                 }
                 if !b.own.is_empty()
                     && let J::Arr(cells) = &mut row
-                    && let Some(J::Obj(props)) = cells.get_mut(4).and_then(|c| c.get_mut("properties"))
+                    && let Some(state) = cells.get_mut(4)
                 {
-                    for (name, value) in &b.own {
-                        props.push((name.clone(), J::Str(value.clone())));
+                    if let J::Str(name) = state {
+                        *state = J::Obj(vec![("id".to_owned(), J::Str(name.clone()))]);
+                    }
+                    if state.get_mut("properties").is_none() {
+                        state.set("properties", J::Obj(Vec::new()));
+                    }
+                    if let Some(J::Obj(props)) = state.get_mut("properties") {
+                        for (name, value) in &b.own {
+                            props.push((name.clone(), J::Str(value.clone())));
+                        }
                     }
                 }
                 if gameplay {
