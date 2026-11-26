@@ -244,6 +244,7 @@ object GameFiles {
             } finally {
                 temp.delete()
             }
+            if (kind != PackKind.RESOURCE) return PackEntry(folder, folder.name, null, null)
             setPackEnabled(folder, true)
             return PackEntry(folder, folder.name, packId(folder), true)
         }
@@ -272,7 +273,17 @@ object GameFiles {
                     if (inner.size != 1) throw IOException("pack.mcmeta is missing at the root of the zip")
                     return inner[0].substringBefore('/') + "/"
                 }
-                PackKind.SHADER -> {}
+                PackKind.SHADER -> {
+                    val names = it.entries().asSequence().map { e -> e.name }.toList()
+                    if (names.any { n -> n == "horizon-shaders.toml" || n.startsWith("shaders/") }) return null
+                    val inner = names
+                        .filter { n -> n.count { c -> c == '/' } >= 1 }
+                        .map { n -> n.substringBefore('/') }
+                        .distinct()
+                        .filter { d -> names.any { n -> n == "$d/horizon-shaders.toml" || n.startsWith("$d/shaders/") } }
+                    if (inner.size != 1) throw IOException("shaders/ is missing at the root of the zip")
+                    return inner[0] + "/"
+                }
             }
         }
         return null
