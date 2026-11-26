@@ -27,7 +27,7 @@ pub struct Cem {
 /// reload swaps them without reloading the mob types.
 type Entry = (usize, Arc<Part>, Arc<Cem>);
 static TYPES: RwLock<Option<HashMap<String, Entry>>> = RwLock::new(None);
-static VARS: Mutex<Option<HashMap<u32, Vec<f32>>>> = Mutex::new(None);
+static VARS: Mutex<Option<HashMap<(u32, usize), Vec<f32>>>> = Mutex::new(None);
 
 /// The custom model of mob type `id` (`minecraft:creeper`) whose vanilla model is `model`, if a
 /// pack has one: the model to draw and its animations.
@@ -850,7 +850,7 @@ impl Cem {
         } else {
             VARS.lock()
                 .ok()
-                .and_then(|mut v| v.get_or_insert_with(HashMap::new).get(&inputs.id).cloned())
+                .and_then(|mut v| v.get_or_insert_with(HashMap::new).get(&(inputs.id, self as *const Cem as usize)).cloned())
                 .unwrap_or_default()
         };
         vars.resize(self.vars.len(), 0.0);
@@ -877,7 +877,7 @@ impl Cem {
             if map.len() > 4096 {
                 map.clear();
             }
-            map.insert(inputs.id, vars);
+            map.insert((inputs.id, self as *const Cem as usize), vars);
         }
     }
 }

@@ -17,9 +17,19 @@ struct PostOut {
     return out;
 }
 
+override STEPS: f32 = 0.0;
+
+fn posterize(c: vec4<f32>) -> vec4<f32> {
+    if STEPS < 2.0 {
+        return c;
+    }
+    let n = STEPS - 1.0;
+    return vec4(floor(clamp(c.rgb, vec3(0.0), vec3(1.0)) * n + 0.5) / n, c.a);
+}
+
 @fragment fn fs_copy(in: PostOut) -> @location(0) vec4<f32> {
     // The alpha carries the emissive mark through to HDR output (hdr.wgsl).
-    return textureSampleLevel(world, world_sampler, in.uv, 0.0);
+    return posterize(textureSampleLevel(world, world_sampler, in.uv, 0.0));
 }
 
 fn luma(c: vec3<f32>) -> f32 {
@@ -28,6 +38,10 @@ fn luma(c: vec3<f32>) -> f32 {
 
 // FXAA 3.11 (console quality): blend along the local edge direction.
 @fragment fn fs_fxaa(in: PostOut) -> @location(0) vec4<f32> {
+    return posterize(fxaa(in));
+}
+
+fn fxaa(in: PostOut) -> vec4<f32> {
     let texel = 1.0 / vec2<f32>(textureDimensions(world));
     let centre = textureSampleLevel(world, world_sampler, in.uv, 0.0);
     let rgb_m = centre.rgb;

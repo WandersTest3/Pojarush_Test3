@@ -50,11 +50,54 @@ struct TaaResources {
     uniform: wgpu::Buffer,
 }
 
+fn post_pipeline(
+    device: &wgpu::Device,
+    shader: &wgpu::ShaderModule,
+    entry: &str,
+    layout: &wgpu::PipelineLayout,
+    format: wgpu::TextureFormat,
+    steps: u32,
+) -> wgpu::RenderPipeline {
+    let constants = [("STEPS", f64::from(steps))];
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Horizon post"),
+        layout: Some(layout),
+        vertex: wgpu::VertexState {
+            module: shader,
+            entry_point: Some("vs_post"),
+            compilation_options: Default::default(),
+            buffers: &[],
+        },
+        primitive: Default::default(),
+        depth_stencil: None,
+        multisample: Default::default(),
+        fragment: Some(wgpu::FragmentState {
+            module: shader,
+            entry_point: Some(entry),
+            compilation_options: wgpu::PipelineCompilationOptions {
+                constants: &constants,
+                ..Default::default()
+            },
+            targets: &[Some(wgpu::ColorTargetState {
+                format,
+                blend: None,
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+        }),
+        multiview_mask: None,
+        cache: None,
+    })
+}
+
 pub struct Post {
     layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
     copy: wgpu::RenderPipeline,
     fxaa: wgpu::RenderPipeline,
+    shader: wgpu::ShaderModule,
+    pipeline_layout: wgpu::PipelineLayout,
+    /// Colour levels per channel the pipelines quantize to (0: off).
+    steps: u32,
     format: wgpu::TextureFormat,
     /// World resolution relative to the window (0.5..=2.0).
     pub scale: f32,
@@ -118,31 +161,7 @@ impl Post {
             ..Default::default()
         });
         let pipeline = |entry: &str, layout: &wgpu::PipelineLayout, format| {
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Horizon post"),
-                layout: Some(layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_post"),
-                    compilation_options: Default::default(),
-                    buffers: &[],
-                },
-                primitive: Default::default(),
-                depth_stencil: None,
-                multisample: Default::default(),
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some(entry),
-                    compilation_options: Default::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format,
-                        blend: None,
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                multiview_mask: None,
-                cache: None,
-            })
+            post_pipeline(device, &shader, entry, layout, format, 0)
         };
         // The OpenGL backend's GLSL translator does not support textureLoad
         // from depth textures: on devices running through OpenGL (such as older
@@ -235,6 +254,9 @@ impl Post {
         Self {
             copy: pipeline("fs_copy", &pipeline_layout, format),
             fxaa: pipeline("fs_fxaa", &pipeline_layout, format),
+            shader: shader.clone(),
+            pipeline_layout: pipeline_layout.clone(),
+            steps: 0,
             layout,
             sampler,
             format,
@@ -249,6 +271,18 @@ impl Post {
             taa_previous: None,
             taa_this_frame: bytemuck::Zeroable::zeroed(),
         }
+    }
+
+    /// Quantizes the final picture to `steps` colour levels per channel (below 2: off),
+    /// building the copy and FXAA pipelines again when the value changes.
+    pub fn set_posterize(&mut self, device: &wgpu::Device, steps: u32) {
+        let steps = if steps < 2 { 0 } else { steps.min(32) };
+        if steps == self.steps {
+            return;
+        }
+        self.steps = steps;
+        self.copy = post_pipeline(device, &self.shader, "fs_copy", &self.pipeline_layout, self.format, steps);
+        self.fxaa = post_pipeline(device, &self.shader, "fs_fxaa", &self.pipeline_layout, self.format, steps);
     }
 
     /// Whether TAA is supported on this GPU/backend.
@@ -308,7 +342,7 @@ impl Post {
         window: [u32; 2],
         always: bool,
     ) -> Option<(wgpu::TextureView, wgpu::TextureView)> {
-        if self.scale == 1.0 && !self.antialias && !self.taa_on && !always {
+        if self.scale == 1.0 && !self.antialias && !self.taa_on && self.steps == 0 && !always {
             self.target = None;
             return None;
         }

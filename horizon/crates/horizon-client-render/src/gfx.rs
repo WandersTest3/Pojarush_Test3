@@ -3627,7 +3627,8 @@ impl Renderer {
         true
     }
     /// `upscale`: output pixels per rendered pixel, for TAA to rebuild (1: native).
-    pub fn set_world_post(&mut self, scale: f32, antialias: bool, taa: bool, upscale: f32) {
+    pub fn set_world_post(&mut self, scale: f32, antialias: bool, taa: bool, upscale: f32, posterize: u32) {
+        self.world_post.set_posterize(&self.device, posterize);
         let taa = taa && self.world_post.supports_taa();
         self.world_post.scale = scale.clamp(0.25, 2.0);
         self.world_post.antialias = antialias && !taa;

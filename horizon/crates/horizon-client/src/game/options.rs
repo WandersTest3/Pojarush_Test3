@@ -325,6 +325,7 @@ impl Game<'_> {
                 s.horizon.fxaa,
                 s.horizon.taa,
                 s.horizon.upscaling.ratio(),
+                s.horizon.posterize,
             );
             r.set_hdr(
                 s.horizon.hdr,

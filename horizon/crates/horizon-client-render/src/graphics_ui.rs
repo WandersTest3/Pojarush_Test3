@@ -39,6 +39,7 @@ pub enum H {
     ResolutionScale,
     Antialiasing,
     Upscaling,
+    Posterize,
     Hdr,
     /// Opens `Level::Hdr`.
     HdrSettings,
@@ -259,6 +260,11 @@ pub fn rows(level: Level) -> Vec<Row> {
                 "Renders the world smaller and rebuilds it with TAA. Faster, softer.",
             ),
             h(
+                H::Posterize,
+                None,
+                "Experimental. Fewer colour levels per channel: flatter picture.",
+            ),
+            h(
                 H::PresentMode,
                 None,
                 "How frames reach the screen while VSync is off.",
@@ -365,6 +371,10 @@ impl H {
             }
             H::Workers => Some(g.workers as f32 / max_workers() as f32),
             H::ResolutionScale => Some((g.resolution_scale as f32 - 25.0) / 175.0),
+            H::Posterize => Some(match g.posterize {
+                0 => 0.0,
+                n => (n - 1) as f32 / 31.0,
+            }),
             // Auto, then 80..480 by 10.
             H::HdrPaperWhite => Some(match g.hdr_paper_white {
                 0 => 0.0,
@@ -427,6 +437,10 @@ impl H {
                 },
             ),
             H::Upscaling => labelled("Upscaling", g.upscaling.label()),
+            H::Posterize => match g.posterize {
+                0 => labelled("Posterize (Experimental)", "Off"),
+                n => labelled("Posterize (Experimental)", n),
+            },
             H::Hdr => labelled("HDR", on_off(g.hdr)),
             H::HdrSettings => Text::literal("HDR Settings..."),
             H::HdrPaperWhite => match g.hdr_paper_white {
@@ -471,6 +485,12 @@ impl H {
             }
             H::Workers => g.workers = (v * max_workers() as f32).round() as u32,
             H::ResolutionScale => g.resolution_scale = (25.0 + (v * 35.0).round() * 5.0) as u32,
+            H::Posterize => {
+                g.posterize = match (v * 31.0).round() as u32 {
+                    0 => 0,
+                    n => n + 1,
+                }
+            }
             H::HdrPaperWhite => {
                 g.hdr_paper_white = match (v * 41.0).round() as u32 {
                     0 => 0,
